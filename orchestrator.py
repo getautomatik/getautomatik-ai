@@ -418,11 +418,6 @@ def checkout():
 def success():
     return "<html><body style='background:#050510;color:white;font-family:sans-serif;text-align:center;padding:100px;'><h1 style='color:#00ff88'>Pagamento Riuscito!</h1><p>Il tuo agente AI sarà attivo entro 24 ore.</p><p>Riceverai una email di conferma.</p><a href='/' style='color:#00b4d8;'>Torna alla dashboard</a></body></html>"
 
-@app.route("/debug/env")
-def debug_env():
-    secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-    return jsonify({"webhook_secret_set": bool(secret), "prefix": secret[:12] if secret else "MISSING"})
-
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
     import stripe
@@ -431,11 +426,12 @@ def stripe_webhook():
     payload = request.get_data()
     sig_header = request.headers.get("Stripe-Signature", "")
     try:
-        event = json.loads(payload)
-    except Exception:
-        return jsonify({"error": "Invalid JSON"}), 400
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except (ValueError, stripe.error.SignatureVerificationError) as e:
+        print(f"Stripe webhook error: {type(e).__name__}: {e}")
+        return jsonify({"error": "Invalid signature"}), 400
 
-    if event.get("type") == "checkout.session.completed":
+    if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         email = (session.get("customer_details") or {}).get("email") or session.get("customer_email", "")
         name = (session.get("customer_details") or {}).get("name", email)
