@@ -432,8 +432,9 @@ def stripe_webhook():
     sig_header = request.headers.get("Stripe-Signature", "")
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
-    except stripe.error.SignatureVerificationError:
-        return jsonify({"error": "Invalid signature"}), 400
+    except (stripe.error.SignatureVerificationError, ValueError, Exception) as e:
+        print(f"Stripe webhook error: {type(e).__name__}: {e}")
+        return jsonify({"error": "Invalid signature", "detail": str(e)[:100]}), 400
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
