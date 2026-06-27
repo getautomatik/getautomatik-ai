@@ -401,14 +401,16 @@ def checkout():
             line_items=[{
                 "price_data": {
                     "currency": "eur",
-                    "product_data": {"name": "GetAutomatik AI - Setup + Primo Mese"},
+                    "product_data": {"name": "GetAutomatik AI"},
                     "unit_amount": 19700,
+                    "recurring": {"interval": "month"},
                 },
                 "quantity": 1,
             }],
-            mode="payment",
-            success_url="https://getautomatik-ai-production.up.railway.app/success",
-            cancel_url="https://getautomatik-ai-production.up.railway.app/landing",
+            mode="subscription",
+            subscription_data={"trial_period_days": 7},
+            success_url="https://getautomatik.com/success",
+            cancel_url="https://getautomatik.com/landing",
         )
         return redirect(session.url, code=302)
     except Exception as e:
@@ -459,16 +461,33 @@ def stripe_webhook():
         session = event["data"]["object"]
         email = (session.get("customer_details") or {}).get("email") or session.get("customer_email", "")
         name = (session.get("customer_details") or {}).get("name", email)
-        amount = session.get("amount_total", 0)
-        amount_eur = f"{amount / 100:.2f}"
+        is_trial = session.get("payment_status") == "no_payment_required"
 
         if email:
             try:
-                db.table("clients").update({"status": "active"}).eq("contact_email", email).eq("status", "payment_pending").execute()
+                new_status = "trial" if is_trial else "active"
+                db.table("clients").update({"status": new_status}).eq("contact_email", email).eq("status", "payment_pending").execute()
             except Exception as e:
                 print(f"Errore aggiornamento cliente Stripe: {e}")
 
-        send_telegram(f"💳 Pagamento ricevuto!\nCliente: {name}\nEmail: {email}\nImporto: {amount_eur}€\nStato: ATTIVO")
+        if is_trial:
+            send_telegram(f"🎯 Nuovo trial attivato!\nCliente: {name}\nEmail: {email}\nTrial: 7 giorni gratuiti")
+        else:
+            amount = session.get("amount_total", 0)
+            send_telegram(f"💳 Pagamento ricevuto!\nCliente: {name}\nEmail: {email}\nImporto: {amount / 100:.2f}€\nStato: ATTIVO")
+
+    elif event["type"] == "invoice.payment_succeeded":
+        invoice = event["data"]["object"]
+        # Primo pagamento reale dopo il trial
+        if invoice.get("billing_reason") == "subscription_cycle":
+            customer_email = invoice.get("customer_email", "")
+            amount = invoice.get("amount_paid", 0)
+            if customer_email:
+                try:
+                    db.table("clients").update({"status": "active"}).eq("contact_email", customer_email).eq("status", "trial").execute()
+                except Exception as e:
+                    print(f"Errore attivazione post-trial: {e}")
+                send_telegram(f"💳 Trial convertito!\nEmail: {customer_email}\nImporto: {amount / 100:.2f}€\nStato: ATTIVO")
 
     return jsonify({"status": "ok"})
 

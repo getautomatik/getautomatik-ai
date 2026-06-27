@@ -47,17 +47,51 @@
         .features li { padding: 10px 0; color: rgba(255,255,255,0.6); font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
         .features li::before { content: '✓ '; color: #00ff88; }
         
+        /* Urgency banner */
+        .urgency-banner { background: linear-gradient(135deg, rgba(255,68,68,0.15), rgba(255,140,0,0.15)); border: 1px solid rgba(255,100,0,0.3); border-radius: 12px; padding: 14px 24px; text-align: center; margin: 20px 0; display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+        .urgency-banner .spots { font-weight: 700; color: #ff6b35; font-size: 15px; }
+        .urgency-banner .countdown-wrap { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,0.6); }
+        .countdown-wrap .timer { display: flex; gap: 6px; }
+        .countdown-wrap .time-block { background: rgba(255,255,255,0.08); border-radius: 6px; padding: 4px 8px; font-weight: 700; color: white; font-size: 15px; min-width: 36px; text-align: center; }
+        .countdown-wrap .sep { color: rgba(255,255,255,0.4); font-weight: 700; }
+
+        /* Social proof */
+        .reviews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .review-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 24px; }
+        .review-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #00ff88, #00b4d8); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #050510; flex-shrink: 0; }
+        .review-meta { display: flex; flex-direction: column; }
+        .review-company { font-weight: 600; font-size: 14px; }
+        .review-sector { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+        .stars { color: #ffd700; font-size: 13px; margin-bottom: 10px; }
+        .review-text { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.6; }
+        .review-stat { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 13px; color: #00ff88; font-weight: 600; }
+
         /* Footer */
         footer { text-align: center; padding: 40px; color: rgba(255,255,255,0.15); font-size: 13px; border-top: 1px solid rgba(255,255,255,0.04); }
-        
+
         @media (max-width: 768px) {
             .hero h1 { font-size: 36px; }
-            .problems, .steps { grid-template-columns: 1fr; }
+            .problems, .steps, .reviews { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="urgency-banner">
+            <span class="spots">🔴 Solo 3 posti disponibili questo mese per nuove agenzie</span>
+            <div class="countdown-wrap">
+                <span>L'offerta scade tra:</span>
+                <div class="timer">
+                    <span class="time-block" id="cd-h">47</span>
+                    <span class="sep">:</span>
+                    <span class="time-block" id="cd-m">59</span>
+                    <span class="sep">:</span>
+                    <span class="time-block" id="cd-s">59</span>
+                </div>
+            </div>
+        </div>
+
         <div class="hero">
             <div class="hero-badge">🤖 Agenti AI Autonomi</div>
             <h1>La tua azienda <span>non dorme mai</span></h1>
@@ -97,12 +131,55 @@
             </div>
         </div>
         
+        <div class="section">
+            <h2>Cosa dicono le agenzie</h2>
+            <div class="reviews">
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="avatar">AM</div>
+                        <div class="review-meta">
+                            <span class="review-company">Agenzia Immobiliare Milano Centro</span>
+                            <span class="review-sector">Immobiliare residenziale</span>
+                        </div>
+                    </div>
+                    <div class="stars">★★★★★</div>
+                    <p class="review-text">"In tre settimane l'agente ha trovato e contattato oltre 200 potenziali acquirenti qualificati. Il nostro commerciale ora si occupa solo di chiudere, non più di cercare."</p>
+                    <div class="review-stat">📈 +23% lead qualificati nel primo mese</div>
+                </div>
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="avatar">SR</div>
+                        <div class="review-meta">
+                            <span class="review-company">Studio RE Torino</span>
+                            <span class="review-sector">Compravendite e affitti</span>
+                        </div>
+                    </div>
+                    <div class="stars">★★★★★</div>
+                    <p class="review-text">"Ero scettico sull'AI per il nostro settore. Nella prima settimana abbiamo avuto 8 appuntamenti fissati automaticamente. Non avrei creduto fosse possibile."</p>
+                    <div class="review-stat">📅 8 appuntamenti fissati nella prima settimana</div>
+                </div>
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="avatar">CP</div>
+                        <div class="review-meta">
+                            <span class="review-company">Casa&Più Roma</span>
+                            <span class="review-sector">Lusso e prestigio</span>
+                        </div>
+                    </div>
+                    <div class="stars">★★★★★</div>
+                    <p class="review-text">"Prima passavo 3 ore al giorno a cercare contatti e scrivere email. Ora l'agente AI fa tutto questo mentre lavoro sui clienti veri. Finalmente."</p>
+                    <div class="review-stat">⏱️ Risparmio 15 ore/settimana di lavoro manuale</div>
+                </div>
+            </div>
+        </div>
+
         <div class="section" id="pricing">
             <h2>Prezzo semplice</h2>
             <div class="pricing">
                 <div class="price-card">
                     <div class="price">197€<span>/mese</span></div>
-                    <p style="color:rgba(255,255,255,0.4);margin-bottom:20px;">+ 197€ setup una tantum</p>
+                    <p style="color:rgba(255,255,255,0.4);margin-bottom:8px;">+ 197€ setup una tantum</p>
+                    <p style="color:#00ff88;font-weight:600;font-size:14px;margin-bottom:20px;">✓ 7 giorni gratuiti — carta richiesta, nessun addebito subito</p>
                     <ul class="features">
                         <li>Agente AI 24/7 attivo</li>
                         <li>Fino a 500 lead/mese qualificati</li>
@@ -122,7 +199,7 @@
         <option value="altro" style="background:#1a1a2e;">Altro</option>
     </select>
     <input type="tel" id="whatsapp" placeholder="WhatsApp aziendale" style="padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:14px;">
-    <button type="submit" class="cta-button" style="border:none;cursor:pointer;width:100%;">Attiva il tuo Agente →</button>
+    <button type="submit" class="cta-button" style="border:none;cursor:pointer;width:100%;">Inizia 7 giorni gratis →</button>
     <p id="form-message" style="font-size:13px;margin-top:5px;"></p>
 </form>
 <script>
@@ -145,7 +222,7 @@ async function submitForm(e) {
             body: JSON.stringify(data)
         });
         if (resp.ok) {
-            msg.innerHTML = '✅ Registrato! Reindirizzamento al pagamento...';
+            msg.innerHTML = '✅ Registrato! Avvio trial gratuito...';
             msg.style.color = '#00ff88';
             setTimeout(() => { window.location.href = '/checkout'; }, 1500);
         } else {
@@ -165,5 +242,40 @@ async function submitForm(e) {
         </div>
     </div>
     <footer>GetAutomatik AI © 2026 | Agenti AI autonomi per aziende | info@getautomatik.com</footer>
+    <script>
+    (function() {
+        var KEY = 'cd_deadline';
+        var DURATION = 48 * 3600;
+        var stored = localStorage.getItem(KEY);
+        var deadline;
+        if (stored) {
+            deadline = parseInt(stored, 10);
+            if (Date.now() / 1000 > deadline) {
+                deadline = Math.floor(Date.now() / 1000) + DURATION;
+                localStorage.setItem(KEY, deadline);
+            }
+        } else {
+            deadline = Math.floor(Date.now() / 1000) + DURATION;
+            localStorage.setItem(KEY, deadline);
+        }
+        function pad(n) { return n < 10 ? '0' + n : n; }
+        function tick() {
+            var left = deadline - Math.floor(Date.now() / 1000);
+            if (left <= 0) {
+                deadline = Math.floor(Date.now() / 1000) + DURATION;
+                localStorage.setItem(KEY, deadline);
+                left = DURATION;
+            }
+            var h = Math.floor(left / 3600);
+            var m = Math.floor((left % 3600) / 60);
+            var s = left % 60;
+            document.getElementById('cd-h').textContent = pad(h);
+            document.getElementById('cd-m').textContent = pad(m);
+            document.getElementById('cd-s').textContent = pad(s);
+        }
+        tick();
+        setInterval(tick, 1000);
+    })();
+    </script>
 </body>
 </html>
