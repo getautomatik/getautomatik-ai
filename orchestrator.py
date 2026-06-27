@@ -367,6 +367,7 @@ def logs():
 
 
 @app.route("/webhook/signup", methods=["POST"])
+@app.route("/webhook/signup", methods=["POST"])
 def signup():
     data = request.json
     company = data.get("company", "")
@@ -418,7 +419,6 @@ def checkout():
 def success():
     return "<html><body style='background:#050510;color:white;font-family:sans-serif;text-align:center;padding:100px;'><h1 style='color:#00ff88'>Pagamento Riuscito!</h1><p>Il tuo agente AI sarà attivo entro 24 ore.</p><p>Riceverai una email di conferma.</p><a href='/' style='color:#00b4d8;'>Torna alla dashboard</a></body></html>"
 
-@app.route("/webhook/signup", methods=["POST"])
 def signup():
     data = request.json
     company = data.get("company", "")
