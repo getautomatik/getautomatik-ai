@@ -425,11 +425,29 @@ def stripe_webhook():
     webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
     payload = request.get_data(as_text=False)
     sig_header = request.headers.get("Stripe-Signature", "")
-    try:
-        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret, tolerance=None)
-    except (ValueError, stripe.error.SignatureVerificationError) as e:
-        print(f"Stripe webhook error: {type(e).__name__}: {e}")
+
+    import hmac as hmac_mod, hashlib
+    timestamp, v1_sigs = None, []
+    for part in sig_header.split(","):
+        k, _, v = part.partition("=")
+        if k == "t":
+            timestamp = v
+        elif k == "v1":
+            v1_sigs.append(v)
+
+    if not timestamp or not v1_sigs:
+        return jsonify({"error": "Missing signature"}), 400
+
+    signed = f"{timestamp}.{payload.decode('utf-8')}"
+    expected = hmac_mod.new(webhook_secret.encode("utf-8"), signed.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not any(hmac_mod.compare_digest(expected, s) for s in v1_sigs):
+        print(f"Stripe sig mismatch. Expected: {expected[:16]}... Got: {v1_sigs[0][:16] if v1_sigs else 'none'}...")
         return jsonify({"error": "Invalid signature"}), 400
+
+    try:
+        event = json.loads(payload)
+    except Exception:
+        return jsonify({"error": "Invalid JSON"}), 400
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
