@@ -367,14 +367,13 @@ def logs():
 
 
 @app.route("/webhook/signup", methods=["POST"])
-@app.route("/webhook/signup", methods=["POST"])
 def signup():
     data = request.json
     company = data.get("company", "")
     email = data.get("email", "")
     sector = data.get("sector", "altro")
     whatsapp = data.get("whatsapp", "")
-    
+
     if company and email:
         try:
             db.table("clients").insert({
@@ -418,27 +417,6 @@ def checkout():
 @app.route("/success")
 def success():
     return "<html><body style='background:#050510;color:white;font-family:sans-serif;text-align:center;padding:100px;'><h1 style='color:#00ff88'>Pagamento Riuscito!</h1><p>Il tuo agente AI sarà attivo entro 24 ore.</p><p>Riceverai una email di conferma.</p><a href='/' style='color:#00b4d8;'>Torna alla dashboard</a></body></html>"
-
-def signup():
-    data = request.json
-    company = data.get("company", "")
-    email = data.get("email", "")
-    sector = data.get("sector", "altro")
-    if company and email:
-        try:
-            db.table("clients").insert({
-                "company_name": company,
-                "contact_email": email,
-                "sector": sector,
-                "plan": "monthly",
-                "mrr": 197,
-                "status": "payment_pending"
-            }).execute()
-            send_telegram(f"Nuovo cliente! {company} ({email}) - Settore: {sector}")
-        except Exception as e:
-            print(f"Errore signup: {e}")
-        return jsonify({"status": "ok"})
-    return jsonify({"status": "error"}), 400
 
 if __name__ == "__main__":
     try:

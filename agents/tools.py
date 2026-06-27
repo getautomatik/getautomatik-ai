@@ -3,6 +3,16 @@ from dotenv import load_dotenv
 load_dotenv()
 from supabase import create_client
 
+def send_telegram(message):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    try:
+        req.post(f"https://api.telegram.org/bot{token}/sendMessage", json={"chat_id": chat_id, "text": message})
+    except:
+        pass
+
 def scrape_google_maps(db, params):
     import requests as r
     import os, time
@@ -28,7 +38,7 @@ def scrape_google_maps(db, params):
             if resp.status_code == 201:
                 run_id = resp.json()["data"]["id"]
                 # Aspetta 10 secondi
-                time.sleep(30)
+                time.sleep(90)
                 # Recupera risultati
                 results_url = f"https://api.apify.com/v2/acts/compass~crawler-google-places/runs/{run_id}/dataset/items"
                 results_resp = r.get(results_url, params={"token": apify_token})
