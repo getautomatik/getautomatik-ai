@@ -418,6 +418,35 @@ def checkout():
 def success():
     return "<html><body style='background:#050510;color:white;font-family:sans-serif;text-align:center;padding:100px;'><h1 style='color:#00ff88'>Pagamento Riuscito!</h1><p>Il tuo agente AI sarà attivo entro 24 ore.</p><p>Riceverai una email di conferma.</p><a href='/' style='color:#00b4d8;'>Torna alla dashboard</a></body></html>"
 
+@app.route("/webhook/stripe", methods=["POST"])
+def stripe_webhook():
+    import stripe
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    payload = request.get_data()
+    sig_header = request.headers.get("Stripe-Signature", "")
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except stripe.error.SignatureVerificationError:
+        return jsonify({"error": "Invalid signature"}), 400
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        email = (session.get("customer_details") or {}).get("email") or session.get("customer_email", "")
+        name = (session.get("customer_details") or {}).get("name", email)
+        amount = session.get("amount_total", 0)
+        amount_eur = f"{amount / 100:.2f}"
+
+        if email:
+            try:
+                db.table("clients").update({"status": "active"}).eq("contact_email", email).eq("status", "payment_pending").execute()
+            except Exception as e:
+                print(f"Errore aggiornamento cliente Stripe: {e}")
+
+        send_telegram(f"💳 Pagamento ricevuto!\nCliente: {name}\nEmail: {email}\nImporto: {amount_eur}€\nStato: ATTIVO")
+
+    return jsonify({"status": "ok"})
+
 if __name__ == "__main__":
     try:
         db.table("metrics").insert({"date": datetime.now().date().isoformat()}).execute()
