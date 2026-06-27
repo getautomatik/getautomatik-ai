@@ -121,6 +121,10 @@ def agency_loop():
             print(f"ERRORE: {e}")
         time.sleep(7200)
 
+@app.route("/landing")
+def landing():
+    return open("templates/landing.html", "r").read()
+
 @app.route("/")
 def dashboard():
     return """
