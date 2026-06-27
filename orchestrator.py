@@ -423,10 +423,10 @@ def stripe_webhook():
     import stripe
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
     webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
-    payload = request.get_data()
+    payload = request.get_data(as_text=False)
     sig_header = request.headers.get("Stripe-Signature", "")
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret, tolerance=None)
     except (ValueError, stripe.error.SignatureVerificationError) as e:
         print(f"Stripe webhook error: {type(e).__name__}: {e}")
         return jsonify({"error": "Invalid signature"}), 400
