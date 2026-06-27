@@ -110,7 +110,56 @@
                         <li>Adattamento automatico al mercato</li>
                         <li>Cancella quando vuoi</li>
                     </ul>
-                    <a href="https://tally.so/r/placeholder" class="cta-button">Attiva il tuo Agente →</a>
+                    <form id="signup-form" onsubmit="submitForm(event)" style="display: flex; flex-direction: column; gap: 12px; max-width: 350px; margin: 20px auto 0;">
+    <input type="text" id="company" placeholder="Nome Azienda" required style="padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:14px;">
+    <input type="email" id="email" placeholder="Email aziendale" required style="padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:14px;">
+    <select id="sector" required style="padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:14px;">
+        <option value="" style="background:#1a1a2e;">Settore</option>
+        <option value="immobiliare" style="background:#1a1a2e;">Immobiliare</option>
+        <option value="dentisti" style="background:#1a1a2e;">Dentisti</option>
+        <option value="consulenti" style="background:#1a1a2e;">Consulenti</option>
+        <option value="ecommerce" style="background:#1a1a2e;">Ecommerce</option>
+        <option value="altro" style="background:#1a1a2e;">Altro</option>
+    </select>
+    <input type="tel" id="whatsapp" placeholder="WhatsApp aziendale" style="padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:14px;">
+    <button type="submit" class="cta-button" style="border:none;cursor:pointer;width:100%;">Attiva il tuo Agente →</button>
+    <p id="form-message" style="font-size:13px;margin-top:5px;"></p>
+</form>
+<script>
+async function submitForm(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    const msg = document.getElementById('form-message');
+    btn.textContent = 'Salvando...';
+    btn.style.opacity = '0.7';
+    const data = {
+        company: document.getElementById('company').value,
+        email: document.getElementById('email').value,
+        sector: document.getElementById('sector').value,
+        whatsapp: document.getElementById('whatsapp').value
+    };
+    try {
+        const resp = await fetch('/webhook/signup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (resp.ok) {
+            msg.innerHTML = '✅ Registrato! Reindirizzamento al pagamento...';
+            msg.style.color = '#00ff88';
+            setTimeout(() => { window.location.href = '/checkout'; }, 1500);
+        } else {
+            msg.textContent = 'Errore. Riprova.';
+            msg.style.color = '#ff4444';
+        }
+    } catch(e) {
+        msg.textContent = 'Errore connessione.';
+        msg.style.color = '#ff4444';
+    }
+    btn.textContent = 'Attiva il tuo Agente →';
+    btn.style.opacity = '1';
+}
+</script>
                 </div>
             </div>
         </div>
