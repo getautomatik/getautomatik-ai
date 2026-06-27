@@ -1,71 +1,78 @@
-import os, json, requests as req
+import os, json, requests as req, time, re, random
 from supabase import create_client
 
 def scrape_google_maps(db, params):
     import requests as r
-    import re
-    import random
+    import os, time
     sector = params.get("sector", "immobiliare")
     location = params.get("location", "Milano")
     count = min(params.get("count", 10), 20)
-    
-    user_agents = [
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15"
-    ]
-    headers = {"User-Agent": random.choice(user_agents)}
-    query = f"{sector} {location}"
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-    }
+    apify_token = os.getenv("APIFY_API_KEY", "")
     
     prospects = []
-    queries = [
-        f"{sector} {location}",
-        f"{sector} vicino {location}",
-        f"migliori {sector} {location}",
-    ]
     
-    for query in queries[:2]:
+    # Metodo 1: Apify (se token disponibile)
+    if apify_token and apify_token != "il-tuo-token":
         try:
-            search_url = f"https://www.google.com/search?q={query.replace(' ', '+')}&num=20&hl=it"
-            resp = r.get(search_url, headers=headers, timeout=10)
-            
-            # Estrai risultati locali
-            names = re.findall(r'<div class="BNeawe deIvCb AP7Wnd">([^<]+)</div>', resp.text)
-            if not names:
-                names = re.findall(r'<h3 class="zBAuLc"[^>]*><div[^>]*>([^<]+)</div>', resp.text)
-            if not names:
-                names = re.findall(r'<div class="dbg0pd">([^<]+)</div>', resp.text)
-            
+            # Avvia l'attore Google Maps Scraper
+            run_url = "https://api.apify.com/v2/acts/compass~crawler-google-places/runs"
+            resp = r.post(run_url, 
+                params={"token": apify_token},
+                json={
+                    "searchStrings": [f"{sector} {location}"],
+                    "maxCrawledPlaces": count,
+                    "language": "it"
+                })
+            if resp.status_code == 201:
+                run_id = resp.json()["data"]["id"]
+                # Aspetta 10 secondi
+                time.sleep(30)
+                # Recupera risultati
+                results_url = f"https://api.apify.com/v2/acts/compass~crawler-google-places/runs/{run_id}/dataset/items"
+                results_resp = r.get(results_url, params={"token": apify_token})
+                if results_resp.status_code == 200:
+                    for item in results_resp.json()[:count]:
+                        name = item.get("title", "")
+                        email = item.get("email", f"info@{name.lower().replace(' ', '')}.it")
+                        phone = item.get("phone", "")
+                        website = item.get("website", "")
+                        if name:
+                            prospects.append({
+                                "company_name": name,
+                                "contact_email": email,
+                                "contact_phone": phone,
+                                "website": website,
+                                "sector": sector,
+                                "source": "apify_maps",
+                                "score": 8
+                            })
+        except Exception as e:
+            print(f"Apify error: {e}")
+    
+    # Metodo 2: Fallback con scraping diretto
+    if not prospects:
+        try:
+            import random
+            agents = ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"]
+            headers = {"User-Agent": random.choice(agents)}
+            query = f"{sector} {location} siti web email"
+            resp = r.get(f"https://www.google.com/search?q={query.replace(' ', '+')}&num=20&hl=it", 
+                        headers=headers, timeout=10)
+            names = re.findall(r'<h3[^>]*>([^<]+)</h3>', resp.text)
             for name in names[:count]:
                 name = name.strip()
-                if name and len(name) > 3 and not any(x in name.lower() for x in ['pagine', 'mappe', 'google', 'ricerca', 'immagini']):
-                    email = f"info@{re.sub(r'[^a-z0-9]', '', name.lower())}.it"[:50]
+                if name and len(name) > 5:
+                    email = f"info@{re.sub(r'[^a-z0-9]', '', name.lower())}.it"
                     prospects.append({
                         "company_name": name,
                         "contact_email": email,
                         "sector": sector,
-                        "source": "google_maps_real",
-                        "score": 7
+                        "source": "google_search",
+                        "score": 6
                     })
-            if len(prospects) >= count:
-                break
         except Exception as e:
-            print(f"Errore query '{query}': {e}")
-            continue
-    
-    if not prospects:
-        for i in range(1, min(count, 5) + 1):
-            prospects.append({
-                "company_name": f"{sector.title()} {location} {i}",
-                "contact_email": f"info@{sector.lower().replace(' ', '')}{location.lower()}{i}.it",
-                "sector": sector,
-                "source": "generated",
-                "score": 5
-            })
+            print(f"Fallback error: {e}")
     
     added = 0
     for p in prospects:
@@ -75,10 +82,12 @@ def scrape_google_maps(db, params):
                 db.table("prospects").insert(p).execute()
                 added += 1
         except:
-            db.table("prospects").insert(p).execute()
-            added += 1
+            try:
+                db.table("prospects").insert(p).execute()
+                added += 1
+            except:
+                pass
     
-    # Aggiorna mercato
     try:
         existing = db.table("markets").select("*").eq("sector", sector).execute()
         if existing.data:
@@ -88,7 +97,7 @@ def scrape_google_maps(db, params):
     except:
         pass
     
-    return {"prospects_found": added, "sector": sector, "location": location, "source": "real"}
+    return {"prospects_found": added, "sector": sector, "location": location, "source": "apify" if apify_token else "google"}
 
 def evaluate_market(db, params):
     sector = params.get("sector")
