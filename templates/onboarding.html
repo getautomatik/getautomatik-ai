@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configura il tuo Agente — GetAutomatik AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #050510; color: #fff; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 60px 20px; }
+        .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(0,255,136,0.2); border-radius: 24px; padding: 48px 44px; max-width: 560px; width: 100%; position: relative; overflow: hidden; }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #00ff88, #00b4d8); }
+        .logo { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.4); margin-bottom: 32px; }
+        .logo span { color: #00ff88; }
+        h1 { font-size: 28px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+        .subtitle { font-size: 15px; color: rgba(255,255,255,0.45); margin-bottom: 36px; line-height: 1.5; }
+        .step-indicator { display: flex; gap: 6px; margin-bottom: 32px; }
+        .step-dot { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); flex: 1; }
+        .step-dot.active { background: linear-gradient(90deg, #00ff88, #00b4d8); }
+        label { display: block; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6); margin-bottom: 7px; letter-spacing: 0.3px; }
+        .field { margin-bottom: 18px; }
+        input, select, textarea { width: 100%; padding: 13px 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: white; font-size: 14px; font-family: inherit; transition: border-color 0.2s; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(0,255,136,0.4); }
+        select option { background: #1a1a2e; }
+        textarea { resize: vertical; min-height: 90px; }
+        .hint { font-size: 12px; color: rgba(255,255,255,0.25); margin-top: 6px; line-height: 1.5; }
+        .submit-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #00ff88, #00b4d8); color: #050510; border: none; border-radius: 10px; font-size: 15px; font-weight: 800; cursor: pointer; margin-top: 8px; font-family: inherit; transition: opacity 0.2s; }
+        .submit-btn:hover { opacity: 0.88; }
+        .error { background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); border-radius: 10px; padding: 14px 16px; font-size: 14px; color: #ff6b6b; margin-bottom: 20px; }
+        .success-msg { text-align: center; padding: 20px 0; }
+        .success-msg .icon { font-size: 52px; margin-bottom: 16px; }
+        .success-msg h2 { font-size: 24px; font-weight: 800; margin-bottom: 10px; }
+        .success-msg p { font-size: 15px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">Getautomatik <span>AI</span></div>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    {% if success %}
+    <div class="success-msg">
+        <div class="icon">🚀</div>
+        <h2>Configurazione completata!</h2>
+        <p>Il tuo agente AI viene attivato entro 24 ore lavorative.<br>Riceverai una email di conferma quando è pronto.</p>
+    </div>
+    {% else %}
+    <div class="step-indicator">
+        <div class="step-dot active"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot {{ 'active' if step >= 3 else '' }}"></div>
+    </div>
+
+    <h1>Configura il tuo agente 👋</h1>
+    <p class="subtitle">Bastano 5 minuti. Più dettagli ci dai, meglio l'agente si comporta con i tuoi lead.</p>
+
+    <form method="POST" action="/onboarding">
+        <input type="hidden" name="token" value="{{ token }}">
+
+        <div class="field">
+            <label>Nome agenzia *</label>
+            <input type="text" name="agency_name" value="{{ agency_name }}" placeholder="Es. Agenzia Rossi Immobiliare" required>
+        </div>
+
+        <div class="field">
+            <label>Portali che usi per ricevere lead *</label>
+            <input type="text" name="portals" placeholder="Es. Immobiliare.it, Idealista, Casa.it, WhatsApp" required>
+            <p class="hint">Elenca i portali o canali da cui ricevi le richieste dei clienti.</p>
+        </div>
+
+        <div class="field">
+            <label>Come qualifichi un lead? *</label>
+            <textarea name="lead_criteria" placeholder="Es. Budget minimo 300.000€, cerca trilocale in zona X, disponibile entro 6 mesi" required></textarea>
+            <p class="hint">L'agente userà questi criteri per filtrare i lead e passarti solo quelli validi.</p>
+        </div>
+
+        <div class="field">
+            <label>WhatsApp o email per ricevere i lead qualificati *</label>
+            <input type="text" name="contact_channel" placeholder="Es. +39 333 1234567 oppure leads@miagenzia.it" required>
+            <p class="hint">Qui ti arriverà la notifica ogni volta che l'agente qualifica un lead caldo.</p>
+        </div>
+
+        <div class="field">
+            <label>Orari di lavoro della tua agenzia</label>
+            <input type="text" name="work_hours" placeholder="Es. Lun-Ven 9:00-19:00, Sab 9:00-13:00">
+            <p class="hint">L'agente risponde sempre 24/7, ma sa quando sei disponibile per fissare appuntamenti.</p>
+        </div>
+
+        <button type="submit" class="submit-btn">Attiva il mio agente AI →</button>
+    </form>
+    {% endif %}
+</div>
+</body>
+</html>

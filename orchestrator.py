@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, redirect
+from flask import Flask, jsonify, request, redirect, render_template
 from agents import create_hunter, create_closer, create_delivery, create_analyst
 from supabase import create_client
 from dotenv import load_dotenv
@@ -7,6 +7,9 @@ import os
 import json
 import threading
 import time
+import hmac as hmac_mod
+import hashlib
+import base64
 from datetime import datetime
 import requests as req
 
@@ -27,6 +30,8 @@ BUDGET = float(os.getenv("BUDGET_MENSILE", 500))
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT = os.getenv("TELEGRAM_CHAT_ID")
 
+DEFAULT_NICHES = ["immobiliare", "dentisti", "palestre", "ristoranti", "studi legali"]
+
 def send_telegram(message):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT:
         return
@@ -35,6 +40,71 @@ def send_telegram(message):
         req.post(url, json={"chat_id": TELEGRAM_CHAT, "text": message})
     except:
         pass
+
+def send_email(to_email, subject, body_html):
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    email_from = os.getenv("EMAIL_ADDRESS")
+    email_pass = os.getenv("EMAIL_PASSWORD")
+    if not email_from or not email_pass:
+        print("Email SMTP non configurata (EMAIL_ADDRESS / EMAIL_PASSWORD)")
+        return False
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = email_from
+        msg["To"] = to_email
+        msg.attach(MIMEText(body_html, "html"))
+        with smtplib.SMTP_SSL("smtp.zoho.eu", 465) as server:
+            server.login(email_from, email_pass)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Errore invio email: {e}")
+        return False
+
+def generate_onboarding_token(email):
+    secret = os.getenv("SECRET_KEY", "getautomatik-secret-key")
+    sig = hmac_mod.new(secret.encode(), email.encode(), hashlib.sha256).hexdigest()[:20]
+    email_b64 = base64.urlsafe_b64encode(email.encode()).decode().rstrip("=")
+    return f"{email_b64}.{sig}"
+
+def decode_onboarding_token(token):
+    try:
+        email_b64, sig = token.rsplit(".", 1)
+        padding = 4 - len(email_b64) % 4
+        email = base64.urlsafe_b64decode(email_b64 + "=" * padding).decode()
+        expected = generate_onboarding_token(email).rsplit(".", 1)[1]
+        if hmac_mod.compare_digest(sig, expected):
+            return email
+    except Exception:
+        pass
+    return None
+
+def send_onboarding_email(to_email, name):
+    token = generate_onboarding_token(to_email)
+    onboarding_url = f"https://getautomatik.com/onboarding?token={token}"
+    subject = "Benvenuto in GetAutomatik — iniziamo subito"
+    body = f"""
+    <div style="font-family:Inter,sans-serif;background:#050510;color:#fff;padding:48px 32px;max-width:560px;margin:0 auto;border-radius:16px;">
+        <div style="font-size:15px;font-weight:700;color:#00ff88;margin-bottom:28px;">GetAutomatik AI</div>
+        <h1 style="font-size:26px;font-weight:800;letter-spacing:-1px;margin-bottom:12px;">Benvenuto, {name}! 🚀</h1>
+        <p style="font-size:15px;color:rgba(255,255,255,0.6);line-height:1.7;margin-bottom:24px;">
+            Il tuo trial di 7 giorni è attivo. Per attivare l'agente AI completamente dobbiamo configurarlo per la tua agenzia.
+        </p>
+        <p style="font-size:15px;color:rgba(255,255,255,0.6);line-height:1.7;margin-bottom:32px;">
+            Ci vogliono meno di 5 minuti. Compila il form e il tuo agente sarà operativo entro 24 ore lavorative.
+        </p>
+        <a href="{onboarding_url}" style="display:inline-block;background:linear-gradient(135deg,#00ff88,#00b4d8);color:#050510;padding:16px 36px;border-radius:10px;font-size:15px;font-weight:800;text-decoration:none;">
+            Configura il mio agente →
+        </a>
+        <p style="font-size:12px;color:rgba(255,255,255,0.2);margin-top:32px;">
+            Hai domande? Rispondi a questa email o scrivi a info@getautomatik.com
+        </p>
+    </div>
+    """
+    return send_email(to_email, subject, body)
 
 def check_budget(costo):
     budget_usato = float(os.getenv("BUDGET_USATO", 0))
@@ -51,6 +121,16 @@ def check_budget(costo):
     return True
 
 def ceo_think():
+    # Seed nicchie di default se la tabella markets è vuota
+    try:
+        existing_markets = db.table("markets").select("sector").execute()
+        existing_sectors = {m["sector"] for m in (existing_markets.data or [])}
+        for niche in DEFAULT_NICHES:
+            if niche not in existing_sectors:
+                db.table("markets").insert({"sector": niche, "score": 50, "leads_found": 0, "active": True}).execute()
+    except Exception as e:
+        print(f"Seed nicchie: {e}")
+
     markets = db.table("markets").select("*").eq("active", True).execute()
     clients = db.table("clients").select("*").eq("status", "active").execute()
     prospects = db.table("prospects").select("*").eq("status", "new").limit(20).execute()
@@ -96,7 +176,8 @@ def ceo_think():
     if worst_market and worst_market["score"] < 20 and best_market and best_market["score"] > 50:
         switch_hint = f" Il mercato {worst_market['sector']} performa male. Considera di spostarti su {best_market['sector']} o esplorare nuovi mercati."
     
-    prompt = "Sei il CEO di una agenzia AI. Devi massimizzare fatturato." + switch_hint + " Stato: " + json.dumps(context) + " Agenti: Hunter, Closer, Delivery, Analyst. Puoi cambiare mercato con params: {sector: 'nuovo_mercato'}. Rispondi SOLO JSON con: priority, agent, action, params, costo_stimato, reasoning."
+    niches_available = ", ".join(DEFAULT_NICHES)
+    prompt = f"Sei il CEO di una agenzia AI. Devi massimizzare fatturato.{switch_hint} Nicchie disponibili: {niches_available}. Scegli autonomamente quale attaccare in base ai dati di conversione. Stato: {json.dumps(context)} Agenti: Hunter, Closer, Delivery, Analyst. Puoi cambiare mercato con params: {{sector: 'nuova_nicchia'}}. Rispondi SOLO JSON con: priority, agent, action, params, costo_stimato, reasoning."
     
     response = claude.messages.create(
         model="claude-opus-4-8",
@@ -107,7 +188,9 @@ def ceo_think():
     try:
         decision = json.loads(response.content[0].text)
     except:
-        decision = {"priority": "ACQUISIRE", "agent": "Hunter", "action": "cerca prospect", "params": {"sector": "immobiliare", "location": "Milano"}, "costo_stimato": 0, "reasoning": "fallback"}
+        import random
+        fallback_sector = random.choice(DEFAULT_NICHES)
+        decision = {"priority": "ACQUISIRE", "agent": "Hunter", "action": "cerca prospect", "params": {"sector": fallback_sector, "location": "Milano"}, "costo_stimato": 0, "reasoning": "fallback"}
     
     costo = decision.get("costo_stimato", 0)
     if costo > 0:
@@ -418,7 +501,65 @@ def checkout():
 
 @app.route("/success")
 def success():
-    return "<html><body style='background:#050510;color:white;font-family:sans-serif;text-align:center;padding:100px;'><h1 style='color:#00ff88'>Pagamento Riuscito!</h1><p>Il tuo agente AI sarà attivo entro 24 ore.</p><p>Riceverai una email di conferma.</p><a href='/' style='color:#00b4d8;'>Torna alla dashboard</a></body></html>"
+    return """<html><body style='background:#050510;color:white;font-family:Inter,sans-serif;text-align:center;padding:80px 20px;'>
+    <div style='max-width:480px;margin:0 auto;'>
+        <div style='font-size:54px;margin-bottom:20px;'>🚀</div>
+        <h1 style='color:#00ff88;font-size:30px;letter-spacing:-1px;margin-bottom:14px;'>Trial attivato!</h1>
+        <p style='color:rgba(255,255,255,0.55);font-size:16px;line-height:1.7;margin-bottom:28px;'>
+            Perfetto! Riceverai a breve una email con il link per configurare il tuo agente.<br>
+            <strong style='color:white;'>Controlla la casella di posta (anche lo spam).</strong>
+        </p>
+        <p style='color:rgba(255,255,255,0.3);font-size:14px;'>Hai domande? Scrivi a info@getautomatik.com</p>
+    </div>
+    </body></html>"""
+
+@app.route("/onboarding", methods=["GET", "POST"])
+def onboarding():
+    if request.method == "GET":
+        token = request.args.get("token", "")
+        email = decode_onboarding_token(token)
+        if not email:
+            return render_template("onboarding.html", error="Link non valido o scaduto. Contatta info@getautomatik.com", success=False, token="", agency_name="", step=1)
+        try:
+            client = db.table("clients").select("company_name").eq("contact_email", email).execute()
+            agency_name = client.data[0]["company_name"] if client.data else ""
+        except Exception:
+            agency_name = ""
+        return render_template("onboarding.html", error=None, success=False, token=token, agency_name=agency_name, step=2)
+
+    # POST — salva i dati
+    token = request.form.get("token", "")
+    email = decode_onboarding_token(token)
+    if not email:
+        return render_template("onboarding.html", error="Link non valido.", success=False, token="", agency_name="", step=1)
+
+    agency_name = request.form.get("agency_name", "")
+    portals = request.form.get("portals", "")
+    lead_criteria = request.form.get("lead_criteria", "")
+    contact_channel = request.form.get("contact_channel", "")
+    work_hours = request.form.get("work_hours", "")
+
+    try:
+        db.table("clients").update({
+            "company_name": agency_name,
+            "onboarding_completed": True,
+            "onboarding_data": json.dumps({
+                "portals": portals,
+                "lead_criteria": lead_criteria,
+                "contact_channel": contact_channel,
+                "work_hours": work_hours
+            })
+        }).eq("contact_email", email).execute()
+    except Exception as e:
+        print(f"Errore salvataggio onboarding: {e}")
+
+    send_telegram(
+        f"📋 ONBOARDING COMPLETATO!\n"
+        f"Agenzia: {agency_name}\nEmail: {email}\n"
+        f"Portali: {portals}\nCriteri: {lead_criteria}\n"
+        f"Contatto: {contact_channel}\nOrari: {work_hours}"
+    )
+    return render_template("onboarding.html", error=None, success=True, token=token, agency_name=agency_name, step=3)
 
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
@@ -472,9 +613,13 @@ def stripe_webhook():
 
         if is_trial:
             send_telegram(f"🎯 Nuovo trial attivato!\nCliente: {name}\nEmail: {email}\nTrial: 7 giorni gratuiti")
+            if email:
+                send_onboarding_email(email, name or email.split("@")[0])
         else:
             amount = session.get("amount_total", 0)
             send_telegram(f"💳 Pagamento ricevuto!\nCliente: {name}\nEmail: {email}\nImporto: {amount / 100:.2f}€\nStato: ATTIVO")
+            if email:
+                send_onboarding_email(email, name or email.split("@")[0])
 
     elif event["type"] == "invoice.payment_succeeded":
         invoice = event["data"]["object"]
