@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GetAutomatik AI - Agenti AI che fanno crescere la tua azienda</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #050510; color: #fff; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 30px; }
+        
+        /* Hero */
+        .hero { padding: 100px 0 60px; text-align: center; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 800px; height: 800px; background: radial-gradient(circle, rgba(0,255,136,0.06) 0%, transparent 70%); pointer-events: none; }
+        .hero-badge { display: inline-block; background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.2); padding: 8px 20px; border-radius: 50px; font-size: 13px; color: #00ff88; margin-bottom: 30px; }
+        .hero h1 { font-size: 64px; font-weight: 900; letter-spacing: -2px; line-height: 1.1; margin-bottom: 20px; position: relative; }
+        .hero h1 span { background: linear-gradient(135deg, #00ff88, #00b4d8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: 18px; color: rgba(255,255,255,0.6); max-width: 600px; margin: 0 auto 40px; line-height: 1.6; }
+        .cta-button { display: inline-block; background: linear-gradient(135deg, #00ff88, #00b4d8); color: #050510; padding: 16px 40px; border-radius: 12px; font-size: 17px; font-weight: 700; text-decoration: none; transition: transform 0.3s, box-shadow 0.3s; }
+        .cta-button:hover { transform: translateY(-2px); box-shadow: 0 20px 40px rgba(0,255,136,0.2); }
+        .cta-sub { font-size: 13px; color: rgba(255,255,255,0.3); margin-top: 12px; }
+        
+        /* Problem */
+        .section { padding: 80px 0; }
+        .section h2 { font-size: 36px; font-weight: 700; text-align: center; margin-bottom: 50px; letter-spacing: -1px; }
+        .problems { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
+        .problem-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 30px; text-align: center; }
+        .problem-card .emoji { font-size: 40px; margin-bottom: 15px; }
+        .problem-card h3 { font-size: 17px; margin-bottom: 10px; }
+        .problem-card p { color: rgba(255,255,255,0.4); font-size: 14px; line-height: 1.5; }
+        
+        /* Solution */
+        .solution { background: rgba(0,255,136,0.02); border-top: 1px solid rgba(0,255,136,0.1); border-bottom: 1px solid rgba(0,255,136,0.1); }
+        .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .step { text-align: center; padding: 20px; }
+        .step-num { width: 50px; height: 50px; background: linear-gradient(135deg, #00ff88, #00b4d8); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; margin: 0 auto 15px; color: #050510; }
+        .step h4 { font-size: 15px; margin-bottom: 8px; }
+        .step p { font-size: 12px; color: rgba(255,255,255,0.4); }
+        
+        /* Pricing */
+        .pricing { max-width: 500px; margin: 0 auto; text-align: center; }
+        .price-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(0,255,136,0.2); border-radius: 20px; padding: 40px; }
+        .price { font-size: 56px; font-weight: 900; }
+        .price span { font-size: 16px; color: rgba(255,255,255,0.4); }
+        .features { list-style: none; margin: 25px 0; }
+        .features li { padding: 10px 0; color: rgba(255,255,255,0.6); font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .features li::before { content: '✓ '; color: #00ff88; }
+        
+        /* Footer */
+        footer { text-align: center; padding: 40px; color: rgba(255,255,255,0.15); font-size: 13px; border-top: 1px solid rgba(255,255,255,0.04); }
+        
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 36px; }
+            .problems, .steps { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <div class="hero-badge">🤖 Agenti AI Autonomi</div>
+            <h1>La tua azienda <span>non dorme mai</span></h1>
+            <p>Agenti AI che acquisiscono clienti, qualificano lead e fissano appuntamenti. 24/7. Automaticamente. Tu paghi solo quando funziona.</p>
+            <a href="#pricing" class="cta-button">Inizia ora →</a>
+            <div class="cta-sub">Setup in 24 ore | Nessun contratto lungo</div>
+        </div>
+        
+        <div class="section">
+            <h2>Ti suona familiare?</h2>
+            <div class="problems">
+                <div class="problem-card">
+                    <div class="emoji">📉</div>
+                    <h3>Lead persi</h3>
+                    <p>Rispondi tardi e il cliente ha già scelto il competitor.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="emoji">😴</div>
+                    <h3>Il tuo team dorme</h3>
+                    <p>I lead arrivano alle 22:00. Chi risponde?</p>
+                </div>
+                <div class="problem-card">
+                    <div class="emoji">💸</div>
+                    <h3>Costi fissi alti</h3>
+                    <p>Un commerciale costa 3000€/mese. Noi molto meno.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section solution">
+            <h2>Come funziona</h2>
+            <div class="steps">
+                <div class="step"><div class="step-num">1</div><h4>Troviamo clienti</h4><p>Il nostro Hunter AI cerca aziende target</p></div>
+                <div class="step"><div class="step-num">2</div><h4>Contattiamo</h4><p>Email e LinkedIn automatici</p></div>
+                <div class="step"><div class="step-num">3</div><h4>Qualifichiamo</h4><p>Solo lead pronti passano a te</p></div>
+                <div class="step"><div class="step-num">4</div><h4>Tu chiudi</h4><p>Appuntamenti già fissati sul tuo calendario</p></div>
+            </div>
+        </div>
+        
+        <div class="section" id="pricing">
+            <h2>Prezzo semplice</h2>
+            <div class="pricing">
+                <div class="price-card">
+                    <div class="price">197€<span>/mese</span></div>
+                    <p style="color:rgba(255,255,255,0.4);margin-bottom:20px;">+ 197€ setup una tantum</p>
+                    <ul class="features">
+                        <li>Agente AI 24/7 attivo</li>
+                        <li>Fino a 500 lead/mese qualificati</li>
+                        <li>Report settimanale automatico</li>
+                        <li>Adattamento automatico al mercato</li>
+                        <li>Cancella quando vuoi</li>
+                    </ul>
+                    <a href="https://tally.so/r/placeholder" class="cta-button">Attiva il tuo Agente →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>GetAutomatik AI © 2026 | Agenti AI autonomi per aziende | info@getautomatik.com</footer>
+</body>
+</html>
