@@ -13,6 +13,39 @@ def send_telegram(message):
     except:
         pass
 
+def _is_real_email(email):
+    if not email:
+        return False
+    fake_domains = ["gmail", "yahoo", "hotmail", "outlook", "libero", "virgilio", "example"]
+    domain = email.split("@")[-1].lower() if "@" in email else ""
+    return bool(domain) and not any(d in domain for d in fake_domains)
+
+def _scrape_email_from_website(website, apify_token):
+    import requests as r
+    import time
+    if not website:
+        return None
+    try:
+        run_url = "https://api.apify.com/v2/acts/apify~contact-info-scraper/runs"
+        resp = r.post(run_url,
+            params={"token": apify_token},
+            json={"startUrls": [{"url": website}], "maxDepth": 1, "maxPages": 3})
+        if resp.status_code != 201:
+            return None
+        run_id = resp.json()["data"]["id"]
+        time.sleep(30)
+        results_url = f"https://api.apify.com/v2/acts/apify~contact-info-scraper/runs/{run_id}/dataset/items"
+        results_resp = r.get(results_url, params={"token": apify_token})
+        if results_resp.status_code != 200:
+            return None
+        for item in results_resp.json():
+            for email in item.get("emails", []):
+                if _is_real_email(email):
+                    return email
+    except Exception as e:
+        print(f"Contact scraper error: {e}")
+    return None
+
 def scrape_google_maps(db, params):
     import requests as r
     import os, time
@@ -20,15 +53,13 @@ def scrape_google_maps(db, params):
     location = params.get("location", "Milano")
     count = min(params.get("count", 10), 20)
     apify_token = os.getenv("APIFY_API_KEY", "")
-    
-    prospects = []
-    
-    # Metodo 1: Apify (se token disponibile)
+
+    raw_results = []
+
     if apify_token and apify_token != "il-tuo-token":
         try:
-            # Avvia l'attore Google Maps Scraper
             run_url = "https://api.apify.com/v2/acts/compass~crawler-google-places/runs"
-            resp = r.post(run_url, 
+            resp = r.post(run_url,
                 params={"token": apify_token},
                 json={
                     "searchStrings": [f"{sector} {location}"],
@@ -37,55 +68,38 @@ def scrape_google_maps(db, params):
                 })
             if resp.status_code == 201:
                 run_id = resp.json()["data"]["id"]
-                # Aspetta 10 secondi
                 time.sleep(90)
-                # Recupera risultati
                 results_url = f"https://api.apify.com/v2/acts/compass~crawler-google-places/runs/{run_id}/dataset/items"
                 results_resp = r.get(results_url, params={"token": apify_token})
                 if results_resp.status_code == 200:
                     for item in results_resp.json()[:count]:
                         name = item.get("title", "")
-                        email = item.get("email", f"info@{name.lower().replace(' ', '')}.it")
-                        phone = item.get("phone", "")
-                        website = item.get("website", "")
-                        if name:
-                            prospects.append({
-                                "company_name": name,
-                                "contact_email": email,
-                                "contact_phone": phone,
-                                "website": website,
-                                "sector": sector,
-                                "source": "apify_maps",
-                                "score": 8
-                            })
+                        if not name:
+                            continue
+                        raw_results.append({
+                            "company_name": name,
+                            "contact_email": item.get("email", ""),
+                            "contact_phone": item.get("phone", ""),
+                            "website": item.get("website", ""),
+                            "sector": sector,
+                            "source": "apify_maps",
+                            "score": 8
+                        })
         except Exception as e:
             print(f"Apify error: {e}")
-    
-    # Metodo 2: Fallback con scraping diretto
-    if not prospects:
-        try:
-            import random
-            agents = ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"]
-            headers = {"User-Agent": random.choice(agents)}
-            query = f"{sector} {location} siti web email"
-            resp = r.get(f"https://www.google.com/search?q={query.replace(' ', '+')}&num=20&hl=it", 
-                        headers=headers, timeout=10)
-            names = re.findall(r'<h3[^>]*>([^<]+)</h3>', resp.text)
-            for name in names[:count]:
-                name = name.strip()
-                if name and len(name) > 5:
-                    email = f"info@{re.sub(r'[^a-z0-9]', '', name.lower())}.it"
-                    prospects.append({
-                        "company_name": name,
-                        "contact_email": email,
-                        "sector": sector,
-                        "source": "google_search",
-                        "score": 6
-                    })
-        except Exception as e:
-            print(f"Fallback error: {e}")
-    
+
+    # Per ogni risultato senza email reale, prova a scrapare il sito
+    prospects = []
+    for p in raw_results:
+        if _is_real_email(p["contact_email"]):
+            prospects.append(p)
+        elif p["website"] and apify_token:
+            email = _scrape_email_from_website(p["website"], apify_token)
+            if email:
+                p["contact_email"] = email
+                prospects.append(p)
+        # Se non ha email reale e non ha sito, salta
+
     added = 0
     for p in prospects:
         try:
@@ -99,7 +113,7 @@ def scrape_google_maps(db, params):
                 added += 1
             except:
                 pass
-    
+
     try:
         existing = db.table("markets").select("*").eq("sector", sector).execute()
         if existing.data:
@@ -108,8 +122,9 @@ def scrape_google_maps(db, params):
             db.table("markets").insert({"sector": sector, "score": 50, "leads_found": added}).execute()
     except:
         pass
-    
-    return {"prospects_found": added, "sector": sector, "location": location, "source": "apify" if apify_token else "google"}
+
+    print(f"Trovati {len(raw_results)} da Maps, email reali: {len(prospects)}, salvati: {added}")
+    return {"prospects_found": added, "sector": sector, "location": location, "source": "apify"}
 
 def evaluate_market(db, params):
     sector = params.get("sector")
