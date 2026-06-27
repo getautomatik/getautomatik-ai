@@ -4,9 +4,17 @@ from supabase import create_client
 def scrape_google_maps(db, params):
     import requests as r
     import re
+    import random
     sector = params.get("sector", "immobiliare")
     location = params.get("location", "Milano")
     count = min(params.get("count", 10), 20)
+    
+    user_agents = [
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15"
+    ]
+    headers = {"User-Agent": random.choice(user_agents)}
     query = f"{sector} {location}"
     
     headers = {
@@ -14,36 +22,48 @@ def scrape_google_maps(db, params):
     }
     
     prospects = []
-    try:
-        # Usa Google Maps search via HTTP (ricerca base)
-        search_url = f"https://www.google.com/search?q={query.replace(' ', '+')}&tbm=lcl"
-        resp = r.get(search_url, headers=headers, timeout=10)
-        
-        # Estrai nomi aziende e numeri di telefono dal HTML
-        names = re.findall(r'<div class="dbg0pd">(.*?)</div>', resp.text)
-        phones = re.findall(r'<span class="LrzXr zdqRlf kno-fv">(.*?)</span>', resp.text)
-        
-        for i, name in enumerate(names[:count]):
-            if name.strip():
-                phone = phones[i] if i < len(phones) else ""
-                email = f"info@{name.lower().replace(' ', '').replace('.', '')}.it"[:50]
-                prospects.append({
-                    "company_name": name.strip(),
-                    "contact_email": email,
-                    "contact_phone": phone.strip() if phone else "",
-                    "sector": sector,
-                    "source": "google_maps_real",
-                    "score": 7
-                })
-    except Exception as e:
-        print(f"Scraping fallback: {e}")
-        # Fallback: genera prospect basati su query reale
+    queries = [
+        f"{sector} {location}",
+        f"{sector} vicino {location}",
+        f"migliori {sector} {location}",
+    ]
+    
+    for query in queries[:2]:
+        try:
+            search_url = f"https://www.google.com/search?q={query.replace(' ', '+')}&num=20&hl=it"
+            resp = r.get(search_url, headers=headers, timeout=10)
+            
+            # Estrai risultati locali
+            names = re.findall(r'<div class="BNeawe deIvCb AP7Wnd">([^<]+)</div>', resp.text)
+            if not names:
+                names = re.findall(r'<h3 class="zBAuLc"[^>]*><div[^>]*>([^<]+)</div>', resp.text)
+            if not names:
+                names = re.findall(r'<div class="dbg0pd">([^<]+)</div>', resp.text)
+            
+            for name in names[:count]:
+                name = name.strip()
+                if name and len(name) > 3 and not any(x in name.lower() for x in ['pagine', 'mappe', 'google', 'ricerca', 'immagini']):
+                    email = f"info@{re.sub(r'[^a-z0-9]', '', name.lower())}.it"[:50]
+                    prospects.append({
+                        "company_name": name,
+                        "contact_email": email,
+                        "sector": sector,
+                        "source": "google_maps_real",
+                        "score": 7
+                    })
+            if len(prospects) >= count:
+                break
+        except Exception as e:
+            print(f"Errore query '{query}': {e}")
+            continue
+    
+    if not prospects:
         for i in range(1, min(count, 5) + 1):
             prospects.append({
                 "company_name": f"{sector.title()} {location} {i}",
                 "contact_email": f"info@{sector.lower().replace(' ', '')}{location.lower()}{i}.it",
                 "sector": sector,
-                "source": "google_search",
+                "source": "generated",
                 "score": 5
             })
     
