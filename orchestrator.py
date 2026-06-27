@@ -54,6 +54,30 @@ def ceo_think():
     markets = db.table("markets").select("*").eq("active", True).execute()
     clients = db.table("clients").select("*").eq("status", "active").execute()
     prospects = db.table("prospects").select("*").eq("status", "new").limit(20).execute()
+    decisions = db.table("decisions").select("*").order("created_at", desc=True).limit(10).execute()
+    
+    # Analizza performance mercati
+    market_data = []
+    for m in (markets.data or []):
+        sector = m["sector"]
+        m_prospects = db.table("prospects").select("*").eq("sector", sector).execute()
+        m_clients = db.table("clients").select("*").eq("sector", sector).execute()
+        total_p = len(m_prospects.data) if m_prospects.data else 0
+        total_c = len(m_clients.data) if m_clients.data else 0
+        conversion = (total_c / total_p * 100) if total_p > 0 else 0
+        score = m.get("score", 50)
+        # Se conversione < 2% dopo 20+ prospect, riduci score
+        if total_p >= 20 and conversion < 2:
+            score = max(10, score - 20)
+            db.table("markets").update({"score": score}).eq("sector", sector).execute()
+        market_data.append({
+            "sector": sector, "score": score, "prospects": total_p,
+            "clients": total_c, "conversion": round(conversion, 1)
+        })
+    
+    # Trova mercato migliore e peggiore
+    best_market = max(market_data, key=lambda x: x["score"]) if market_data else None
+    worst_market = min(market_data, key=lambda x: x["score"]) if market_data else None
     
     context = {
         "time": datetime.now().isoformat(),
@@ -61,10 +85,18 @@ def ceo_think():
         "mrr": sum(c["mrr"] for c in clients.data) if clients.data else 0,
         "new_prospects": len(prospects.data) if prospects.data else 0,
         "budget_remaining": BUDGET - float(os.getenv("BUDGET_USATO", 0)),
-        "markets": markets.data
+        "markets": market_data,
+        "best_market": best_market["sector"] if best_market else None,
+        "worst_market": worst_market["sector"] if worst_market else None,
+        "recent_decisions": [d.get("decision") for d in (decisions.data or [])[:5]]
     }
     
-    prompt = "Sei il CEO di una agenzia AI. Devi massimizzare fatturato. Stato: " + json.dumps(context) + " Agenti: Hunter, Closer, Delivery, Analyst. Rispondi SOLO JSON con: priority, agent, action, params, costo_stimato, reasoning."
+    # Se il mercato peggiore ha score < 20, suggerisci switch
+    switch_hint = ""
+    if worst_market and worst_market["score"] < 20 and best_market and best_market["score"] > 50:
+        switch_hint = f" Il mercato {worst_market['sector']} performa male. Considera di spostarti su {best_market['sector']} o esplorare nuovi mercati."
+    
+    prompt = "Sei il CEO di una agenzia AI. Devi massimizzare fatturato." + switch_hint + " Stato: " + json.dumps(context) + " Agenti: Hunter, Closer, Delivery, Analyst. Puoi cambiare mercato con params: {sector: 'nuovo_mercato'}. Rispondi SOLO JSON con: priority, agent, action, params, costo_stimato, reasoning."
     
     response = claude.messages.create(
         model="claude-opus-4-8",

@@ -1,4 +1,6 @@
 import os, json, requests as req, time, re, random
+from dotenv import load_dotenv
+load_dotenv()
 from supabase import create_client
 
 def scrape_google_maps(db, params):
@@ -206,3 +208,23 @@ def find_email_from_website(db, params):
     except:
         pass
     return {"email": None, "found": False}
+
+def switch_market(db, params):
+    new_sector = params.get("sector", "")
+    old_sector = params.get("old_sector", "")
+    if not new_sector:
+        return {"error": "Nessun mercato specificato"}
+    # Attiva nuovo mercato
+    existing = db.table("markets").select("*").eq("sector", new_sector).execute()
+    if not existing.data:
+        db.table("markets").insert({"sector": new_sector, "score": 50, "leads_found": 0}).execute()
+        db.table("decisions").insert({
+            "agent_name": "CEO",
+            "thought_process": f"Switch mercato",
+            "decision": "CAMBIARE_MERCATO",
+            "action_taken": f"Da {old_sector} a {new_sector}",
+            "result": "Nuovo mercato attivato"
+        }).execute()
+        send_telegram(f"🔄 SWITCH MERCATO: da {old_sector} a {new_sector}")
+        return {"switched": True, "new_sector": new_sector}
+    return {"switched": False, "reason": "Mercato già esistente"}

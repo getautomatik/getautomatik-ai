@@ -5,6 +5,7 @@ def create_hunter():
     tools = [
         {"name": "scrape_google_maps", "description": "Cerca aziende su Google Maps", "function": scrape_google_maps},
         {"name": "evaluate_market", "description": "Valuta potenziale mercato", "function": evaluate_market},
+        {"name": "switch_market", "description": "Cambia mercato target", "function": switch_market},
     ]
     return BaseAgent("Hunter", "Trova prospect e valuta mercati", tools)
 
