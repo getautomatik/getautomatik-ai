@@ -1,3 +1,5 @@
 .env
-*.txt
 deepseek*
+*.save
+__pycache__/
+.DS_Store
