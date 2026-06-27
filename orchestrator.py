@@ -623,8 +623,9 @@ def stripe_webhook():
 
     elif event["type"] == "invoice.payment_succeeded":
         invoice = event["data"]["object"]
-        # Primo pagamento reale dopo il trial
-        if invoice.get("billing_reason") == "subscription_cycle":
+        billing_reason = invoice.get("billing_reason", "")
+        # Gestisce sia il primo pagamento post-trial che i rinnovi mensili
+        if billing_reason in ("subscription_cycle", "subscription_create"):
             customer_email = invoice.get("customer_email", "")
             amount = invoice.get("amount_paid", 0)
             if customer_email:
@@ -632,7 +633,28 @@ def stripe_webhook():
                     db.table("clients").update({"status": "active"}).eq("contact_email", customer_email).eq("status", "trial").execute()
                 except Exception as e:
                     print(f"Errore attivazione post-trial: {e}")
-                send_telegram(f"💳 Trial convertito!\nEmail: {customer_email}\nImporto: {amount / 100:.2f}€\nStato: ATTIVO")
+                send_telegram(f"💰 Cliente convertito da trial a pagante: {customer_email} - 197€/mese")
+
+    elif event["type"] == "customer.subscription.deleted":
+        subscription = event["data"]["object"]
+        customer_email = subscription.get("customer_email", "")
+        # customer_email può essere assente, prova a recuperarlo dal customer_id
+        if not customer_email:
+            customer_id = subscription.get("customer", "")
+            if customer_id:
+                try:
+                    import stripe as stripe_lib
+                    stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+                    customer = stripe_lib.Customer.retrieve(customer_id)
+                    customer_email = customer.get("email", "")
+                except Exception:
+                    pass
+        if customer_email:
+            try:
+                db.table("clients").update({"status": "cancelled"}).eq("contact_email", customer_email).execute()
+            except Exception as e:
+                print(f"Errore cancellazione cliente: {e}")
+            send_telegram(f"❌ Cancellazione abbonamento: {customer_email}")
 
     return jsonify({"status": "ok"})
 
