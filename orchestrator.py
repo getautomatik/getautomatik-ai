@@ -420,13 +420,23 @@ def success():
 
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
-    import stripe
-    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    import hmac as hmac_mod, hashlib
     payload = request.get_data(as_text=False)
     sig_header = request.headers.get("Stripe-Signature", "")
 
-    import hmac as hmac_mod, hashlib
+    # Peek livemode from raw payload to select the correct secret
+    try:
+        raw_event = json.loads(payload)
+    except Exception:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    is_live = raw_event.get("livemode", False)
+    secret_key = "STRIPE_WEBHOOK_SECRET_LIVE" if is_live else "STRIPE_WEBHOOK_SECRET"
+    webhook_secret = os.getenv(secret_key, "")
+    if not webhook_secret:
+        print(f"Missing env var: {secret_key}")
+        return jsonify({"error": "Webhook secret not configured"}), 500
+
     timestamp, v1_sigs = None, []
     for part in sig_header.split(","):
         k, _, v = part.partition("=")
@@ -441,13 +451,9 @@ def stripe_webhook():
     signed = f"{timestamp}.{payload.decode('utf-8')}"
     expected = hmac_mod.new(webhook_secret.encode("utf-8"), signed.encode("utf-8"), hashlib.sha256).hexdigest()
     if not any(hmac_mod.compare_digest(expected, s) for s in v1_sigs):
-        print(f"Stripe sig mismatch. Expected: {expected[:16]}... Got: {v1_sigs[0][:16] if v1_sigs else 'none'}...")
         return jsonify({"error": "Invalid signature"}), 400
 
-    try:
-        event = json.loads(payload)
-    except Exception:
-        return jsonify({"error": "Invalid JSON"}), 400
+    event = raw_event
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
