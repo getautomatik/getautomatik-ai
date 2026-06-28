@@ -573,13 +573,71 @@ def webhook_capture():
     send_telegram(f"STRIPE CAPTURE\nSig: {sig[:80]}\nPayload size: {len(payload)}\nFirst 200: {payload[:200]}")
     return jsonify({"status": "captured"}), 200
 
+def _handle_stripe_event(event):
+    try:
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            email = (session.get("customer_details") or {}).get("email") or session.get("customer_email", "")
+            name = (session.get("customer_details") or {}).get("name", email)
+            is_trial = session.get("payment_status") == "no_payment_required"
+
+            if email:
+                try:
+                    new_status = "trial" if is_trial else "active"
+                    db.table("clients").update({"status": new_status}).eq("contact_email", email).eq("status", "payment_pending").execute()
+                except Exception as e:
+                    print(f"Errore aggiornamento cliente Stripe: {e}")
+
+            if is_trial:
+                send_telegram(f"🎯 Nuovo trial attivato!\nCliente: {name}\nEmail: {email}\nTrial: 7 giorni gratuiti")
+                if email:
+                    send_onboarding_email(email, name or email.split("@")[0])
+            else:
+                amount = session.get("amount_total", 0)
+                send_telegram(f"💳 Pagamento ricevuto!\nCliente: {name}\nEmail: {email}\nImporto: {amount / 100:.2f}€\nStato: ATTIVO")
+                if email:
+                    send_onboarding_email(email, name or email.split("@")[0])
+
+        elif event["type"] == "invoice.payment_succeeded":
+            invoice = event["data"]["object"]
+            billing_reason = invoice.get("billing_reason", "")
+            if billing_reason in ("subscription_cycle", "subscription_create"):
+                customer_email = invoice.get("customer_email", "")
+                if customer_email:
+                    try:
+                        db.table("clients").update({"status": "active"}).eq("contact_email", customer_email).eq("status", "trial").execute()
+                    except Exception as e:
+                        print(f"Errore attivazione post-trial: {e}")
+                    send_telegram(f"💰 Cliente convertito da trial a pagante: {customer_email} - 197€/mese")
+
+        elif event["type"] == "customer.subscription.deleted":
+            import stripe as stripe_lib
+            subscription = event["data"]["object"]
+            customer_email = subscription.get("customer_email", "")
+            if not customer_email:
+                customer_id = subscription.get("customer", "")
+                if customer_id:
+                    try:
+                        stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+                        customer = stripe_lib.Customer.retrieve(customer_id)
+                        customer_email = customer.get("email", "")
+                    except Exception:
+                        pass
+            if customer_email:
+                try:
+                    db.table("clients").update({"status": "cancelled"}).eq("contact_email", customer_email).execute()
+                except Exception as e:
+                    print(f"Errore cancellazione cliente: {e}")
+                send_telegram(f"❌ Cancellazione abbonamento: {customer_email}")
+    except Exception as e:
+        print(f"Errore handler Stripe: {type(e).__name__}: {e}")
+
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
     import stripe as stripe_lib
     payload = request.get_data(as_text=False)
     sig_header = request.headers.get("Stripe-Signature", "")
 
-    # Peek livemode to select correct secret
     try:
         raw_event = json.loads(payload)
     except Exception:
@@ -589,76 +647,17 @@ def stripe_webhook():
     secret_key = "STRIPE_WEBHOOK_SECRET_LIVE" if is_live else "STRIPE_WEBHOOK_SECRET"
     webhook_secret = os.getenv(secret_key, "")
     if not webhook_secret:
-        print(f"Missing env var: {secret_key}")
-        return jsonify({"error": "Webhook secret not configured"}), 500
+        return jsonify({"error": "Secret not configured"}), 500
 
     try:
         stripe_lib.Webhook.construct_event(payload, sig_header, webhook_secret)
     except Exception as e:
-        print(f"Stripe webhook verification failed: {type(e).__name__}: {e}")
+        print(f"Webhook verification failed: {type(e).__name__}: {e}")
         return jsonify({"error": "Invalid signature"}), 400
 
-    event = raw_event
-
-    if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
-        email = (session.get("customer_details") or {}).get("email") or session.get("customer_email", "")
-        name = (session.get("customer_details") or {}).get("name", email)
-        is_trial = session.get("payment_status") == "no_payment_required"
-
-        if email:
-            try:
-                new_status = "trial" if is_trial else "active"
-                db.table("clients").update({"status": new_status}).eq("contact_email", email).eq("status", "payment_pending").execute()
-            except Exception as e:
-                print(f"Errore aggiornamento cliente Stripe: {e}")
-
-        if is_trial:
-            send_telegram(f"🎯 Nuovo trial attivato!\nCliente: {name}\nEmail: {email}\nTrial: 7 giorni gratuiti")
-            if email:
-                send_onboarding_email(email, name or email.split("@")[0])
-        else:
-            amount = session.get("amount_total", 0)
-            send_telegram(f"💳 Pagamento ricevuto!\nCliente: {name}\nEmail: {email}\nImporto: {amount / 100:.2f}€\nStato: ATTIVO")
-            if email:
-                send_onboarding_email(email, name or email.split("@")[0])
-
-    elif event["type"] == "invoice.payment_succeeded":
-        invoice = event["data"]["object"]
-        billing_reason = invoice.get("billing_reason", "")
-        # Gestisce sia il primo pagamento post-trial che i rinnovi mensili
-        if billing_reason in ("subscription_cycle", "subscription_create"):
-            customer_email = invoice.get("customer_email", "")
-            amount = invoice.get("amount_paid", 0)
-            if customer_email:
-                try:
-                    db.table("clients").update({"status": "active"}).eq("contact_email", customer_email).eq("status", "trial").execute()
-                except Exception as e:
-                    print(f"Errore attivazione post-trial: {e}")
-                send_telegram(f"💰 Cliente convertito da trial a pagante: {customer_email} - 197€/mese")
-
-    elif event["type"] == "customer.subscription.deleted":
-        subscription = event["data"]["object"]
-        customer_email = subscription.get("customer_email", "")
-        # customer_email può essere assente, prova a recuperarlo dal customer_id
-        if not customer_email:
-            customer_id = subscription.get("customer", "")
-            if customer_id:
-                try:
-                    import stripe as stripe_lib
-                    stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
-                    customer = stripe_lib.Customer.retrieve(customer_id)
-                    customer_email = customer.get("email", "")
-                except Exception:
-                    pass
-        if customer_email:
-            try:
-                db.table("clients").update({"status": "cancelled"}).eq("contact_email", customer_email).execute()
-            except Exception as e:
-                print(f"Errore cancellazione cliente: {e}")
-            send_telegram(f"❌ Cancellazione abbonamento: {customer_email}")
-
-    return jsonify({"status": "ok"})
+    # Return 200 immediately, process in background to avoid Stripe timeout
+    threading.Thread(target=_handle_stripe_event, args=(raw_event,), daemon=True).start()
+    return jsonify({"status": "ok"}), 200
 
 if __name__ == "__main__":
     try:
