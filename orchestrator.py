@@ -586,13 +586,10 @@ def stripe_webhook():
         return jsonify({"error": "Webhook secret not configured"}), 500
 
     try:
-        event = stripe_lib.Webhook.construct_event(payload, sig_header, webhook_secret)
-    except stripe_lib.errors.SignatureVerificationError as e:
-        print(f"Stripe signature error: {e}")
-        return jsonify({"error": "Invalid signature"}), 400
+        stripe_lib.Webhook.construct_event(payload, sig_header, webhook_secret)
     except Exception as e:
-        print(f"Webhook error: {e}")
-        return jsonify({"error": "Webhook error"}), 400
+        print(f"Stripe webhook verification failed: {type(e).__name__}: {e}")
+        return jsonify({"error": "Invalid signature"}), 400
 
     event = raw_event
 
