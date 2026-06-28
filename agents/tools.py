@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 from supabase import create_client
 
+DAILY_EMAIL_LIMIT = 30
+CITIES = ["Milano", "Roma", "Torino", "Napoli", "Bologna", "Firenze", "Venezia", "Bari", "Palermo", "Genova"]
+
 def send_telegram(message):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
@@ -20,6 +23,43 @@ def _is_real_email(email):
     fake_domains = ["gmail", "yahoo", "hotmail", "outlook", "libero", "virgilio", "example"]
     domain = email.split("@")[-1].lower() if "@" in email else ""
     return bool(domain) and not any(d in domain for d in fake_domains)
+
+def _get_company_context(website):
+    """Scrape homepage title + meta description for email personalization."""
+    if not website:
+        return ""
+    try:
+        resp = req.get(website, timeout=6, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True)
+        html = resp.text[:20000]
+        title = re.search(r'<title[^>]*>([^<]{3,80})</title>', html, re.I)
+        desc = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']{10,200})', html, re.I)
+        parts = []
+        if title:
+            parts.append(title.group(1).strip())
+        if desc:
+            parts.append(desc.group(1).strip())
+        return " — ".join(parts)[:180]
+    except Exception:
+        return ""
+
+def _check_and_increment_daily_emails(db):
+    """Returns True if under daily limit, increments counter."""
+    key = f"daily_emails_{date.today().isoformat()}"
+    try:
+        existing = db.table("settings").select("value").eq("key", key).execute()
+        if existing.data:
+            count = int(existing.data[0]["value"])
+            if count >= DAILY_EMAIL_LIMIT:
+                return False
+            db.table("settings").update({"value": str(count + 1)}).eq("key", key).execute()
+        else:
+            db.table("settings").insert({"key": key, "value": "1"}).execute()
+        return True
+    except Exception:
+        return True
+
+def _rotation_city():
+    return CITIES[date.today().timetuple().tm_yday % len(CITIES)]
 
 def _scrape_email_from_website(website, apify_token):
     import requests as r
@@ -53,7 +93,7 @@ def scrape_google_maps(db, params):
     import requests as r
     import os, time
     sector = params.get("sector", "immobiliare")
-    location = params.get("location", "Milano")
+    location = params.get("location") or _rotation_city()
     count = min(params.get("count", 10), 20)
     apify_token = os.getenv("APIFY_API_KEY", "")
 
@@ -145,6 +185,96 @@ def evaluate_market(db, params):
     db.table("markets").update({"score": score, "conversion_rate": round(conversion, 1)}).eq("sector", sector).execute()
     return {"sector": sector, "score": score, "conversion_rate": conversion}
 
+def _handle_reply(db, prospect, body_text):
+    """Classify a prospect reply with Claude and take automated action."""
+    import anthropic
+    import smtplib
+    from email.mime.text import MIMEText
+
+    company = prospect.get("company_name", "")
+    email_to = prospect.get("contact_email", "")
+    sector = prospect.get("sector", "")
+    EMAIL = os.getenv("EMAIL_ADDRESS")
+    EMAIL_PASS = os.getenv("EMAIL_PASSWORD")
+    CALENDLY = os.getenv("CALENDLY_URL", "https://calendly.com/getautomatik")
+
+    claude_client = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
+
+    # Classify reply
+    clf_prompt = (
+        f"Classifica questa risposta email di un'azienda italiana ({company}, settore {sector}) "
+        f"a una proposta di agente AI:\n\"{body_text[:400]}\"\n\n"
+        f"Rispondi SOLO con: INTERESTED / NOT_INTERESTED / QUESTION / OUT_OF_OFFICE"
+    )
+    clf = claude_client.messages.create(
+        model="claude-haiku-4-5-20251001", max_tokens=10,
+        messages=[{"role": "user", "content": clf_prompt}]
+    ).content[0].text.strip().upper()
+
+    def _send_reply(subject, body):
+        if EMAIL and EMAIL_PASS and email_to:
+            msg = MIMEText(body)
+            msg["Subject"] = subject
+            msg["From"] = EMAIL
+            msg["To"] = email_to
+            with smtplib.SMTP_SSL("smtp.zoho.eu", 465) as s:
+                s.login(EMAIL, EMAIL_PASS)
+                s.send_message(msg)
+
+    if "INTERESTED" in clf:
+        rp = claude_client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=150,
+            messages=[{"role": "user", "content":
+                f"Rispondi a un prospect italiano ({company}) che è interessato al nostro agente AI. "
+                f"Max 70 parole. Proponi una call di 30 minuti. Calendly: {CALENDLY} "
+                f"Tono: caldo e diretto. Firma: Team GetAutomatik"
+            }]
+        ).content[0].text
+        _send_reply(f"Re: Agente AI per {company}", rp)
+        db.table("prospects").update({
+            "status": "replied",
+            "agent_notes": f"INTERESTED: {body_text[:120]}"
+        }).eq("id", prospect["id"]).execute()
+        send_telegram(
+            f"🔥 PROSPECT CALDO!\n{company} ({sector}) è INTERESSATO\n"
+            f"Email: {email_to}\nRisposta + Calendly inviati automaticamente"
+        )
+
+    elif "QUESTION" in clf:
+        rp = claude_client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=200,
+            messages=[{"role": "user", "content":
+                f"Un prospect italiano ({company}, {sector}) ha fatto questa domanda:\n\"{body_text[:300]}\"\n"
+                f"Rispondi in modo convincente (max 90 parole). Il servizio: agente AI che trova e contatta "
+                f"clienti in automatico, 197€/mese, 7 giorni trial gratuito. "
+                f"Chiudi proponendo una call: {CALENDLY} Firma: Team GetAutomatik"
+            }]
+        ).content[0].text
+        _send_reply(f"Re: Agente AI per {company}", rp)
+        db.table("prospects").update({
+            "agent_notes": f"QUESTION: {body_text[:120]}"
+        }).eq("id", prospect["id"]).execute()
+        send_telegram(f"❓ Domanda da {company}\n{body_text[:100]}\nRisposta automatica inviata")
+
+    elif "NOT_INTERESTED" in clf:
+        db.table("prospects").update({
+            "status": "dead",
+            "agent_notes": f"NOT_INTERESTED: {body_text[:120]}"
+        }).eq("id", prospect["id"]).execute()
+        send_telegram(f"🚫 {company} non interessato — marcato dead")
+
+    elif "OUT_OF_OFFICE" in clf:
+        new_date = (date.today() + timedelta(days=5)).isoformat()
+        db.table("prospects").update({
+            "status": "contacted",
+            "follow_up_at": new_date,
+            "agent_notes": "OUT_OF_OFFICE — ricontatto tra 5gg"
+        }).eq("id", prospect["id"]).execute()
+        send_telegram(f"🏖️ {company} fuori ufficio — ricontatto riprogrammato")
+
+    _track_cost(db, 0.0005, f"reply classification {company}")
+
+
 def _track_cost(db, euros, description=""):
     try:
         existing = db.table("settings").select("value").eq("key", "budget_usato").execute()
@@ -166,6 +296,15 @@ def generate_email(db, params):
     company = prospect.get("company_name", "cliente")
     sector = prospect.get("sector", "azienda")
     email_to = prospect.get("contact_email", "")
+    website = prospect.get("website", "")
+
+    # Rate limit: max DAILY_EMAIL_LIMIT emails/day to protect deliverability
+    if not _check_and_increment_daily_emails(db):
+        print(f"Daily email limit reached ({DAILY_EMAIL_LIMIT}), skipping {company}")
+        return {"email": "", "sent": False, "prospect": company, "skipped": "daily_limit"}
+
+    # Personalization: scrape homepage for company context
+    company_context = _get_company_context(website) if website else ""
 
     # Use CEO-optimized prompt if available
     try:
@@ -175,12 +314,21 @@ def generate_email(db, params):
         else:
             raise Exception("no setting")
     except Exception:
-        prompt = f"Scrivi email vendita per: {company}, settore: {sector}. Servizio: Agente AI per acquisizione clienti. Includi CTA per demo gratuita. Max 120 parole."
+        prompt = (
+            f"Scrivi email fredda di vendita per: {company}, settore: {sector}. "
+            f"Servizio: Agente AI che trova e contatta clienti in automatico, 197€/mese, 7 giorni trial gratuito. "
+            f"Includi CTA per demo gratuita. Max 120 parole. Italiano."
+        )
 
-    response = claude.messages.create(model="claude-haiku-4-5-20251001", max_tokens=200, messages=[{"role": "user", "content": prompt}])
+    if company_context:
+        prompt += f"\nContesto azienda (da usare per personalizzare): {company_context}"
+
+    response = claude.messages.create(
+        model="claude-haiku-4-5-20251001", max_tokens=220,
+        messages=[{"role": "user", "content": prompt}]
+    )
     email_body = response.content[0].text
 
-    # Track Claude cost (Haiku ~$0.80/MTok in, $4/MTok out → EUR ×0.92)
     cost_eur = (len(prompt) / 4 * 0.80 + len(email_body) / 4 * 4.0) / 1_000_000 * 0.92
     _track_cost(db, cost_eur, f"email {company}")
 
@@ -210,7 +358,7 @@ def generate_email(db, params):
 
 
 def check_email_replies(db):
-    """Scan Zoho IMAP inbox for replies from contacted prospects. Returns count of new replies."""
+    """Scan Zoho IMAP for replies from contacted prospects, classify and auto-respond."""
     import imaplib
     import email as email_lib
 
@@ -228,7 +376,7 @@ def check_email_replies(db):
             return 0
 
         contacted = db.table("prospects").select("id,contact_email,company_name,sector").in_(
-            "status", ["contacted", "followup_1", "followup_2"]
+            "status", ["contacted", "followup_1"]
         ).execute()
         prospect_map = {
             (p.get("contact_email") or "").lower().strip(): p
@@ -241,20 +389,35 @@ def check_email_replies(db):
             try:
                 _, data = mail.fetch(num, "(RFC822)")
                 msg = email_lib.message_from_bytes(data[0][1])
+
+                # Extract plain text body
+                body_text = ""
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        if part.get_content_type() == "text/plain":
+                            try:
+                                body_text = part.get_payload(decode=True).decode(errors="ignore")
+                                break
+                            except Exception:
+                                pass
+                else:
+                    try:
+                        body_text = msg.get_payload(decode=True).decode(errors="ignore")
+                    except Exception:
+                        pass
+                body_text = body_text[:1200].strip()
+
                 from_header = msg.get("From", "")
                 found_emails = re.findall(r'[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}', from_header)
                 for sender in found_emails:
                     p = prospect_map.get(sender.lower())
                     if p:
-                        db.table("prospects").update({"status": "replied"}).eq("id", p["id"]).execute()
-                        send_telegram(
-                            f"📬 RISPOSTA ricevuta!\n"
-                            f"Azienda: {p.get('company_name')}\n"
-                            f"Email: {sender}\nSettore: {p.get('sector')}"
-                        )
+                        # Classify reply and auto-respond
+                        _handle_reply(db, p, body_text)
                         replied_count += 1
                         break
-            except Exception:
+            except Exception as e:
+                print(f"IMAP parse error: {e}")
                 continue
 
         mail.logout()

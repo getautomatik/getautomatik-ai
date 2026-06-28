@@ -456,6 +456,16 @@ def dashboard():
             </div>
         </div>
         
+        <div class="pipeline-section" style="padding:16px 25px;margin-bottom:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span id="daily-label" style="font-size:13px;color:rgba(255,255,255,0.5);">Email oggi: 0/30</span>
+                <span style="font-size:12px;color:rgba(255,255,255,0.25);">Limite giornaliero per deliverability</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:8px;">
+                <div id="daily-bar" style="height:8px;border-radius:6px;width:0%;transition:width 0.6s;background:linear-gradient(90deg,#00ff88,#00b4d8);"></div>
+            </div>
+        </div>
+
         <div class="pipeline-section">
             <div class="section-title">🎯 Prospect Pipeline</div>
             <div id="pipeline-container"><div class="empty-pipeline">Caricamento...</div></div>
@@ -507,6 +517,14 @@ def dashboard():
                 document.getElementById('pl-emails').textContent = d.emails_sent;
                 document.getElementById('pl-rate').textContent = d.reply_rate + '%';
                 document.getElementById('pl-spent').textContent = d.spent + '€';
+                const pct = Math.min(100, Math.round((d.daily_sent || 0) / (d.daily_limit || 30) * 100));
+                const bar = document.getElementById('daily-bar');
+                if (bar) {
+                    bar.style.width = pct + '%';
+                    bar.style.background = pct > 80 ? '#ff6b35' : 'linear-gradient(90deg,#00ff88,#00b4d8)';
+                }
+                const lbl = document.getElementById('daily-label');
+                if (lbl) lbl.textContent = `Email oggi: ${d.daily_sent||0}/${d.daily_limit||30}`;
             } catch(e) {}
         }
 
@@ -611,13 +629,21 @@ def pl_report():
             spent = round(float(s.data[0]["value"]), 2) if s.data else 0.0
         except Exception:
             spent = 0.0
+        try:
+            today_key = f"daily_emails_{datetime.now().date().isoformat()}"
+            de = db.table("settings").select("value").eq("key", today_key).execute()
+            daily_sent = int(de.data[0]["value"]) if de.data else 0
+        except Exception:
+            daily_sent = 0
         return jsonify({
             "mrr": mrr,
             "spent": spent,
             "profit": round(mrr - spent, 2),
             "emails_sent": total_contacted,
             "replies": total_replied,
-            "reply_rate": reply_rate
+            "reply_rate": reply_rate,
+            "daily_sent": daily_sent,
+            "daily_limit": 30
         })
     except Exception as e:
         return jsonify({"mrr": 0, "spent": 0, "profit": 0, "emails_sent": 0, "replies": 0, "reply_rate": 0})
