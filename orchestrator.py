@@ -561,6 +561,11 @@ def onboarding():
     )
     return render_template("onboarding.html", error=None, success=True, token=token, agency_name=agency_name, step=3)
 
+@app.route("/webhook/debug", methods=["GET"])
+def webhook_debug():
+    secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    return jsonify({"secret_prefix": secret[:12] if secret else "NOT_SET", "len": len(secret)})
+
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
     import hmac as hmac_mod, hashlib
