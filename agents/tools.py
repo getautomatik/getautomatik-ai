@@ -26,16 +26,18 @@ def _scrape_email_from_website(website, apify_token):
     if not website:
         return None
     try:
-        run_url = "https://api.apify.com/v2/acts/apify~contact-info-scraper/runs"
+        run_url = "https://api.apify.com/v2/acts/vdrmota~contact-info-scraper/runs"
         resp = r.post(run_url,
             params={"token": apify_token},
-            json={"startUrls": [{"url": website}], "maxDepth": 1, "maxPages": 3})
+            json={"startUrls": [{"url": website}], "maxDepth": 1, "maxPages": 3},
+            timeout=15)
         if resp.status_code != 201:
+            print(f"vdrmota scraper start failed: {resp.status_code} {resp.text[:100]}")
             return None
         run_id = resp.json()["data"]["id"]
-        time.sleep(30)
-        results_url = f"https://api.apify.com/v2/acts/apify~contact-info-scraper/runs/{run_id}/dataset/items"
-        results_resp = r.get(results_url, params={"token": apify_token})
+        time.sleep(60)
+        results_url = f"https://api.apify.com/v2/acts/vdrmota~contact-info-scraper/runs/{run_id}/dataset/items"
+        results_resp = r.get(results_url, params={"token": apify_token}, timeout=15)
         if results_resp.status_code != 200:
             return None
         for item in results_resp.json():

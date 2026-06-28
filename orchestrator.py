@@ -300,6 +300,16 @@ def dashboard():
         .log-agent.delivery-tag { color: #00ff88; }
         .log-agent.analyst-tag { color: #ffaa00; }
         .footer { text-align: center; padding: 30px; color: rgba(255,255,255,0.15); font-size: 12px; }
+        .pipeline-section { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 25px; margin-bottom: 30px; }
+        .pipeline-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .pipeline-table th { text-align: left; padding: 10px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .pipeline-table td { padding: 12px 14px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .pipeline-table tr:last-child td { border-bottom: none; }
+        .pipeline-table .sector-name { font-weight: 600; color: #fff; text-transform: capitalize; }
+        .bar-bg { background: rgba(255,255,255,0.06); border-radius: 4px; height: 6px; min-width: 80px; }
+        .bar-fill { height: 6px; border-radius: 4px; background: linear-gradient(90deg, #00ff88, #00b4d8); transition: width 0.6s; }
+        .conv-rate { color: #00ff88; font-weight: 700; }
+        .empty-pipeline { color: rgba(255,255,255,0.2); font-size: 13px; text-align: center; padding: 30px 0; }
         @media (max-width: 900px) {
             .metrics-grid, .agents-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -378,6 +388,11 @@ def dashboard():
             </div>
         </div>
         
+        <div class="pipeline-section">
+            <div class="section-title">🎯 Prospect Pipeline</div>
+            <div id="pipeline-container"><div class="empty-pipeline">Caricamento...</div></div>
+        </div>
+
         <div class="log-section">
             <div class="section-title">📋 Activity Log</div>
             <div id="log-container">
@@ -416,10 +431,37 @@ def dashboard():
             } catch(e) {}
         }
         
+        async function updatePipeline() {
+            try {
+                const resp = await fetch('/prospects');
+                const data = await resp.json();
+                const container = document.getElementById('pipeline-container');
+                if (!data.length) {
+                    container.innerHTML = '<div class="empty-pipeline">Nessun prospect trovato ancora. L\'agente Hunter sta cercando...</div>';
+                    return;
+                }
+                const maxTotal = Math.max(...data.map(d => d.total), 1);
+                container.innerHTML = '<table class="pipeline-table"><thead><tr><th>Nicchia</th><th>Totale</th><th>Contattati</th><th>Risposto</th><th>Conversion</th><th>Progresso</th></tr></thead><tbody>' +
+                    data.map(d => {
+                        const pct = Math.round(d.total / maxTotal * 100);
+                        return `<tr>
+                            <td class="sector-name">${d.sector}</td>
+                            <td>${d.total}</td>
+                            <td>${d.contacted}</td>
+                            <td>${d.replied}</td>
+                            <td class="conv-rate">${d.conversion_rate}%</td>
+                            <td><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></td>
+                        </tr>`;
+                    }).join('') + '</tbody></table>';
+            } catch(e) {}
+        }
+
         setInterval(updateDashboard, 5000);
         setInterval(updateLogs, 10000);
+        setInterval(updatePipeline, 30000);
         updateDashboard();
         updateLogs();
+        updatePipeline();
     </script>
 </body>
 </html>"""
@@ -448,6 +490,29 @@ def logs():
     except:
         return jsonify([])
 
+
+@app.route("/prospects")
+def prospects_pipeline():
+    try:
+        rows = db.table("prospects").select("sector,status").execute()
+        pipeline = {}
+        for p in (rows.data or []):
+            s = p.get("sector", "altro")
+            if s not in pipeline:
+                pipeline[s] = {"total": 0, "contacted": 0, "replied": 0}
+            pipeline[s]["total"] += 1
+            if p.get("status") in ("contacted", "replied", "converted"):
+                pipeline[s]["contacted"] += 1
+            if p.get("status") == "replied":
+                pipeline[s]["replied"] += 1
+        result = []
+        for sector, stats in pipeline.items():
+            conv = round(stats["replied"] / stats["contacted"] * 100, 1) if stats["contacted"] > 0 else 0
+            result.append({"sector": sector, "total": stats["total"], "contacted": stats["contacted"], "replied": stats["replied"], "conversion_rate": conv})
+        result.sort(key=lambda x: x["total"], reverse=True)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify([])
 
 @app.route("/webhook/signup", methods=["POST"])
 def signup():
