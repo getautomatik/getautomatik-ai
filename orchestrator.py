@@ -106,18 +106,35 @@ def send_onboarding_email(to_email, name):
     """
     return send_email(to_email, subject, body)
 
+def _get_budget_usato():
+    try:
+        s = db.table("settings").select("value").eq("key", "budget_usato").execute()
+        return float(s.data[0]["value"]) if s.data else 0.0
+    except Exception:
+        return float(os.getenv("BUDGET_USATO", 0))
+
+def _set_budget_usato(value):
+    try:
+        existing = db.table("settings").select("id").eq("key", "budget_usato").execute()
+        if existing.data:
+            db.table("settings").update({"value": str(round(value, 4))}).eq("key", "budget_usato").execute()
+        else:
+            db.table("settings").insert({"key": "budget_usato", "value": str(round(value, 4))}).execute()
+    except Exception:
+        os.environ["BUDGET_USATO"] = str(value)
+
 def check_budget(costo):
-    budget_usato = float(os.getenv("BUDGET_USATO", 0))
+    budget_usato = _get_budget_usato()
     budget_rimasto = BUDGET - budget_usato
     if costo > budget_rimasto:
-        send_telegram(f"Budget insufficiente! Richiesto: {costo}, Disponibile: {budget_rimasto}")
+        send_telegram(f"Budget insufficiente! Richiesto: {costo}, Disponibile: {budget_rimasto:.2f}")
         return False
     if costo > 50:
-        send_telegram(f"Richiesta spesa: {costo}. Budget: {budget_rimasto}. Rispondi SI o NO")
+        send_telegram(f"Richiesta spesa: {costo}. Budget: {budget_rimasto:.2f}. Rispondi SI o NO")
         return False
     nuovo_usato = budget_usato + costo
-    os.environ["BUDGET_USATO"] = str(nuovo_usato)
-    send_telegram(f"Spesa approvata: {costo}. Budget rimasto: {BUDGET - nuovo_usato}")
+    _set_budget_usato(nuovo_usato)
+    send_telegram(f"Spesa approvata: {costo}. Budget rimasto: {BUDGET - nuovo_usato:.2f}")
     return True
 
 def ceo_think():
@@ -210,6 +227,17 @@ def ceo_think():
     
     return decision
 
+def imap_loop():
+    time.sleep(120)
+    while True:
+        try:
+            n = check_email_replies(db)
+            if n:
+                print(f"IMAP: {n} nuove risposte")
+        except Exception as e:
+            print(f"IMAP loop error: {e}")
+        time.sleep(1800)
+
 def agency_loop():
     send_telegram("AGENZIA AI AVVIATA - Budget: 500 EUR")
     print("AGENZIA AI AVVIATA")
@@ -217,15 +245,7 @@ def agency_loop():
     while True:
         iteration += 1
         try:
-            # 1. Controlla risposte IMAP (ogni ciclo ~2h)
-            try:
-                new_replies = check_email_replies(db)
-                if new_replies:
-                    print(f"IMAP: {new_replies} nuove risposte rilevate")
-            except Exception as e:
-                print(f"IMAP check failed: {e}")
-
-            # 2. Invia follow-up scaduti (every cycle, query returns only due ones)
+            # 1. Invia follow-up scaduti (every cycle, query returns only due ones)
             try:
                 followups_sent = send_followups(db)
                 if followups_sent:
@@ -562,7 +582,7 @@ def prospects_pipeline():
             if s not in pipeline:
                 pipeline[s] = {"total": 0, "contacted": 0, "replied": 0}
             pipeline[s]["total"] += 1
-            if p.get("status") in ("contacted", "followup_1", "followup_2", "replied", "converted"):
+            if p.get("status") in ("contacted", "followup_1", "replied", "converted", "dead"):
                 pipeline[s]["contacted"] += 1
             if p.get("status") in ("replied", "converted"):
                 pipeline[s]["replied"] += 1
@@ -731,6 +751,14 @@ def _handle_stripe_event(event):
                 except Exception as e:
                     print(f"Errore aggiornamento cliente Stripe: {e}")
 
+            if email:
+                try:
+                    db.table("prospects").update({"status": "converted"}).eq("contact_email", email).in_(
+                        "status", ["contacted", "followup_1", "followup_2", "replied"]
+                    ).execute()
+                except Exception:
+                    pass
+
             if is_trial:
                 send_telegram(f"🎯 Nuovo trial attivato!\nCliente: {name}\nEmail: {email}\nTrial: 7 giorni gratuiti")
                 if email:
@@ -808,4 +836,5 @@ if __name__ == "__main__":
     except:
         pass
     threading.Thread(target=agency_loop, daemon=True).start()
+    threading.Thread(target=imap_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=8080)

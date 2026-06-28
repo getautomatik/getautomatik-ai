@@ -103,6 +103,11 @@ def scrape_google_maps(db, params):
                 prospects.append(p)
         # Se non ha email reale e non ha sito, salta
 
+    # Track Apify costs (~€0.05/Maps run + €0.01/contact scrape)
+    maps_cost = 0.05 if raw_results else 0.0
+    scrape_cost = 0.01 * sum(1 for p in raw_results if not _is_real_email(p["contact_email"]) and p["website"])
+    _track_cost(db, maps_cost + scrape_cost, f"apify {sector} {location}")
+
     added = 0
     for p in prospects:
         try:
@@ -298,13 +303,13 @@ def send_followups(db):
                 new_status = "followup_1"
                 next_date = (date.today() + timedelta(days=4)).isoformat()
                 subject = f"Re: Agente AI per {company}"
-            else:
+            else:  # followup_1 → sequenza completata
                 prompt = (
                     f"Email finale (max 50 parole) per {company} ({sector}). "
                     f"Ultima email, poi non scriverò più. Offri 30 minuti di demo gratuita senza impegno. "
                     f"Firma: Team GetAutomatik"
                 )
-                new_status = "followup_2"
+                new_status = "dead"
                 next_date = None
                 subject = f"Demo gratuita per {company} — ultima opportunità"
 
