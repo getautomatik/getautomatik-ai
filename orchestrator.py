@@ -561,18 +561,7 @@ def onboarding():
     )
     return render_template("onboarding.html", error=None, success=True, token=token, agency_name=agency_name, step=3)
 
-@app.route("/webhook/debug", methods=["GET"])
-def webhook_debug():
-    import time
-    secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-    return jsonify({"secret_prefix": secret[:12] if secret else "NOT_SET", "len": len(secret), "server_time": int(time.time())})
 
-@app.route("/webhook/capture", methods=["POST"])
-def webhook_capture():
-    payload = request.get_data(as_text=True)
-    sig = request.headers.get("Stripe-Signature", "NO_SIG")
-    send_telegram(f"STRIPE CAPTURE\nSig: {sig[:80]}\nPayload size: {len(payload)}\nFirst 200: {payload[:200]}")
-    return jsonify({"status": "captured"}), 200
 
 def _handle_stripe_event(event):
     try:
@@ -651,9 +640,9 @@ def stripe_webhook():
         return jsonify({"error": "Secret not configured"}), 500
 
     try:
-        stripe_lib.Webhook.construct_event(payload, sig_header, webhook_secret, tolerance=None)
+        stripe_lib.Webhook.construct_event(payload, sig_header, webhook_secret, tolerance=600)
     except Exception as e:
-        print(f"Webhook verification FAILED: {type(e).__name__}: {e}")
+        print(f"Webhook verification failed: {type(e).__name__}: {e}")
         return jsonify({"error": "Invalid signature"}), 400
 
     # Return 200 immediately, process in background to avoid Stripe timeout
