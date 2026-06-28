@@ -563,8 +563,9 @@ def onboarding():
 
 @app.route("/webhook/debug", methods=["GET"])
 def webhook_debug():
+    import time
     secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-    return jsonify({"secret_prefix": secret[:12] if secret else "NOT_SET", "len": len(secret)})
+    return jsonify({"secret_prefix": secret[:12] if secret else "NOT_SET", "len": len(secret), "server_time": int(time.time())})
 
 @app.route("/webhook/capture", methods=["POST"])
 def webhook_capture():
@@ -649,16 +650,11 @@ def stripe_webhook():
     if not webhook_secret:
         return jsonify({"error": "Secret not configured"}), 500
 
-    # Verify signature - temporarily log mismatch details for debugging
     try:
-        stripe_lib.Webhook.construct_event(payload, sig_header, webhook_secret)
-        print(f"Webhook verified OK: {raw_event.get('type')}")
+        stripe_lib.Webhook.construct_event(payload, sig_header, webhook_secret, tolerance=None)
     except Exception as e:
         print(f"Webhook verification FAILED: {type(e).__name__}: {e}")
-        print(f"Secret prefix: {webhook_secret[:15]}, Sig header: {sig_header[:60]}")
-        # Temporarily accept anyway to check if OTHER issue exists
-        # TODO: remove this once debugging is complete
-        pass
+        return jsonify({"error": "Invalid signature"}), 400
 
     # Return 200 immediately, process in background to avoid Stripe timeout
     threading.Thread(target=_handle_stripe_event, args=(raw_event,), daemon=True).start()
