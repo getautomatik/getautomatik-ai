@@ -568,11 +568,11 @@ def webhook_debug():
 
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
-    import hmac as hmac_mod, hashlib
+    import stripe as stripe_lib
     payload = request.get_data(as_text=False)
     sig_header = request.headers.get("Stripe-Signature", "")
 
-    # Peek livemode from raw payload to select the correct secret
+    # Peek livemode to select correct secret
     try:
         raw_event = json.loads(payload)
     except Exception:
@@ -585,21 +585,14 @@ def stripe_webhook():
         print(f"Missing env var: {secret_key}")
         return jsonify({"error": "Webhook secret not configured"}), 500
 
-    timestamp, v1_sigs = None, []
-    for part in sig_header.split(","):
-        k, _, v = part.partition("=")
-        if k == "t":
-            timestamp = v
-        elif k == "v1":
-            v1_sigs.append(v)
-
-    if not timestamp or not v1_sigs:
-        return jsonify({"error": "Missing signature"}), 400
-
-    signed = f"{timestamp}.{payload.decode('utf-8')}"
-    expected = hmac_mod.new(webhook_secret.encode("utf-8"), signed.encode("utf-8"), hashlib.sha256).hexdigest()
-    if not any(hmac_mod.compare_digest(expected, s) for s in v1_sigs):
+    try:
+        event = stripe_lib.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except stripe_lib.errors.SignatureVerificationError as e:
+        print(f"Stripe signature error: {e}")
         return jsonify({"error": "Invalid signature"}), 400
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return jsonify({"error": "Webhook error"}), 400
 
     event = raw_event
 
