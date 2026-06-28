@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, redirect, render_template
-from agents import create_hunter, create_closer, create_delivery, create_analyst
+from agents import create_hunter, create_closer, create_delivery, create_analyst, check_email_replies, send_followups, ceo_optimize_emails
 from supabase import create_client
 from dotenv import load_dotenv
 import anthropic
@@ -217,6 +217,23 @@ def agency_loop():
     while True:
         iteration += 1
         try:
+            # 1. Controlla risposte IMAP (ogni ciclo ~2h)
+            try:
+                new_replies = check_email_replies(db)
+                if new_replies:
+                    print(f"IMAP: {new_replies} nuove risposte rilevate")
+            except Exception as e:
+                print(f"IMAP check failed: {e}")
+
+            # 2. Invia follow-up scaduti (every cycle, query returns only due ones)
+            try:
+                followups_sent = send_followups(db)
+                if followups_sent:
+                    send_telegram(f"📤 Follow-up inviati: {followups_sent}")
+            except Exception as e:
+                print(f"Follow-up failed: {e}")
+
+            # 3. CEO pensa e delega all'agente
             decision = ceo_think()
             msg = f"Ciclo {iteration} - CEO: {decision.get('priority')} - Agente: {decision.get('agent')}"
             if decision.get("blocked"):
@@ -231,6 +248,14 @@ def agency_loop():
                         msg += f" - Fatto: {json.dumps(result, ensure_ascii=False)[:150]}"
             send_telegram(msg)
             print(msg)
+
+            # 4. CEO ottimizza prompt email ogni 5 cicli (ogni ~10h)
+            if iteration % 5 == 0:
+                try:
+                    ceo_optimize_emails(db)
+                except Exception as e:
+                    print(f"CEO optimize failed: {e}")
+
         except Exception as e:
             send_telegram(f"ERRORE: {str(e)[:200]}")
             print(f"ERRORE: {e}")
@@ -348,6 +373,29 @@ def dashboard():
                 <div class="label">Mercati Attivi</div>
             </div>
         </div>
+
+        <div class="metrics-grid" style="margin-bottom:30px;">
+            <div class="metric-card" style="border-color:rgba(0,255,136,0.2);">
+                <div class="icon">📊</div>
+                <div class="value" style="color:#00ff88;font-size:32px;" id="pl-profit">0€</div>
+                <div class="label">Profitto Netto</div>
+            </div>
+            <div class="metric-card">
+                <div class="icon">📧</div>
+                <div class="value" style="font-size:32px;" id="pl-emails">0</div>
+                <div class="label">Email Inviate</div>
+            </div>
+            <div class="metric-card">
+                <div class="icon">💬</div>
+                <div class="value" style="color:#00b4d8;font-size:32px;" id="pl-rate">0%</div>
+                <div class="label">Reply Rate</div>
+            </div>
+            <div class="metric-card">
+                <div class="icon">💸</div>
+                <div class="value" style="color:#ff6b35;font-size:32px;" id="pl-spent">0€</div>
+                <div class="label">Costi Operativi</div>
+            </div>
+        </div>
         
         <div class="section-title">🧠 Team Agenti AI</div>
         <div class="agents-grid" id="agents-grid">
@@ -431,6 +479,17 @@ def dashboard():
             } catch(e) {}
         }
         
+        async function updatePL() {
+            try {
+                const resp = await fetch('/api/pl');
+                const d = await resp.json();
+                document.getElementById('pl-profit').textContent = d.profit + '€';
+                document.getElementById('pl-emails').textContent = d.emails_sent;
+                document.getElementById('pl-rate').textContent = d.reply_rate + '%';
+                document.getElementById('pl-spent').textContent = d.spent + '€';
+            } catch(e) {}
+        }
+
         async function updatePipeline() {
             try {
                 const resp = await fetch('/prospects');
@@ -459,9 +518,11 @@ def dashboard():
         setInterval(updateDashboard, 5000);
         setInterval(updateLogs, 10000);
         setInterval(updatePipeline, 30000);
+        setInterval(updatePL, 60000);
         updateDashboard();
         updateLogs();
         updatePipeline();
+        updatePL();
     </script>
 </body>
 </html>"""
@@ -501,9 +562,9 @@ def prospects_pipeline():
             if s not in pipeline:
                 pipeline[s] = {"total": 0, "contacted": 0, "replied": 0}
             pipeline[s]["total"] += 1
-            if p.get("status") in ("contacted", "replied", "converted"):
+            if p.get("status") in ("contacted", "followup_1", "followup_2", "replied", "converted"):
                 pipeline[s]["contacted"] += 1
-            if p.get("status") == "replied":
+            if p.get("status") in ("replied", "converted"):
                 pipeline[s]["replied"] += 1
         result = []
         for sector, stats in pipeline.items():
@@ -511,8 +572,35 @@ def prospects_pipeline():
             result.append({"sector": sector, "total": stats["total"], "contacted": stats["contacted"], "replied": stats["replied"], "conversion_rate": conv})
         result.sort(key=lambda x: x["total"], reverse=True)
         return jsonify(result)
-    except Exception as e:
+    except Exception:
         return jsonify([])
+
+
+@app.route("/api/pl")
+def pl_report():
+    try:
+        clients = db.table("clients").select("mrr").eq("status", "active").execute()
+        mrr = sum(c.get("mrr", 0) for c in (clients.data or []))
+        total_emails = db.table("prospects").select("id").in_("status", ["contacted", "followup_1", "followup_2", "replied", "converted"]).execute()
+        replied = db.table("prospects").select("id").in_("status", ["replied", "converted"]).execute()
+        total_contacted = len(total_emails.data) if total_emails.data else 0
+        total_replied = len(replied.data) if replied.data else 0
+        reply_rate = round(total_replied / total_contacted * 100, 1) if total_contacted > 0 else 0
+        try:
+            s = db.table("settings").select("value").eq("key", "budget_usato").execute()
+            spent = round(float(s.data[0]["value"]), 2) if s.data else 0.0
+        except Exception:
+            spent = 0.0
+        return jsonify({
+            "mrr": mrr,
+            "spent": spent,
+            "profit": round(mrr - spent, 2),
+            "emails_sent": total_contacted,
+            "replies": total_replied,
+            "reply_rate": reply_rate
+        })
+    except Exception as e:
+        return jsonify({"mrr": 0, "spent": 0, "profit": 0, "emails_sent": 0, "replies": 0, "reply_rate": 0})
 
 @app.route("/webhook/signup", methods=["POST"])
 def signup():
