@@ -1,8 +1,7 @@
-import os, json, requests as req, time, re, random
+﻿import os, json, requests as req, time, re, random
 from datetime import date, timedelta
 from dotenv import load_dotenv
 load_dotenv()
-from supabase import create_client
 
 DAILY_EMAIL_LIMIT = 30
 CITIES = ["Milano", "Roma", "Torino", "Napoli", "Bologna", "Firenze", "Venezia", "Bari", "Palermo", "Genova"]
@@ -298,7 +297,7 @@ def _handle_reply(db, prospect, body_text):
             "follow_up_at": (date.today() + timedelta(days=5)).isoformat(),
             "agent_notes": "OUT_OF_OFFICE — ricontatto +5gg"
         }).eq("id", prospect["id"]).execute()
-        send_telegram(f"🏖️ {company} fuori ufficio → ricontatto +5gg")
+        send_telegram(f"🏖ï¸ {company} fuori ufficio → ricontatto +5gg")
 
     _track_cost(db, 0.0006, f"reply handler {company}")
 
@@ -705,3 +704,380 @@ def switch_market(db, params):
         send_telegram(f"🔄 SWITCH MERCATO: da {old_sector} a {new_sector}")
         return {"switched": True, "new_sector": new_sector}
     return {"switched": False, "reason": "Mercato già esistente"}
+
+# --- Revenue pipeline: deterministic micro-agency flow ---
+# AI is used only for website analysis, synthesis, copywriting and reply classification.
+
+DENTIST_VERTICAL = "dentisti"
+AUDIT_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
+
+
+def _today_key():
+    return date.today().isoformat()
+
+
+def _safe_int(value, default=0):
+    try:
+        return int(value or default)
+    except Exception:
+        return default
+
+
+def _normalize_url(url):
+    if not url:
+        return ""
+    url = url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    return url
+
+
+def _extract_domain(url):
+    try:
+        clean = _normalize_url(url)
+        return re.sub(r"^www\.", "", clean.split("//", 1)[-1].split("/", 1)[0].lower())
+    except Exception:
+        return ""
+
+
+def _metric_increment(db, field, amount=1):
+    today = _today_key()
+    allowed = {"emails_sent", "replies", "calls_booked", "clients_closed", "mrr", "leads_found"}
+    if field not in allowed:
+        return False
+    try:
+        existing = db.table("daily_metrics").select("*").eq("date", today).execute()
+        if existing.data:
+            row = existing.data[0]
+            current = _safe_int(row.get(field), 0)
+            db.table("daily_metrics").update({field: current + amount}).eq("date", today).execute()
+        else:
+            payload = {
+                "date": today,
+                "leads_found": 0,
+                "emails_sent": 0,
+                "replies": 0,
+                "calls_booked": 0,
+                "clients_closed": 0,
+                "mrr": 0,
+            }
+            payload[field] = amount
+            db.table("daily_metrics").insert(payload).execute()
+        return True
+    except Exception as e:
+        print(f"daily_metrics update skipped: {e}")
+        return False
+
+
+class WebsiteAuditAgent:
+    """Audits a prospect website and returns commercial problems/opportunities."""
+
+    def __init__(self):
+        self.api_key = os.getenv("CLAUDE_API_KEY")
+
+    def audit(self, website_url, company_name=""):
+        website_url = _normalize_url(website_url)
+        fallback_name = company_name or _extract_domain(website_url) or "Studio dentistico"
+        if not website_url:
+            return {
+                "company_name": fallback_name,
+                "problems": ["Sito web non disponibile o non trovato nella fonte lead"],
+                "opportunities": ["Recuperare un contatto diretto prima di inviare outreach"],
+                "estimated_lost_leads": 0,
+                "score": 10,
+            }
+
+        html = ""
+        status_code = None
+        try:
+            resp = req.get(website_url, timeout=8, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True)
+            status_code = resp.status_code
+            html = resp.text[:35000]
+        except Exception as e:
+            return {
+                "company_name": fallback_name,
+                "problems": [f"Homepage non raggiungibile durante audit: {type(e).__name__}"],
+                "opportunities": ["Contattare lo studio con un audit di presenza digitale e risposta lead"],
+                "estimated_lost_leads": 3,
+                "score": 20,
+            }
+
+        text = re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", " ", html, flags=re.I)
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()[:5000]
+        title = ""
+        title_match = re.search(r"<title[^>]*>([^<]{3,120})</title>", html, re.I)
+        if title_match:
+            title = title_match.group(1).strip()
+
+        has_booking = bool(re.search(r"prenota|booking|calendly|appuntamento|visita", html, re.I))
+        has_phone = bool(re.search(r"(\+39|tel:|\b0\d{1,3}[\s.-]?\d{5,}\b)", html, re.I))
+        has_whatsapp = "whatsapp" in html.lower() or "wa.me" in html.lower()
+        has_contact_form = bool(re.search(r"<form|contattaci|richiedi", html, re.I))
+        heuristic_score = 55
+        heuristic_score += 10 if has_booking else -12
+        heuristic_score += 8 if has_phone else -8
+        heuristic_score += 6 if has_whatsapp else -4
+        heuristic_score += 8 if has_contact_form else -8
+        heuristic_score = max(5, min(95, heuristic_score))
+
+        if self.api_key:
+            try:
+                import anthropic
+                client = anthropic.Anthropic(api_key=self.api_key)
+                prompt = (
+                    "Analizza questo sito di uno studio dentistico italiano per una micro-agenzia AI. "
+                    "Usa solo il contenuto fornito. Trova problemi che fanno perdere richieste pazienti "
+                    "e opportunita per recuperare richieste e riempire calendario. "
+                    "Rispondi SOLO JSON con chiavi: company_name, problems (array), opportunities (array), "
+                    "estimated_lost_leads (integer mensile), score (0-100).\n\n"
+                    f"URL: {website_url}\nTitolo: {title}\nHTTP: {status_code}\n"
+                    f"Segnali: booking={has_booking}, phone={has_phone}, whatsapp={has_whatsapp}, form={has_contact_form}\n"
+                    f"Testo sito:\n{text[:3500]}"
+                )
+                response = client.messages.create(
+                    model=AUDIT_MODEL,
+                    max_tokens=450,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                data = json.loads(response.content[0].text)
+                return {
+                    "company_name": data.get("company_name") or fallback_name,
+                    "problems": list(data.get("problems") or [])[:5],
+                    "opportunities": list(data.get("opportunities") or [])[:5],
+                    "estimated_lost_leads": _safe_int(data.get("estimated_lost_leads"), 0),
+                    "score": max(0, min(100, _safe_int(data.get("score"), heuristic_score))),
+                }
+            except Exception as e:
+                print(f"Website AI audit fallback: {e}")
+
+        problems = []
+        opportunities = []
+        if not has_booking:
+            problems.append("Manca una prenotazione online evidente per i nuovi pazienti")
+            opportunities.append("Inserire una CTA di prenotazione e follow-up automatico per richieste fuori orario")
+        if not has_whatsapp:
+            problems.append("WhatsApp non e visibile come canale rapido per richieste urgenti")
+            opportunities.append("Aggiungere risposta automatica WhatsApp/email per richieste di prima visita")
+        if not has_contact_form:
+            problems.append("Il form contatti non e immediatamente riconoscibile")
+            opportunities.append("Ridurre attrito con form breve e notifica immediata allo studio")
+        if not problems:
+            problems.append("Il sito ha canali di contatto, ma non mostra un recupero automatico delle richieste perse")
+            opportunities.append("Automatizzare richiamo e qualificazione delle richieste entro pochi minuti")
+
+        lost = max(2, round((100 - heuristic_score) / 10))
+        return {
+            "company_name": fallback_name,
+            "problems": problems[:5],
+            "opportunities": opportunities[:5],
+            "estimated_lost_leads": lost,
+            "score": heuristic_score,
+        }
+
+
+class LeadScoring:
+    """Deterministic score: no AI decision making."""
+
+    def score(self, prospect, audit):
+        score = 0
+        if prospect.get("website"):
+            score += 25
+        if _is_real_email(prospect.get("contact_email")):
+            score += 30
+        if (prospect.get("sector") or "").lower() in ("dentisti", "dentista", "studio dentistico"):
+            score += 15
+        if audit.get("estimated_lost_leads", 0) >= 4:
+            score += 15
+        if audit.get("score", 0) < 65:
+            score += 10
+        if prospect.get("contact_phone"):
+            score += 5
+        reason = "email business + sito + audit dentisti" if score >= 65 else "lead debole o audit poco urgente"
+        return {"score": min(100, score), "qualified": score >= 65, "reason": reason}
+
+
+class OutreachGenerator:
+    """Creates audit-led outreach copy for dentists."""
+
+    def __init__(self):
+        self.api_key = os.getenv("CLAUDE_API_KEY")
+
+    def generate(self, prospect, audit, score):
+        company = prospect.get("company_name") or audit.get("company_name") or "Studio"
+        first_problem = (audit.get("problems") or ["alcune richieste pazienti possono perdersi fuori orario"])[0]
+        lost = audit.get("estimated_lost_leads", 3)
+        if self.api_key:
+            try:
+                import anthropic
+                client = anthropic.Anthropic(api_key=self.api_key)
+                prompt = (
+                    "Scrivi una email cold B2B in italiano per uno studio dentistico. "
+                    "Obiettivo: offrire audit gratuito, non vendere subito abbonamento. Max 110 parole. "
+                    "Tono: diretto, concreto, professionale. CTA: Ricevi audit gratuito. "
+                    "Non inventare dati oltre quelli forniti.\n\n"
+                    f"Studio: {company}\nProblema rilevato: {first_problem}\n"
+                    f"Richieste potenzialmente perse/mese: {lost}\nScore lead: {score.get('score')}\n"
+                )
+                response = client.messages.create(
+                    model=AUDIT_MODEL,
+                    max_tokens=240,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                body = response.content[0].text.strip()
+            except Exception as e:
+                print(f"Outreach AI fallback: {e}")
+                body = ""
+        else:
+            body = ""
+
+        if not body:
+            body = (
+                f"Buongiorno, ho analizzato il sito di {company} e ho notato questo punto: {first_problem}.\n\n"
+                f"Per studi dentistici questo spesso significa richieste pazienti non recuperate, soprattutto fuori orario. "
+                f"Abbiamo preparato un audit gratuito con 3 azioni pratiche per recuperare richieste perse e riempire meglio il calendario.\n\n"
+                "Vuole che glielo invii?\n\nTeam GetAutomatik"
+            )
+        return {
+            "subject": f"Audit gratuito per {company}",
+            "body": body,
+            "cta": "Ricevi audit gratuito",
+        }
+
+
+class CampaignSender:
+    """Sends queued outreach with existing SMTP and logs to Supabase."""
+
+    def queue(self, db, prospect, audit, scoring, message):
+        payload = {
+            "prospect_id": prospect.get("id"),
+            "company_name": prospect.get("company_name") or audit.get("company_name"),
+            "contact_email": prospect.get("contact_email"),
+            "sector": prospect.get("sector") or DENTIST_VERTICAL,
+            "status": "queued",
+            "score": scoring.get("score"),
+            "subject": message.get("subject"),
+            "body": message.get("body"),
+            "audit": json.dumps(audit, ensure_ascii=False),
+            "created_at": datetime_now_iso(),
+        }
+        try:
+            existing = db.table("outreach").select("id,status").eq("contact_email", payload["contact_email"]).execute()
+            if existing.data:
+                return {"queued": False, "reason": "duplicate_outreach"}
+            db.table("outreach").insert(payload).execute()
+            return {"queued": True}
+        except Exception as e:
+            print(f"outreach queue skipped: {e}")
+            return {"queued": False, "reason": str(e)[:120]}
+
+    def send_queued(self, db, limit=DAILY_EMAIL_LIMIT):
+        try:
+            rows = db.table("outreach").select("*").eq("status", "queued").limit(limit).execute()
+        except Exception as e:
+            print(f"outreach table unavailable: {e}")
+            return 0
+        sent = 0
+        for row in rows.data or []:
+            email_to = row.get("contact_email")
+            if not _is_real_email(email_to):
+                db.table("outreach").update({"status": "skipped", "error": "invalid_email"}).eq("id", row.get("id")).execute()
+                continue
+            if not _check_and_increment_daily_emails(db):
+                break
+            ok = _send_plain_email(email_to, row.get("subject", "Audit gratuito"), row.get("body", ""))
+            status = "sent" if ok else "failed"
+            update = {"status": status, "sent_at": datetime_now_iso()}
+            if not ok:
+                update["error"] = "smtp_failed"
+            try:
+                db.table("outreach").update(update).eq("id", row.get("id")).execute()
+                if row.get("prospect_id"):
+                    db.table("prospects").update({"status": "contacted", "follow_up_at": (date.today() + timedelta(days=3)).isoformat()}).eq("id", row.get("prospect_id")).execute()
+            except Exception as e:
+                print(f"outreach status update failed: {e}")
+            if ok:
+                _metric_increment(db, "emails_sent", 1)
+                sent += 1
+        return sent
+
+
+def datetime_now_iso():
+    from datetime import datetime
+    return datetime.utcnow().isoformat() + "Z"
+
+
+class MetricsTracker:
+    def snapshot(self, db):
+        today = _today_key()
+        result = {"leads_today": 0, "emails_sent": 0, "replies": 0, "calls_booked": 0, "clients_closed": 0, "mrr": 0}
+        try:
+            metrics = db.table("daily_metrics").select("*").eq("date", today).execute()
+            if metrics.data:
+                row = metrics.data[0]
+                result.update({
+                    "leads_today": _safe_int(row.get("leads_found"), 0),
+                    "emails_sent": _safe_int(row.get("emails_sent"), 0),
+                    "replies": _safe_int(row.get("replies"), 0),
+                    "calls_booked": _safe_int(row.get("calls_booked"), 0),
+                    "clients_closed": _safe_int(row.get("clients_closed"), 0),
+                    "mrr": _safe_int(row.get("mrr"), 0),
+                })
+        except Exception as e:
+            print(f"daily_metrics read fallback: {e}")
+        try:
+            clients = db.table("clients").select("mrr").eq("status", "active").execute()
+            result["clients_closed"] = len(clients.data or [])
+            result["mrr"] = sum(_safe_int(c.get("mrr"), 0) for c in (clients.data or []))
+        except Exception:
+            pass
+        return result
+
+
+def run_revenue_pipeline(db, sector=DENTIST_VERTICAL, location=None, hunt_count=8, audit_limit=5, send_limit=DAILY_EMAIL_LIMIT):
+    """Fixed business pipeline: hunt -> audit -> score -> write outreach -> send -> metrics."""
+    summary = {"sector": sector, "hunted": 0, "audited": 0, "qualified": 0, "queued": 0, "sent": 0}
+
+    hunt = scrape_google_maps(db, {"sector": sector, "location": location or _rotation_city(), "count": hunt_count})
+    summary["hunted"] = hunt.get("prospects_found", 0)
+    if summary["hunted"]:
+        _metric_increment(db, "leads_found", summary["hunted"])
+
+    auditor = WebsiteAuditAgent()
+    scorer = LeadScoring()
+    generator = OutreachGenerator()
+    sender = CampaignSender()
+
+    try:
+        prospects = db.table("prospects").select("*").eq("sector", sector).or_("status.is.null,status.in.(new,discovered)").limit(audit_limit).execute()
+    except Exception:
+        prospects = db.table("prospects").select("*").eq("sector", sector).not_.in_("status", ["contacted","followup_1","qualified","discarded","dead","warm_1","warm_2","warm_closed","converted"]).limit(audit_limit).execute()
+
+    for prospect in prospects.data or []:
+        website = prospect.get("website")
+        if not website:
+            continue
+        audit = auditor.audit(website, prospect.get("company_name", ""))
+        scoring = scorer.score(prospect, audit)
+        summary["audited"] += 1
+        status = "qualified" if scoring["qualified"] else "discarded"
+        try:
+            db.table("prospects").update({
+                "status": status,
+                "score": scoring["score"],
+                "agent_notes": json.dumps({"audit": audit, "score_reason": scoring["reason"]}, ensure_ascii=False)[:900],
+            }).eq("id", prospect.get("id")).execute()
+        except Exception as e:
+            print(f"prospect audit update skipped: {e}")
+        if not scoring["qualified"]:
+            continue
+        summary["qualified"] += 1
+        message = generator.generate(prospect, audit, scoring)
+        queued = sender.queue(db, prospect, audit, scoring, message)
+        if queued.get("queued"):
+            summary["queued"] += 1
+
+    summary["sent"] = sender.send_queued(db, limit=send_limit)
+    return summary
+
+

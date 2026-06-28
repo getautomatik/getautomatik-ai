@@ -1,387 +1,115 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GetAutomatik AI — Agente AI che porta clienti qualificati 24/7</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <title>GetAutomatik AI - Audit gratuito per studi dentistici</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #050510; color: #fff; line-height: 1.6; }
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-
-        /* NAV */
-        nav { padding: 20px 0; border-bottom: 1px solid rgba(255,255,255,0.05); position: sticky; top: 0; background: rgba(5,5,16,0.95); backdrop-filter: blur(12px); z-index: 100; }
-        .nav-inner { display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
-        .logo span { color: #00ff88; }
-        .nav-cta { background: linear-gradient(135deg, #00ff88, #00b4d8); color: #050510; padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 700; text-decoration: none; transition: opacity 0.2s; }
-        .nav-cta:hover { opacity: 0.85; }
-
-        /* URGENCY */
-        .urgency { background: linear-gradient(135deg, rgba(255,68,68,0.12), rgba(255,140,0,0.12)); border-bottom: 1px solid rgba(255,100,0,0.25); padding: 12px 0; text-align: center; font-size: 13px; }
-        .urgency strong { color: #ff6b35; }
-        .countdown { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; }
-        .cd-block { background: rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 7px; font-weight: 700; font-size: 14px; }
-
-        /* HERO */
-        .hero { padding: 90px 0 70px; text-align: center; position: relative; overflow: hidden; }
-        .hero::before { content: ''; position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 700px; height: 700px; background: radial-gradient(circle, rgba(0,255,136,0.07) 0%, transparent 65%); pointer-events: none; }
-        .hero-badge { display: inline-block; background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.25); padding: 7px 18px; border-radius: 50px; font-size: 12px; color: #00ff88; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 28px; }
-        .hero h1 { font-size: 58px; font-weight: 900; letter-spacing: -2px; line-height: 1.08; margin-bottom: 22px; }
-        .hero h1 em { font-style: normal; background: linear-gradient(135deg, #00ff88, #00b4d8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero p { font-size: 19px; color: rgba(255,255,255,0.55); max-width: 580px; margin: 0 auto 40px; }
-        .hero-cta { display: inline-block; background: linear-gradient(135deg, #00ff88, #00b4d8); color: #050510; padding: 18px 44px; border-radius: 12px; font-size: 17px; font-weight: 800; text-decoration: none; transition: transform 0.25s, box-shadow 0.25s; }
-        .hero-cta:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(0,255,136,0.25); }
-        .hero-sub { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.28); }
-        .hero-logos { margin-top: 50px; display: flex; justify-content: center; align-items: center; gap: 30px; flex-wrap: wrap; }
-        .hero-logos span { font-size: 12px; color: rgba(255,255,255,0.2); letter-spacing: 1px; text-transform: uppercase; }
-        .hero-logos .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.08); }
-
-        /* SEZIONI */
-        section { padding: 80px 0; }
-        .section-label { font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #00ff88; margin-bottom: 14px; text-align: center; }
-        h2 { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; text-align: center; margin-bottom: 14px; }
-        .section-sub { text-align: center; font-size: 16px; color: rgba(255,255,255,0.45); margin-bottom: 56px; max-width: 500px; margin-left: auto; margin-right: auto; }
-
-        /* PROBLEMA */
-        .problems-bg { background: rgba(255,255,255,0.015); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .problems { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-        .problem-card { background: rgba(255,0,0,0.04); border: 1px solid rgba(255,50,50,0.12); border-radius: 16px; padding: 32px 28px; }
-        .problem-card .icon { font-size: 36px; margin-bottom: 16px; }
-        .problem-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
-        .problem-card p { font-size: 14px; color: rgba(255,255,255,0.45); }
-
-        /* COME FUNZIONA */
-        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; position: relative; }
-        .steps::before { content: ''; position: absolute; top: 32px; left: calc(16.66% + 16px); right: calc(16.66% + 16px); height: 1px; background: linear-gradient(90deg, transparent, rgba(0,255,136,0.3), transparent); }
-        .step { text-align: center; padding: 0 16px; }
-        .step-num { width: 64px; height: 64px; background: linear-gradient(135deg, #00ff88, #00b4d8); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 20px; color: #050510; }
-        .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
-        .step p { font-size: 14px; color: rgba(255,255,255,0.45); }
-
-        /* RISULTATI */
-        .results-bg { background: linear-gradient(180deg, rgba(0,255,136,0.03) 0%, transparent 100%); border-top: 1px solid rgba(0,255,136,0.08); }
-        .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-        .result-card { text-align: center; padding: 40px 24px; background: rgba(255,255,255,0.02); border: 1px solid rgba(0,255,136,0.12); border-radius: 20px; }
-        .result-num { font-size: 56px; font-weight: 900; letter-spacing: -2px; background: linear-gradient(135deg, #00ff88, #00b4d8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
-        .result-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-        .result-card p { font-size: 13px; color: rgba(255,255,255,0.4); }
-
-        /* SOCIAL PROOF */
-        .reviews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .review-card { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 26px; }
-        .review-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #00ff88, #00b4d8); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #050510; flex-shrink: 0; }
-        .review-meta .name { font-weight: 600; font-size: 14px; }
-        .review-meta .sector { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 2px; }
-        .stars { color: #ffd700; font-size: 13px; letter-spacing: 1px; margin-bottom: 12px; }
-        .review-text { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.65; font-style: italic; }
-        .review-stat { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 13px; color: #00ff88; font-weight: 600; }
-
-        /* PRICING */
-        .pricing-wrap { max-width: 520px; margin: 0 auto; }
-        .price-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(0,255,136,0.25); border-radius: 24px; padding: 44px 40px; text-align: center; position: relative; overflow: hidden; }
-        .price-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #00ff88, #00b4d8); }
-        .trial-badge { display: inline-block; background: rgba(0,255,136,0.15); border: 1px solid rgba(0,255,136,0.3); color: #00ff88; font-size: 13px; font-weight: 600; padding: 6px 16px; border-radius: 50px; margin-bottom: 24px; }
-        .price-amount { font-size: 64px; font-weight: 900; letter-spacing: -3px; }
-        .price-amount sup { font-size: 24px; font-weight: 600; vertical-align: super; letter-spacing: 0; }
-        .price-amount sub { font-size: 18px; font-weight: 400; color: rgba(255,255,255,0.4); letter-spacing: 0; }
-        .price-note { font-size: 13px; color: rgba(255,255,255,0.35); margin: 8px 0 28px; }
-        .features { list-style: none; margin: 0 0 30px; text-align: left; }
-        .features li { padding: 10px 0; font-size: 14px; color: rgba(255,255,255,0.65); border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; align-items: center; gap: 10px; }
-        .features li::before { content: '✓'; color: #00ff88; font-weight: 700; flex-shrink: 0; }
-        .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-        .form-input { padding: 13px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: white; font-size: 14px; font-family: inherit; transition: border-color 0.2s; }
-        .form-input:focus { outline: none; border-color: rgba(0,255,136,0.4); }
-        .form-input option { background: #1a1a2e; }
-        .submit-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #00ff88, #00b4d8); color: #050510; border: none; border-radius: 10px; font-size: 16px; font-weight: 800; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; font-family: inherit; }
-        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,255,136,0.25); }
-        .form-msg { font-size: 13px; margin-top: 8px; min-height: 20px; }
-        .guarantee { margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.25); }
-
-        /* FAQ */
-        .faq { max-width: 720px; margin: 0 auto; }
-        .faq-item { border-bottom: 1px solid rgba(255,255,255,0.06); padding: 22px 0; cursor: pointer; }
-        .faq-q { font-size: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-        .faq-q .arrow { color: #00ff88; font-size: 18px; transition: transform 0.25s; flex-shrink: 0; }
-        .faq-a { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.7; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, margin-top 0.3s; }
-        .faq-item.open .faq-a { max-height: 200px; margin-top: 14px; }
-        .faq-item.open .arrow { transform: rotate(45deg); }
-
-        /* FINAL CTA */
-        .final-cta { text-align: center; padding: 80px 0; }
-        .final-cta h2 { margin-bottom: 16px; }
-        .final-cta p { font-size: 17px; color: rgba(255,255,255,0.45); margin-bottom: 36px; }
-
-        /* FOOTER */
-        footer { text-align: center; padding: 36px; color: rgba(255,255,255,0.15); font-size: 13px; border-top: 1px solid rgba(255,255,255,0.04); }
-
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 36px; }
-            .problems, .steps, .results, .reviews { grid-template-columns: 1fr; }
-            .steps::before { display: none; }
-            h2 { font-size: 30px; }
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Inter, sans-serif; background: #f7f7f2; color: #101415; line-height: 1.6; }
+        .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+        nav { padding: 20px 0; border-bottom: 1px solid rgba(16,20,21,.08); background: rgba(247,247,242,.92); position: sticky; top: 0; backdrop-filter: blur(10px); z-index: 10; }
+        .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .logo { font-weight: 900; letter-spacing: -.4px; font-size: 18px; }
+        .logo span { color: #147a5c; }
+        .nav-cta, .hero-cta, button { background: #147a5c; color: #fff; border: 0; border-radius: 10px; padding: 13px 20px; font-weight: 800; text-decoration: none; cursor: pointer; font-family: inherit; }
+        .hero { padding: 74px 0 54px; }
+        .hero-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+        .eyebrow { color: #147a5c; text-transform: uppercase; font-size: 12px; letter-spacing: 1.4px; font-weight: 800; margin-bottom: 18px; }
+        h1 { font-size: clamp(38px, 6vw, 68px); line-height: 1.02; letter-spacing: -2.2px; margin-bottom: 24px; }
+        .lead { font-size: 19px; color: rgba(16,20,21,.68); max-width: 660px; margin-bottom: 30px; }
+        .proof { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 34px; }
+        .proof div, .audit-card, .form-card { background: #fff; border: 1px solid rgba(16,20,21,.09); border-radius: 14px; box-shadow: 0 20px 60px rgba(20,122,92,.08); }
+        .proof div { padding: 18px; }
+        .proof strong { display: block; font-size: 24px; margin-bottom: 4px; }
+        .proof span { color: rgba(16,20,21,.56); font-size: 13px; }
+        .audit-card { padding: 28px; }
+        .audit-card h2 { font-size: 24px; letter-spacing: -.6px; margin-bottom: 18px; }
+        .check { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(16,20,21,.07); }
+        .check:last-child { border-bottom: 0; }
+        .mark { color: #147a5c; font-weight: 900; }
+        section { padding: 56px 0; }
+        .section-title { font-size: 34px; letter-spacing: -1px; line-height: 1.12; margin-bottom: 14px; }
+        .muted { color: rgba(16,20,21,.6); max-width: 720px; }
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
+        .step { background: #fff; border: 1px solid rgba(16,20,21,.08); border-radius: 14px; padding: 24px; }
+        .step-num { color: #147a5c; font-weight: 900; margin-bottom: 12px; }
+        .step h3 { margin-bottom: 8px; }
+        .form-band { background: #101415; color: #fff; padding: 62px 0; }
+        .form-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 36px; align-items: start; }
+        .form-card { padding: 28px; color: #101415; }
+        input, select { width: 100%; border: 1px solid rgba(16,20,21,.14); border-radius: 10px; padding: 14px 15px; font: inherit; margin-bottom: 12px; }
+        .form-msg { min-height: 22px; margin-top: 10px; font-size: 14px; }
+        footer { padding: 34px 0; color: rgba(16,20,21,.46); font-size: 13px; }
+        @media (max-width: 860px) { .hero-grid, .form-grid, .steps { grid-template-columns: 1fr; } .proof { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-
 <nav>
-    <div class="container">
-        <div class="nav-inner">
-            <div class="logo">Getautomatik <span>AI</span></div>
-            <a href="#pricing" class="nav-cta">Inizia gratis 7 giorni</a>
-        </div>
+    <div class="container nav-inner">
+        <div class="logo">GetAutomatik <span>AI</span></div>
+        <a class="nav-cta" href="#audit">Ricevi audit gratuito</a>
     </div>
 </nav>
 
-<div class="urgency">
-    <strong>🔴 Solo 3 posti disponibili questo mese</strong> — Offerta scade tra:
-    <span class="countdown">
-        <span class="cd-block" id="cd-h">47</span>:
-        <span class="cd-block" id="cd-m">59</span>:
-        <span class="cd-block" id="cd-s">59</span>
-    </span>
-</div>
-
-<!-- HERO -->
-<section class="hero">
-    <div class="container">
-        <div class="hero-badge">🤖 Agente AI Autonomo</div>
-        <h1>Il tuo agente AI che lavora<br><em>24/7 per portarti clienti qualificati</em></h1>
-        <p>Rispondi ai lead in 30 secondi, qualifica automaticamente, fissa appuntamenti. Tu ti occupi solo di chiudere.</p>
-        <a href="#pricing" class="hero-cta">Inizia gratis 7 giorni →</a>
-        <div class="hero-sub">Carta richiesta · Nessun addebito per 7 giorni · Cancella quando vuoi</div>
-        <div class="hero-logos">
-            <span>Usato da agenzie in tutta Italia</span>
-            <div class="sep"></div>
-            <span>Setup in 24 ore</span>
-            <div class="sep"></div>
-            <span>Nessun contratto</span>
-        </div>
-    </div>
-</section>
-
-<!-- PROBLEMA -->
-<section class="problems-bg">
-    <div class="container">
-        <section>
-            <div class="section-label">Il problema</div>
-            <h2>Ti suona familiare?</h2>
-            <p class="section-sub">Ogni agenzia immobiliare perde opportunità ogni giorno per gli stessi motivi.</p>
-            <div class="problems">
-                <div class="problem-card">
-                    <div class="icon">🌙</div>
-                    <h3>Lead persi di notte</h3>
-                    <p>Il 40% delle richieste arriva fuori orario. Quando rispondi il mattino, il cliente ha già scelto qualcun altro.</p>
-                </div>
-                <div class="problem-card">
-                    <div class="icon">📞</div>
-                    <h3>Troppo tempo al telefono</h3>
-                    <p>Ore al giorno per qualificare lead che poi non convertono. Tempo sottratto ai clienti veri che generano fatturato.</p>
-                </div>
-                <div class="problem-card">
-                    <div class="icon">📅</div>
-                    <h3>Appuntamenti non qualificati</h3>
-                    <p>Visite inutili, budget non allineati, acquirenti non seri. L'agenda piena non significa agenzia redditizia.</p>
+<main>
+    <section class="hero">
+        <div class="container hero-grid">
+            <div>
+                <div class="eyebrow">Micro-agenzia AI per studi dentistici</div>
+                <h1>Recuperiamo richieste perse e riempiamo automaticamente il calendario dello studio</h1>
+                <p class="lead">Analizziamo sito, canali di contatto e punti in cui i nuovi pazienti si bloccano. Poi prepariamo un audit gratuito con azioni pratiche per recuperare richieste fuori orario, WhatsApp non gestiti e form lasciati senza risposta.</p>
+                <a class="hero-cta" href="#audit">Ricevi audit gratuito</a>
+                <div class="proof">
+                    <div><strong>24h</strong><span>per ricevere il primo audit</span></div>
+                    <div><strong>0€</strong><span>nessun impegno iniziale</span></div>
+                    <div><strong>3 step</strong><span>audit, priorita, piano operativo</span></div>
                 </div>
             </div>
-        </section>
-    </div>
-</section>
-
-<!-- COME FUNZIONA -->
-<section>
-    <div class="container">
-        <div class="section-label">Come funziona</div>
-        <h2>Tre step. Zero attrito.</h2>
-        <p class="section-sub">Dall'attivazione ai primi risultati nel giro di 24 ore.</p>
-        <div class="steps">
-            <div class="step">
-                <div class="step-num">⚡</div>
-                <h3>Installiamo in 24h</h3>
-                <p>Compili il form con i dati della tua agenzia. Noi configuriamo e attiviamo il tuo agente AI entro un giorno lavorativo.</p>
-            </div>
-            <div class="step">
-                <div class="step-num">🤖</div>
-                <h3>Risponde in 30 secondi</h3>
-                <p>Ogni richiesta ricevuta — da qualsiasi portale o canale — viene gestita automaticamente dal sistema, 24 ore su 24.</p>
-            </div>
-            <div class="step">
-                <div class="step-num">🎯</div>
-                <h3>Tu ricevi appuntamenti qualificati</h3>
-                <p>Solo i lead con budget reale e interesse concreto arrivano sulla tua agenda. Gli altri li filtra il sistema.</p>
+            <div class="audit-card">
+                <h2>Cosa controlliamo nello studio</h2>
+                <div class="check"><div class="mark">✓</div><div>Richieste pazienti fuori orario non recuperate.</div></div>
+                <div class="check"><div class="mark">✓</div><div>Assenza di CTA chiare per prenotare prima visita o igiene.</div></div>
+                <div class="check"><div class="mark">✓</div><div>WhatsApp, telefono e form non collegati a follow-up rapido.</div></div>
+                <div class="check"><div class="mark">✓</div><div>Messaggi automatici per riattivare chi non prenota subito.</div></div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- RISULTATI -->
-<section class="results-bg">
-    <div class="container">
-        <section>
-            <div class="section-label">Risultati</div>
-            <h2>Numeri reali</h2>
-            <p class="section-sub">Media sui clienti attivi nel primo trimestre di utilizzo.</p>
-            <div class="results">
-                <div class="result-card">
-                    <div class="result-num">30s</div>
-                    <h3>Tempo di risposta</h3>
-                    <p>Ogni lead riceve una risposta personalizzata in meno di 30 secondi, anche alle 3 di notte.</p>
-                </div>
-                <div class="result-card">
-                    <div class="result-num">+40%</div>
-                    <h3>Lead qualificati in più</h3>
-                    <p>Il tasso di qualificazione medio migliora del 40% rispetto alla gestione manuale nel primo mese.</p>
-                </div>
-                <div class="result-card">
-                    <div class="result-num">10h</div>
-                    <h3>Ore/settimana risparmiate</h3>
-                    <p>Ogni agente della tua squadra recupera in media 10 ore settimanali da dedicare alle trattative vere.</p>
-                </div>
-            </div>
-        </section>
-    </div>
-</section>
-
-<!-- SOCIAL PROOF -->
-<section>
-    <div class="container">
-        <div class="section-label">Recensioni</div>
-        <h2>Cosa dicono le agenzie</h2>
-        <p class="section-sub">Agenzie immobiliari italiane che usano GetAutomatik da almeno 60 giorni.</p>
-        <div class="reviews">
-            <div class="review-card">
-                <div class="review-head">
-                    <div class="avatar">AM</div>
-                    <div class="review-meta">
-                        <div class="name">Agenzia Immobiliare Milano Centro</div>
-                        <div class="sector">Residenziale · Milano</div>
-                    </div>
-                </div>
-                <div class="stars">★★★★★</div>
-                <p class="review-text">"In tre settimane l'agente ha trovato e contattato oltre 200 acquirenti potenziali. Il mio commerciale ora fa solo trattative, mai più filtro telefonico."</p>
-                <div class="review-stat">📈 +23% lead qualificati nel primo mese</div>
-            </div>
-            <div class="review-card">
-                <div class="review-head">
-                    <div class="avatar">SR</div>
-                    <div class="review-meta">
-                        <div class="name">Studio RE Torino</div>
-                        <div class="sector">Compravendite · Torino</div>
-                    </div>
-                </div>
-                <div class="stars">★★★★★</div>
-                <p class="review-text">"Ero scettico. Nella prima settimana abbiamo avuto 8 appuntamenti fissati in automatico, tutti con budget verificato. Non ci credevo."</p>
-                <div class="review-stat">📅 8 appuntamenti in prima settimana</div>
-            </div>
-            <div class="review-card">
-                <div class="review-head">
-                    <div class="avatar">CP</div>
-                    <div class="review-meta">
-                        <div class="name">Casa&Più Roma</div>
-                        <div class="sector">Lusso e affitti · Roma</div>
-                    </div>
-                </div>
-                <div class="stars">★★★★★</div>
-                <p class="review-text">"Prima passavo 3 ore al giorno a qualificare lead. Ora l'agente lo fa mentre lavoro sui clienti veri. Finalmente gestisco l'agenzia anziché il telefono."</p>
-                <div class="review-stat">⏱️ 15 ore/settimana recuperate</div>
+    <section>
+        <div class="container">
+            <h2 class="section-title">Non serve una piattaforma. Serve una pipeline che porta pazienti.</h2>
+            <p class="muted">Per i primi 30 giorni lavoriamo solo sul flusso che genera ricavi: trovare studi adatti, analizzare il sito, stimare le richieste perse, inviare un audit utile e trasformare le risposte in call.</p>
+            <div class="steps">
+                <div class="step"><div class="step-num">01</div><h3>Audit del sito</h3><p>Identifichiamo dove lo studio perde contatti: form, CTA, WhatsApp, telefono e richieste fuori orario.</p></div>
+                <div class="step"><div class="step-num">02</div><h3>Piano recupero richieste</h3><p>Prepariamo priorita semplici: risposta automatica, follow-up e qualificazione paziente.</p></div>
+                <div class="step"><div class="step-num">03</div><h3>Calendario piu pieno</h3><p>Quando ha senso, attiviamo una campagna controllata per riempire appuntamenti senza aumentare il carico dello staff.</p></div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- PRICING -->
-<section id="pricing" style="background: rgba(0,255,136,0.02); border-top: 1px solid rgba(0,255,136,0.07);">
-    <div class="container">
-        <div class="section-label">Piano</div>
-        <h2>Semplice e trasparente</h2>
-        <p class="section-sub">Un solo piano. Tutto incluso. Nessuna sorpresa in fattura.</p>
-        <div class="pricing-wrap">
-            <div class="price-card">
-                <div class="trial-badge">✓ 7 giorni gratuiti — nessun addebito ora</div>
-                <div class="price-amount"><sup>€</sup>197<sub>/mese</sub></div>
-                <div class="price-note">+ €197 setup una tantum · Cancella quando vuoi</div>
-                <ul class="features">
-                    <li>Agente AI attivo 24/7 — risponde ai lead in 30 secondi</li>
-                    <li>Qualificazione automatica con criteri personalizzati</li>
-                    <li>Fino a 500 lead/mese gestiti automaticamente</li>
-                    <li>Integrazione con i tuoi portali (Immobiliare.it, Idealista...)</li>
-                    <li>Report settimanale con metriche e conversioni</li>
-                    <li>Notifiche WhatsApp o email per ogni lead caldo</li>
-                    <li>Adattamento automatico al mercato locale</li>
-                    <li>Supporto onboarding dedicato</li>
-                </ul>
-                <form id="signup-form" onsubmit="submitForm(event)">
-                    <div class="form-group">
-                        <input class="form-input" type="text" id="company" placeholder="Nome agenzia" required>
-                        <input class="form-input" type="email" id="email" placeholder="Email aziendale" required>
-                        <select class="form-input" id="sector" required>
-                            <option value="">Settore</option>
-                            <option value="immobiliare">Immobiliare</option>
-                            <option value="dentisti">Studio dentistico</option>
-                            <option value="palestre">Palestra / Fitness</option>
-                            <option value="ristoranti">Ristorante / Locale</option>
-                            <option value="studi_legali">Studio legale</option>
-                            <option value="altro">Altro</option>
-                        </select>
-                        <input class="form-input" type="tel" id="whatsapp" placeholder="WhatsApp aziendale (opzionale)">
-                    </div>
-                    <button type="submit" class="submit-btn">Inizia 7 giorni gratis →</button>
-                    <p class="form-msg" id="form-msg"></p>
-                </form>
-                <div class="guarantee">🔒 Pagamento sicuro via Stripe · Dati cifrati · Cancella in qualsiasi momento</div>
+    <section class="form-band" id="audit">
+        <div class="container form-grid">
+            <div>
+                <div class="eyebrow" style="color:#7be0bf;">Audit gratuito</div>
+                <h2 class="section-title">Ricevi una diagnosi rapida dei punti in cui perdi richieste pazienti.</h2>
+                <p style="color:rgba(255,255,255,.65);">Compila il form. Ti inviamo un audit sintetico con problemi, opportunita e priorita operative. Nessuna carta richiesta.</p>
             </div>
+            <form class="form-card" id="signup-form" onsubmit="submitForm(event)">
+                <input type="text" id="company" placeholder="Nome studio dentistico" required>
+                <input type="email" id="email" placeholder="Email dello studio" required>
+                <input type="tel" id="whatsapp" placeholder="Telefono o WhatsApp">
+                <input type="hidden" id="sector" value="dentisti">
+                <button type="submit" style="width:100%;">Ricevi audit gratuito</button>
+                <div class="form-msg" id="form-msg"></div>
+            </form>
         </div>
-    </div>
-</section>
-
-<!-- FAQ -->
-<section>
-    <div class="container">
-        <div class="section-label">FAQ</div>
-        <h2>Domande frequenti</h2>
-        <p class="section-sub" style="margin-bottom: 44px;">Tutto quello che devi sapere prima di iniziare.</p>
-        <div class="faq">
-            <div class="faq-item">
-                <div class="faq-q">Come funziona il trial di 7 giorni? <span class="arrow">+</span></div>
-                <div class="faq-a">Inserisci la carta ma non viene addebitato nulla per 7 giorni. Durante il trial il tuo agente è completamente attivo. Se non sei soddisfatto, cancelli dalla dashboard senza spendere un euro. Solo dopo i 7 giorni parte il primo addebito di 197€/mese.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-q">Devo fare qualcosa di tecnico per configurarlo? <span class="arrow">+</span></div>
-                <div class="faq-a">No. Dopo il pagamento ricevi un'email con un link a un breve form (5 minuti). Ci dici come funziona la tua agenzia, quali portali usi e come qualifichi i lead. Noi facciamo il resto entro 24 ore lavorative.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-q">Con quali portali o canali si integra? <span class="arrow">+</span></div>
-                <div class="faq-a">Il sistema gestisce lead da Immobiliare.it, Idealista, Casa.it, Subito.it e qualsiasi altro canale che riceve email o compilazione form. Lo configuriamo durante il tuo onboarding.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-q">Posso cancellare in qualsiasi momento? <span class="arrow">+</span></div>
-                <div class="faq-a">Sì, senza penali e senza periodi di preavviso. Cancelli dalla tua dashboard Stripe e l'abbonamento si interrompe a fine periodo già pagato. Zero vincoli.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-q">Il sistema risponde davvero come un umano? <span class="arrow">+</span></div>
-                <div class="faq-a">L'agente è addestrato con il tono e le informazioni della tua agenzia. Risponde in italiano, con coerenza e professionalità. La maggior parte dei lead non si accorge di parlare con un AI — finché non lo riveli tu stesso.</div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- FINAL CTA -->
-<section style="background: rgba(0,255,136,0.03); border-top: 1px solid rgba(0,255,136,0.08);">
-    <div class="container">
-        <div class="final-cta">
-            <div class="section-label">Inizia ora</div>
-            <h2>La tua agenzia merita un agente AI</h2>
-            <p>7 giorni gratis, setup in 24 ore. Nessun rischio.</p>
-            <a href="#pricing" class="hero-cta">Attiva il trial gratuito →</a>
-        </div>
-    </div>
-</section>
+    </section>
+</main>
 
 <footer>
-    GetAutomatik AI © 2026 · Agenti AI autonomi per agenzie italiane · <a href="mailto:info@getautomatik.com" style="color:inherit;">info@getautomatik.com</a>
+    <div class="container">GetAutomatik AI - Micro-agenzia AI per studi dentistici - info@getautomatik.com</div>
 </footer>
 
 <script>
@@ -389,14 +117,13 @@ async function submitForm(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button');
     const msg = document.getElementById('form-msg');
-    btn.textContent = 'Registrazione in corso...';
     btn.disabled = true;
-    msg.style.color = '';
+    btn.textContent = 'Invio richiesta...';
     msg.textContent = '';
     const data = {
         company: document.getElementById('company').value,
         email: document.getElementById('email').value,
-        sector: document.getElementById('sector').value,
+        sector: 'dentisti',
         whatsapp: document.getElementById('whatsapp').value
     };
     try {
@@ -405,61 +132,17 @@ async function submitForm(e) {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(data)
         });
-        if (resp.ok) {
-            msg.innerHTML = '✅ Perfetto! Avvio il trial gratuito...';
-            msg.style.color = '#00ff88';
-            setTimeout(() => { window.location.href = '/checkout'; }, 1200);
-        } else {
-            throw new Error();
-        }
-    } catch {
-        msg.textContent = 'Errore. Riprova o scrivi a info@getautomatik.com';
-        msg.style.color = '#ff4444';
-        btn.textContent = 'Inizia 7 giorni gratis →';
+        if (!resp.ok) throw new Error('signup failed');
+        msg.textContent = 'Richiesta ricevuta. Ti inviamo l audit gratuito entro 24 ore.';
+        msg.style.color = '#147a5c';
+        btn.textContent = 'Richiesta inviata';
+    } catch (e) {
+        msg.textContent = 'Errore. Scrivi a info@getautomatik.com o riprova.';
+        msg.style.color = '#b42318';
         btn.disabled = false;
+        btn.textContent = 'Ricevi audit gratuito';
     }
 }
-
-// FAQ accordion
-document.querySelectorAll('.faq-item').forEach(item => {
-    item.querySelector('.faq-q').addEventListener('click', () => {
-        const open = item.classList.contains('open');
-        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-        if (!open) item.classList.add('open');
-    });
-});
-
-// Countdown timer (48h, auto-reset)
-(function() {
-    var KEY = 'cd_deadline';
-    var DURATION = 48 * 3600;
-    var stored = localStorage.getItem(KEY);
-    var deadline;
-    if (stored) {
-        deadline = parseInt(stored, 10);
-        if (Date.now() / 1000 > deadline) {
-            deadline = Math.floor(Date.now() / 1000) + DURATION;
-            localStorage.setItem(KEY, deadline);
-        }
-    } else {
-        deadline = Math.floor(Date.now() / 1000) + DURATION;
-        localStorage.setItem(KEY, deadline);
-    }
-    function pad(n) { return n < 10 ? '0' + n : n; }
-    function tick() {
-        var left = deadline - Math.floor(Date.now() / 1000);
-        if (left <= 0) {
-            deadline = Math.floor(Date.now() / 1000) + DURATION;
-            localStorage.setItem(KEY, deadline);
-            left = DURATION;
-        }
-        document.getElementById('cd-h').textContent = pad(Math.floor(left / 3600));
-        document.getElementById('cd-m').textContent = pad(Math.floor((left % 3600) / 60));
-        document.getElementById('cd-s').textContent = pad(left % 60);
-    }
-    tick();
-    setInterval(tick, 1000);
-})();
 </script>
 </body>
 </html>

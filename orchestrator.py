@@ -1,8 +1,7 @@
-from flask import Flask, jsonify, request, redirect, render_template
-from agents import create_hunter, create_closer, create_delivery, create_analyst, check_email_replies, send_followups, ceo_optimize_emails
+﻿from flask import Flask, jsonify, request, redirect, render_template
+from agents import check_email_replies, send_followups, run_revenue_pipeline, MetricsTracker
 from supabase import create_client
 from dotenv import load_dotenv
-import anthropic
 import os
 import json
 import threading
@@ -17,20 +16,11 @@ load_dotenv()
 
 app = Flask(__name__)
 db = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
-claude = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
-
-hunter = create_hunter()
-closer_agent = create_closer()
-delivery_agent = create_delivery()
-analyst = create_analyst()
-
-AGENTS = {"Hunter": hunter, "Closer": closer_agent, "Delivery": delivery_agent, "Analyst": analyst}
-
 BUDGET = float(os.getenv("BUDGET_MENSILE", 500))
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT = os.getenv("TELEGRAM_CHAT_ID")
 
-DEFAULT_NICHES = ["immobiliare", "dentisti", "palestre", "ristoranti", "studi legali"]
+DEFAULT_NICHES = ["dentisti"]
 
 def send_telegram(message):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT:
@@ -137,166 +127,6 @@ def check_budget(costo):
     send_telegram(f"Spesa approvata: {costo}. Budget rimasto: {BUDGET - nuovo_usato:.2f}")
     return True
 
-def _compute_analytics(db):
-    """Real-time KPIs for CEO decision making."""
-    try:
-        all_p = db.table("prospects").select("sector,status,follow_up_at").execute()
-        sectors = {}
-        warm_count = 0
-        for p in (all_p.data or []):
-            s = p.get("sector", "altro")
-            st = p.get("status", "new")
-            if s not in sectors:
-                sectors[s] = {"total": 0, "contacted": 0, "replied": 0, "warm": 0, "converted": 0}
-            sectors[s]["total"] += 1
-            if st in ("contacted", "followup_1", "replied", "warm_1", "warm_2", "warm_closed", "converted", "dead"):
-                sectors[s]["contacted"] += 1
-            if st in ("replied", "warm_1", "warm_2", "warm_closed", "converted"):
-                sectors[s]["replied"] += 1
-            if st in ("warm_1", "warm_2"):
-                sectors[s]["warm"] += 1
-                warm_count += 1
-            if st == "converted":
-                sectors[s]["converted"] += 1
-
-        reply_rates = {}
-        for s, v in sectors.items():
-            if v["contacted"] >= 5:
-                reply_rates[s] = round(v["replied"] / v["contacted"] * 100, 1)
-
-        best_sector = max(reply_rates, key=reply_rates.get) if reply_rates else None
-        worst_sector = min(reply_rates, key=reply_rates.get) if len(reply_rates) > 1 else None
-
-        spent = _get_budget_usato()
-        clients = db.table("clients").select("mrr").eq("status", "active").execute()
-        mrr = sum(c.get("mrr", 0) for c in (clients.data or []))
-        total_replied = sum(v["replied"] for v in sectors.values())
-        total_contacted = sum(v["contacted"] for v in sectors.values())
-        cost_per_reply = round(spent / total_replied, 2) if total_replied > 0 else 0
-        cost_per_client = round(spent / len(clients.data), 2) if clients.data else 0
-
-        return {
-            "mrr": mrr,
-            "spent": round(spent, 2),
-            "profit": round(mrr - spent, 2),
-            "warm_prospects": warm_count,
-            "reply_rate_by_sector": reply_rates,
-            "best_sector": best_sector,
-            "worst_sector": worst_sector,
-            "cost_per_reply": cost_per_reply,
-            "cost_per_client": cost_per_client,
-            "sector_detail": {s: sectors[s] for s in list(sectors.keys())[:6]}
-        }
-    except Exception as e:
-        print(f"Analytics error: {e}")
-        return {}
-
-
-def ceo_think():
-    # Seed nicchie di default se la tabella markets è vuota
-    try:
-        existing_markets = db.table("markets").select("sector").execute()
-        existing_sectors = {m["sector"] for m in (existing_markets.data or [])}
-        for niche in DEFAULT_NICHES:
-            if niche not in existing_sectors:
-                db.table("markets").insert({"sector": niche, "score": 50, "leads_found": 0, "active": True}).execute()
-    except Exception as e:
-        print(f"Seed nicchie: {e}")
-
-    markets = db.table("markets").select("*").eq("active", True).execute()
-    clients = db.table("clients").select("*").eq("status", "active").execute()
-    prospects = db.table("prospects").select("*").eq("status", "new").limit(20).execute()
-    decisions = db.table("decisions").select("*").order("created_at", desc=True).limit(10).execute()
-    
-    # Analizza performance mercati
-    market_data = []
-    for m in (markets.data or []):
-        sector = m["sector"]
-        m_prospects = db.table("prospects").select("*").eq("sector", sector).execute()
-        m_clients = db.table("clients").select("*").eq("sector", sector).execute()
-        total_p = len(m_prospects.data) if m_prospects.data else 0
-        total_c = len(m_clients.data) if m_clients.data else 0
-        conversion = (total_c / total_p * 100) if total_p > 0 else 0
-        score = m.get("score", 50)
-        # Se conversione < 2% dopo 20+ prospect, riduci score
-        if total_p >= 20 and conversion < 2:
-            score = max(10, score - 20)
-            db.table("markets").update({"score": score}).eq("sector", sector).execute()
-        market_data.append({
-            "sector": sector, "score": score, "prospects": total_p,
-            "clients": total_c, "conversion": round(conversion, 1)
-        })
-    
-    # Trova mercato migliore e peggiore
-    best_market = max(market_data, key=lambda x: x["score"]) if market_data else None
-    worst_market = min(market_data, key=lambda x: x["score"]) if market_data else None
-    
-    context = {
-        "time": datetime.now().isoformat(),
-        "active_clients": len(clients.data) if clients.data else 0,
-        "mrr": sum(c["mrr"] for c in clients.data) if clients.data else 0,
-        "new_prospects": len(prospects.data) if prospects.data else 0,
-        "budget_remaining": BUDGET - float(os.getenv("BUDGET_USATO", 0)),
-        "markets": market_data,
-        "best_market": best_market["sector"] if best_market else None,
-        "worst_market": worst_market["sector"] if worst_market else None,
-        "recent_decisions": [d.get("decision") for d in (decisions.data or [])[:5]]
-    }
-    
-    # Se il mercato peggiore ha score < 20, suggerisci switch
-    switch_hint = ""
-    if worst_market and worst_market["score"] < 20 and best_market and best_market["score"] > 50:
-        switch_hint = f" Il mercato {worst_market['sector']} performa male. Considera di spostarti su {best_market['sector']} o esplorare nuovi mercati."
-    
-    analytics = _compute_analytics(db)
-    niches_available = ", ".join(DEFAULT_NICHES)
-    prompt = (
-        f"Sei il CEO di GetAutomatik AI, agenzia che vende agenti AI a PMI italiane (197€/mese).\n"
-        f"Obiettivo: massimizzare MRR e chiudere contratti.\n\n"
-        f"ANALYTICS REALI:\n{json.dumps(analytics, ensure_ascii=False)}\n\n"
-        f"STATO OPERATIVO:\n{json.dumps(context, ensure_ascii=False)}\n\n"
-        f"REGOLE:\n"
-        f"- Se ci sono prospect warm (warm_prospects > 0), dai ALTA priorità a Closer per inviargli email\n"
-        f"- Attacca il settore con reply rate più alto ({analytics.get('best_sector', 'sconosciuto')})\n"
-        f"- Evita settori con reply rate < 2% se hai alternative\n"
-        f"- Hunter cerca nuovi prospect, Closer li contatta, Delivery serve clienti, Analyst ottimizza\n"
-        f"- Nicchie disponibili: {niches_available}\n"
-        f"- Puoi cambiare mercato con params: {{\"sector\": \"nuova_nicchia\"}}\n\n"
-        f"{switch_hint}\n\n"
-        f"Rispondi SOLO JSON: {{\"priority\": str, \"agent\": str, \"action\": str, \"params\": dict, \"costo_stimato\": float, \"reasoning\": str}}"
-    )
-    
-    response = claude.messages.create(
-        model="claude-opus-4-8",
-        max_tokens=300,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    
-    try:
-        decision = json.loads(response.content[0].text)
-    except:
-        import random
-        fallback_sector = random.choice(DEFAULT_NICHES)
-        decision = {"priority": "ACQUISIRE", "agent": "Hunter", "action": "cerca prospect", "params": {"sector": fallback_sector, "location": "Milano"}, "costo_stimato": 0, "reasoning": "fallback"}
-    
-    costo = decision.get("costo_stimato", 0)
-    if costo > 0:
-        if not check_budget(costo):
-            decision["blocked"] = "budget"
-    
-    try:
-        db.table("decisions").insert({
-            "agent_name": "CEO",
-            "thought_process": decision.get("reasoning"),
-            "decision": decision.get("priority"),
-            "action_taken": decision.get("action"),
-            "result": json.dumps(decision.get("params", {}))
-        }).execute()
-    except:
-        pass
-    
-    return decision
-
 def imap_loop():
     time.sleep(120)
     while True:
@@ -309,46 +139,30 @@ def imap_loop():
         time.sleep(1800)
 
 def agency_loop():
-    send_telegram("AGENZIA AI AVVIATA - Budget: 500 EUR")
-    print("AGENZIA AI AVVIATA")
+    send_telegram("MICRO-AGENZIA AI AVVIATA - verticale dentisti")
+    print("MICRO-AGENZIA AI AVVIATA")
     iteration = 0
     while True:
         iteration += 1
         try:
-            # 1. Invia follow-up scaduti (every cycle, query returns only due ones)
             try:
                 followups_sent = send_followups(db)
                 if followups_sent:
-                    send_telegram(f"📤 Follow-up inviati: {followups_sent}")
+                    send_telegram(f"Follow-up inviati: {followups_sent}")
             except Exception as e:
                 print(f"Follow-up failed: {e}")
 
-            # 3. CEO pensa e delega all'agente
-            decision = ceo_think()
-            msg = f"Ciclo {iteration} - CEO: {decision.get('priority')} - Agente: {decision.get('agent')}"
-            if decision.get("blocked"):
-                msg += " - BLOCCATO"
-            else:
-                agent_name = decision.get("agent")
-                if agent_name and agent_name in AGENTS:
-                    agent = AGENTS[agent_name]
-                    agent_decision = agent.think({"ceo_decision": decision})
-                    if agent_decision.get("tool"):
-                        result = agent.execute(agent_decision["tool"], agent_decision.get("params", {}))
-                        msg += f" - Fatto: {json.dumps(result, ensure_ascii=False)[:150]}"
+            result = run_revenue_pipeline(db, sector="dentisti", hunt_count=8, audit_limit=5, send_limit=30)
+            msg = (
+                f"Ciclo {iteration} pipeline dentisti - "
+                f"lead: {result.get('hunted', 0)}, audit: {result.get('audited', 0)}, "
+                f"qualificati: {result.get('qualified', 0)}, email: {result.get('sent', 0)}"
+            )
             send_telegram(msg)
             print(msg)
-
-            # 4. CEO ottimizza prompt email ogni 5 cicli (ogni ~10h)
-            if iteration % 5 == 0:
-                try:
-                    ceo_optimize_emails(db)
-                except Exception as e:
-                    print(f"CEO optimize failed: {e}")
-
         except Exception as e:
-            send_telegram(f"ERRORE: {str(e)[:200]}")
-            print(f"ERRORE: {e}")
+            send_telegram(f"ERRORE PIPELINE: {str(e)[:200]}")
+            print(f"ERRORE PIPELINE: {e}")
         time.sleep(7200)
 
 @app.route("/landing")
@@ -744,7 +558,7 @@ def signup():
     data = request.json
     company = data.get("company", "")
     email = data.get("email", "")
-    sector = data.get("sector", "altro")
+    sector = data.get("sector", "dentisti")
     whatsapp = data.get("whatsapp", "")
 
     if company and email:
@@ -754,10 +568,10 @@ def signup():
                 "contact_email": email,
                 "sector": sector,
                 "plan": "monthly",
-                "mrr": 197,
-                "status": "payment_pending"
+                "mrr": 0,
+                "status": "audit_requested"
             }).execute()
-            send_telegram(f"🎉 Nuovo cliente! {company} ({email}) - Settore: {sector}")
+            send_telegram(f"🎉 Nuova richiesta audit dentisti! {company} ({email}) - Settore: {sector}")
         except Exception as e:
             print(f"Errore signup: {e}")
         return jsonify({"status": "ok"})
@@ -956,3 +770,7 @@ if __name__ == "__main__":
     threading.Thread(target=agency_loop, daemon=True).start()
     threading.Thread(target=imap_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=8080)
+
+
+
+
