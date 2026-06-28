@@ -225,7 +225,6 @@ def _handle_reply(db, prospect, body_text):
     company = prospect.get("company_name", "")
     email_to = prospect.get("contact_email", "")
     sector = prospect.get("sector", "")
-    CALENDLY = os.getenv("CALENDLY_URL", "https://calendly.com/getautomatik")
     CHECKOUT = os.getenv("CHECKOUT_URL", "https://getautomatik.com/checkout")
 
     claude_client = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
@@ -240,24 +239,20 @@ def _handle_reply(db, prospect, body_text):
     ).content[0].text.strip().upper()
 
     if "INTERESTED" in clf:
-        # Rich closing email: value prop + two CTAs (checkout direct + Calendly)
         body = claude_client.messages.create(
-            model="claude-haiku-4-5-20251001", max_tokens=350,
+            model="claude-haiku-4-5-20251001", max_tokens=300,
             messages=[{"role": "user", "content":
-                f"Scrivi una email di chiusura vendita (120 parole max) per {company} ({sector}) "
+                f"Scrivi una email di chiusura vendita (100 parole max) per {company} ({sector}) "
                 f"che ha mostrato interesse al nostro agente AI.\n"
-                f"Struttura:\n"
-                f"1. Apertura calda (1 frase personalizzata per {sector})\n"
-                f"2. Cosa ottengono: l'agente trova e contatta automaticamente clienti qualificati ogni giorno\n"
-                f"3. Due opzioni chiare:\n"
-                f"   → Inizia il trial gratuito 7 giorni ora: {CHECKOUT}\n"
-                f"   → Preferisci una call di 30 min? {CALENDLY}\n"
-                f"4. P.S. breve: entro 24h dall'attivazione l'agente è operativo\n"
+                f"1. Frase di apertura personalizzata per il settore {sector}\n"
+                f"2. Cosa ottengono: l'agente trova e contatta clienti qualificati ogni giorno in automatico\n"
+                f"3. CTA unico e diretto: inizia il trial gratuito di 7 giorni → {CHECKOUT}\n"
+                f"4. P.S.: entro 24h dall'attivazione l'agente è operativo\n"
                 f"Tono: diretto, caldo, zero pressione. Firma: Team GetAutomatik"
             }]
         ).content[0].text
 
-        _send_plain_email(email_to, f"Come funziona per {company} — prossimo passo", body)
+        _send_plain_email(email_to, f"Come funziona per {company} — inizia gratis", body)
 
         warm_date = (date.today() + timedelta(days=2)).isoformat()
         db.table("prospects").update({
@@ -266,9 +261,9 @@ def _handle_reply(db, prospect, body_text):
             "agent_notes": f"INTERESTED: {body_text[:120]}"
         }).eq("id", prospect["id"]).execute()
         send_telegram(
-            f"🔥 PROSPECT CALDO → warm sequence avviata!\n"
-            f"{company} ({sector})\nEmail: {email_to}\n"
-            f"Closing email inviata con checkout + Calendly"
+            f"🔥 PROSPECT CALDO → warm sequence!\n"
+            f"{company} ({sector}) — {email_to}\n"
+            f"Closing email inviata → trial {CHECKOUT}"
         )
 
     elif "QUESTION" in clf:
@@ -276,9 +271,9 @@ def _handle_reply(db, prospect, body_text):
             model="claude-haiku-4-5-20251001", max_tokens=250,
             messages=[{"role": "user", "content":
                 f"Un prospect italiano ({company}, {sector}) ha fatto questa domanda:\n\"{body_text[:300]}\"\n"
-                f"Rispondi in modo convincente e diretto (max 90 parole). "
+                f"Rispondi in modo convincente e diretto (max 80 parole). "
                 f"Servizio: agente AI che trova e contatta clienti automaticamente, 197€/mese, 7gg trial gratuito.\n"
-                f"Chiudi con due opzioni: trial {CHECKOUT} oppure call {CALENDLY}\n"
+                f"Chiudi con CTA diretto: prova gratis → {CHECKOUT}\n"
                 f"Firma: Team GetAutomatik"
             }]
         ).content[0].text
@@ -288,7 +283,7 @@ def _handle_reply(db, prospect, body_text):
             "follow_up_at": (date.today() + timedelta(days=3)).isoformat(),
             "agent_notes": f"QUESTION: {body_text[:120]}"
         }).eq("id", prospect["id"]).execute()
-        send_telegram(f"❓ Domanda da {company}\n{body_text[:100]}\nRisposta + CTA inviati → warm_1")
+        send_telegram(f"❓ Domanda da {company} → risposta + trial link inviati")
 
     elif "NOT_INTERESTED" in clf:
         db.table("prospects").update({
@@ -452,7 +447,6 @@ def send_followups(db):
 
     today = date.today().isoformat()
     CHECKOUT = os.getenv("CHECKOUT_URL", "https://getautomatik.com/checkout")
-    CALENDLY = os.getenv("CALENDLY_URL", "https://calendly.com/getautomatik")
 
     try:
         due = db.table("prospects").select("*").in_(
@@ -518,7 +512,7 @@ def send_followups(db):
                 prompt = (
                     f"Email di chiusura finale (max 60 parole) per {company} ({sector}). "
                     f"Offri 14 giorni di trial gratuito invece di 7 — offerta valida solo questa settimana. "
-                    f"Link: {CHECKOUT} Alternativa call: {CALENDLY} "
+                    f"Link diretto: {CHECKOUT} "
                     f"Firma: Team GetAutomatik"
                 )
                 new_status = "warm_closed"

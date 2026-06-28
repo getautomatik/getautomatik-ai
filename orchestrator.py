@@ -469,7 +469,7 @@ def dashboard():
                         <div style="font-size:32px;font-weight:900;color:#ffaa00;" id="warm-count">0</div>
                         <div style="font-size:13px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;">Prospect Caldi in Closing Sequence</div>
                     </div>
-                    <div style="margin-left:auto;font-size:13px;color:rgba(255,255,255,0.3);">warm_1 / warm_2 / call_scheduled</div>
+                    <div style="margin-left:auto;font-size:13px;color:rgba(255,255,255,0.3);">warm_1 → warm_2 → warm_closed → converted</div>
                 </div>
             </div>
         </div>
@@ -652,7 +652,7 @@ def status():
     clients = db.table("clients").select("*").eq("status", "active").execute()
     prospects = db.table("prospects").select("*").execute()
     markets = db.table("markets").select("*").eq("active", True).execute()
-    warm = db.table("prospects").select("id").in_("status", ["warm_1", "warm_2", "call_scheduled"]).execute()
+    warm = db.table("prospects").select("id").in_("status", ["warm_1", "warm_2"]).execute()
     budget_usato = _get_budget_usato()
     return jsonify({
         "clients": len(clients.data) if clients.data else 0,
@@ -691,10 +691,9 @@ def prospects_pipeline():
                 pipeline[s] = {"total": 0, "contacted": 0, "replied": 0}
             pipeline[s]["total"] += 1
             if p.get("status") in ("contacted", "followup_1", "replied", "warm_1", "warm_2",
-                                      "warm_closed", "call_scheduled", "converted", "dead"):
+                                      "warm_closed", "converted", "dead"):
                 pipeline[s]["contacted"] += 1
-            if p.get("status") in ("replied", "warm_1", "warm_2", "warm_closed",
-                                   "call_scheduled", "converted"):
+            if p.get("status") in ("replied", "warm_1", "warm_2", "warm_closed", "converted"):
                 pipeline[s]["replied"] += 1
         result = []
         for sector, stats in pipeline.items():
@@ -946,74 +945,6 @@ def stripe_webhook():
 
     # Return 200 immediately, process in background to avoid Stripe timeout
     threading.Thread(target=_handle_stripe_event, args=(raw_event,), daemon=True).start()
-    return jsonify({"status": "ok"}), 200
-
-@app.route("/webhook/calendly", methods=["POST"])
-def calendly_webhook():
-    """Triggered when someone books a call via Calendly."""
-    try:
-        data = request.json or {}
-        event = data.get("event", "")
-        payload = data.get("payload", {})
-
-        if event == "invitee.created":
-            invitee = payload.get("invitee", {})
-            name = invitee.get("name", "")
-            email = invitee.get("email", "")
-            scheduled = payload.get("scheduled_event", {})
-            start_time = scheduled.get("start_time", "")[:16].replace("T", " ") if scheduled.get("start_time") else "da definire"
-
-            send_telegram(
-                f"📅 CALL PRENOTATA!\n"
-                f"Nome: {name}\nEmail: {email}\n"
-                f"Orario: {start_time}"
-            )
-
-            # Find matching prospect and update status
-            try:
-                db.table("prospects").update({"status": "call_scheduled"}).eq("contact_email", email).execute()
-            except Exception:
-                pass
-
-            # Send pre-call prep email
-            if email:
-                prep_body = (
-                    f"Ciao {name or 'a te'},\n\n"
-                    f"Perfetto! La tua call è confermata per {start_time}.\n\n"
-                    f"Per sfruttare al massimo i 30 minuti, ti chiedo di avere pronti:\n"
-                    f"• Il numero approssimativo di clienti che vuoi acquisire al mese\n"
-                    f"• Il tuo settore principale e la città target\n"
-                    f"• Come acquisisci clienti oggi (passaparola, Google Ads, ecc.)\n\n"
-                    f"Saremo puntuali. A presto!\n\n"
-                    f"Team GetAutomatik"
-                )
-                EMAIL = os.getenv("EMAIL_ADDRESS")
-                EMAIL_PASS = os.getenv("EMAIL_PASSWORD")
-                if EMAIL and EMAIL_PASS:
-                    import smtplib
-                    from email.mime.multipart import MIMEMultipart
-                    from email.mime.text import MIMEText as MIMEText2
-                    msg = MIMEMultipart("alternative")
-                    msg["Subject"] = "La tua call GetAutomatik è confermata"
-                    msg["From"] = f"GetAutomatik AI <{EMAIL}>"
-                    msg["To"] = email
-                    msg.attach(MIMEText2(prep_body, "plain", "utf-8"))
-                    with smtplib.SMTP_SSL("smtp.zoho.eu", 465) as srv:
-                        srv.login(EMAIL, EMAIL_PASS)
-                        srv.send_message(msg)
-
-        elif event == "invitee.canceled":
-            invitee = payload.get("invitee", {})
-            email = invitee.get("email", "")
-            name = invitee.get("name", "")
-            send_telegram(f"❌ Call cancellata: {name} ({email})")
-            try:
-                db.table("prospects").update({"status": "warm_2"}).eq("contact_email", email).eq("status", "call_scheduled").execute()
-            except Exception:
-                pass
-
-    except Exception as e:
-        print(f"Calendly webhook error: {e}")
     return jsonify({"status": "ok"}), 200
 
 
