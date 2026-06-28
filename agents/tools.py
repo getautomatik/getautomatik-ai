@@ -61,6 +61,39 @@ def _check_and_increment_daily_emails(db):
 def _rotation_city():
     return CITIES[date.today().timetuple().tm_yday % len(CITIES)]
 
+def _send_plain_email(to_email, subject, body):
+    """Send plain-text email with proper deliverability headers."""
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    EMAIL = os.getenv("EMAIL_ADDRESS")
+    EMAIL_PASS = os.getenv("EMAIL_PASSWORD")
+    if not EMAIL or not EMAIL_PASS or not to_email:
+        return False
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"GetAutomatik AI <{EMAIL}>"
+        msg["To"] = to_email
+        msg["Reply-To"] = EMAIL
+        msg["List-Unsubscribe"] = f"<mailto:{EMAIL}?subject=unsubscribe>"
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        with smtplib.SMTP_SSL("smtp.zoho.eu", 465) as server:
+            server.login(EMAIL, EMAIL_PASS)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Email send error: {e}")
+        return False
+
+def _check_converted(db, email):
+    """True if this email already has an active/trial client record."""
+    try:
+        r = db.table("clients").select("status").eq("contact_email", email).execute()
+        return bool(r.data) and r.data[0].get("status") in ("active", "trial")
+    except Exception:
+        return False
+
 def _scrape_email_from_website(website, apify_token):
     import requests as r
     import time
@@ -186,93 +219,93 @@ def evaluate_market(db, params):
     return {"sector": sector, "score": score, "conversion_rate": conversion}
 
 def _handle_reply(db, prospect, body_text):
-    """Classify a prospect reply with Claude and take automated action."""
+    """Classify reply with Claude, auto-respond, push warm prospects toward checkout."""
     import anthropic
-    import smtplib
-    from email.mime.text import MIMEText
 
     company = prospect.get("company_name", "")
     email_to = prospect.get("contact_email", "")
     sector = prospect.get("sector", "")
-    EMAIL = os.getenv("EMAIL_ADDRESS")
-    EMAIL_PASS = os.getenv("EMAIL_PASSWORD")
     CALENDLY = os.getenv("CALENDLY_URL", "https://calendly.com/getautomatik")
+    CHECKOUT = os.getenv("CHECKOUT_URL", "https://getautomatik.com/checkout")
 
     claude_client = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
 
-    # Classify reply
-    clf_prompt = (
-        f"Classifica questa risposta email di un'azienda italiana ({company}, settore {sector}) "
-        f"a una proposta di agente AI:\n\"{body_text[:400]}\"\n\n"
-        f"Rispondi SOLO con: INTERESTED / NOT_INTERESTED / QUESTION / OUT_OF_OFFICE"
-    )
     clf = claude_client.messages.create(
         model="claude-haiku-4-5-20251001", max_tokens=10,
-        messages=[{"role": "user", "content": clf_prompt}]
+        messages=[{"role": "user", "content":
+            f"Classifica questa risposta email di un'azienda italiana ({company}, settore {sector}) "
+            f"a una proposta di agente AI:\n\"{body_text[:400]}\"\n\n"
+            f"Rispondi SOLO con: INTERESTED / NOT_INTERESTED / QUESTION / OUT_OF_OFFICE"
+        }]
     ).content[0].text.strip().upper()
 
-    def _send_reply(subject, body):
-        if EMAIL and EMAIL_PASS and email_to:
-            msg = MIMEText(body)
-            msg["Subject"] = subject
-            msg["From"] = EMAIL
-            msg["To"] = email_to
-            with smtplib.SMTP_SSL("smtp.zoho.eu", 465) as s:
-                s.login(EMAIL, EMAIL_PASS)
-                s.send_message(msg)
-
     if "INTERESTED" in clf:
-        rp = claude_client.messages.create(
-            model="claude-haiku-4-5-20251001", max_tokens=150,
+        # Rich closing email: value prop + two CTAs (checkout direct + Calendly)
+        body = claude_client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=350,
             messages=[{"role": "user", "content":
-                f"Rispondi a un prospect italiano ({company}) che è interessato al nostro agente AI. "
-                f"Max 70 parole. Proponi una call di 30 minuti. Calendly: {CALENDLY} "
-                f"Tono: caldo e diretto. Firma: Team GetAutomatik"
+                f"Scrivi una email di chiusura vendita (120 parole max) per {company} ({sector}) "
+                f"che ha mostrato interesse al nostro agente AI.\n"
+                f"Struttura:\n"
+                f"1. Apertura calda (1 frase personalizzata per {sector})\n"
+                f"2. Cosa ottengono: l'agente trova e contatta automaticamente clienti qualificati ogni giorno\n"
+                f"3. Due opzioni chiare:\n"
+                f"   → Inizia il trial gratuito 7 giorni ora: {CHECKOUT}\n"
+                f"   → Preferisci una call di 30 min? {CALENDLY}\n"
+                f"4. P.S. breve: entro 24h dall'attivazione l'agente è operativo\n"
+                f"Tono: diretto, caldo, zero pressione. Firma: Team GetAutomatik"
             }]
         ).content[0].text
-        _send_reply(f"Re: Agente AI per {company}", rp)
+
+        _send_plain_email(email_to, f"Come funziona per {company} — prossimo passo", body)
+
+        warm_date = (date.today() + timedelta(days=2)).isoformat()
         db.table("prospects").update({
-            "status": "replied",
+            "status": "warm_1",
+            "follow_up_at": warm_date,
             "agent_notes": f"INTERESTED: {body_text[:120]}"
         }).eq("id", prospect["id"]).execute()
         send_telegram(
-            f"🔥 PROSPECT CALDO!\n{company} ({sector}) è INTERESSATO\n"
-            f"Email: {email_to}\nRisposta + Calendly inviati automaticamente"
+            f"🔥 PROSPECT CALDO → warm sequence avviata!\n"
+            f"{company} ({sector})\nEmail: {email_to}\n"
+            f"Closing email inviata con checkout + Calendly"
         )
 
     elif "QUESTION" in clf:
-        rp = claude_client.messages.create(
-            model="claude-haiku-4-5-20251001", max_tokens=200,
+        body = claude_client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=250,
             messages=[{"role": "user", "content":
                 f"Un prospect italiano ({company}, {sector}) ha fatto questa domanda:\n\"{body_text[:300]}\"\n"
-                f"Rispondi in modo convincente (max 90 parole). Il servizio: agente AI che trova e contatta "
-                f"clienti in automatico, 197€/mese, 7 giorni trial gratuito. "
-                f"Chiudi proponendo una call: {CALENDLY} Firma: Team GetAutomatik"
+                f"Rispondi in modo convincente e diretto (max 90 parole). "
+                f"Servizio: agente AI che trova e contatta clienti automaticamente, 197€/mese, 7gg trial gratuito.\n"
+                f"Chiudi con due opzioni: trial {CHECKOUT} oppure call {CALENDLY}\n"
+                f"Firma: Team GetAutomatik"
             }]
         ).content[0].text
-        _send_reply(f"Re: Agente AI per {company}", rp)
+        _send_plain_email(email_to, f"Re: Agente AI per {company}", body)
         db.table("prospects").update({
+            "status": "warm_1",
+            "follow_up_at": (date.today() + timedelta(days=3)).isoformat(),
             "agent_notes": f"QUESTION: {body_text[:120]}"
         }).eq("id", prospect["id"]).execute()
-        send_telegram(f"❓ Domanda da {company}\n{body_text[:100]}\nRisposta automatica inviata")
+        send_telegram(f"❓ Domanda da {company}\n{body_text[:100]}\nRisposta + CTA inviati → warm_1")
 
     elif "NOT_INTERESTED" in clf:
         db.table("prospects").update({
             "status": "dead",
             "agent_notes": f"NOT_INTERESTED: {body_text[:120]}"
         }).eq("id", prospect["id"]).execute()
-        send_telegram(f"🚫 {company} non interessato — marcato dead")
+        send_telegram(f"🚫 {company} non interessato → dead")
 
     elif "OUT_OF_OFFICE" in clf:
-        new_date = (date.today() + timedelta(days=5)).isoformat()
         db.table("prospects").update({
             "status": "contacted",
-            "follow_up_at": new_date,
-            "agent_notes": "OUT_OF_OFFICE — ricontatto tra 5gg"
+            "follow_up_at": (date.today() + timedelta(days=5)).isoformat(),
+            "agent_notes": "OUT_OF_OFFICE — ricontatto +5gg"
         }).eq("id", prospect["id"]).execute()
-        send_telegram(f"🏖️ {company} fuori ufficio — ricontatto riprogrammato")
+        send_telegram(f"🏖️ {company} fuori ufficio → ricontatto +5gg")
 
-    _track_cost(db, 0.0005, f"reply classification {company}")
+    _track_cost(db, 0.0006, f"reply handler {company}")
 
 
 def _track_cost(db, euros, description=""):
@@ -332,21 +365,7 @@ def generate_email(db, params):
     cost_eur = (len(prompt) / 4 * 0.80 + len(email_body) / 4 * 4.0) / 1_000_000 * 0.92
     _track_cost(db, cost_eur, f"email {company}")
 
-    email_from = os.getenv("EMAIL_ADDRESS")
-    email_pass = os.getenv("EMAIL_PASSWORD")
-    sent = False
-    if email_from and email_pass and email_to:
-        try:
-            msg = MIMEText(email_body)
-            msg["Subject"] = f"Automatizza la crescita di {company}"
-            msg["From"] = email_from
-            msg["To"] = email_to
-            with smtplib.SMTP_SSL("smtp.zoho.eu", 465) as server:
-                server.login(email_from, email_pass)
-                server.send_message(msg)
-            sent = True
-        except Exception as e:
-            print(f"Errore invio email: {e}")
+    sent = _send_plain_email(email_to, f"Automatizza la crescita di {company}", email_body)
 
     follow_up_date = (date.today() + timedelta(days=3)).isoformat()
     db.table("prospects").update({
@@ -428,17 +447,17 @@ def check_email_replies(db):
 
 
 def send_followups(db):
-    """Send scheduled follow-up emails (day+3, day+7) to non-replying prospects. Returns count sent."""
+    """Handle all scheduled sequences: cold follow-ups + warm closing sequence."""
     import anthropic
-    import smtplib
-    from email.mime.text import MIMEText
 
     today = date.today().isoformat()
-    EMAIL = os.getenv("EMAIL_ADDRESS")
-    EMAIL_PASS = os.getenv("EMAIL_PASSWORD")
+    CHECKOUT = os.getenv("CHECKOUT_URL", "https://getautomatik.com/checkout")
+    CALENDLY = os.getenv("CALENDLY_URL", "https://calendly.com/getautomatik")
 
     try:
-        due = db.table("prospects").select("*").in_("status", ["contacted", "followup_1"]).lte("follow_up_at", today).limit(10).execute()
+        due = db.table("prospects").select("*").in_(
+            "status", ["contacted", "followup_1", "warm_1", "warm_2"]
+        ).lte("follow_up_at", today).limit(15).execute()
     except Exception as e:
         print(f"Follow-up query error: {e}")
         return 0
@@ -457,47 +476,73 @@ def send_followups(db):
         if not email_to:
             continue
         try:
+            # --- Cold follow-up sequence ---
             if status == "contacted":
                 prompt = (
                     f"Follow-up email brevissima (max 60 parole) per {company} ({sector}). "
-                    f"Tono amichevole, nessuna pressione. Chiedi solo se hanno avuto modo di leggere "
-                    f"la proposta precedente sull'agente AI. CTA: risposta sì/no. Firma: Team GetAutomatik"
+                    f"Amichevole, zero pressione. Chiedi se hanno avuto modo di leggere la proposta "
+                    f"sull'agente AI. CTA: risposta sì/no. Firma: Team GetAutomatik"
                 )
                 new_status = "followup_1"
                 next_date = (date.today() + timedelta(days=4)).isoformat()
-                subject = f"Re: Agente AI per {company}"
-            else:  # followup_1 → sequenza completata
+                subject = f"Hai 2 minuti, {company}?"
+
+            elif status == "followup_1":
                 prompt = (
-                    f"Email finale (max 50 parole) per {company} ({sector}). "
-                    f"Ultima email, poi non scriverò più. Offri 30 minuti di demo gratuita senza impegno. "
+                    f"Email finale (max 55 parole) per {company} ({sector}). "
+                    f"Ultima email, poi non scriverò più. Offri trial gratuito 7 giorni: {CHECKOUT} "
                     f"Firma: Team GetAutomatik"
                 )
                 new_status = "dead"
                 next_date = None
-                subject = f"Demo gratuita per {company} — ultima opportunità"
+                subject = f"Ultima proposta per {company}"
+
+            # --- Warm closing sequence (prospect ha già risposto con interesse) ---
+            elif status == "warm_1":
+                if _check_converted(db, email_to):
+                    db.table("prospects").update({"status": "converted"}).eq("id", p["id"]).execute()
+                    continue
+                prompt = (
+                    f"Follow-up caldo (max 70 parole) per {company} ({sector}) che aveva mostrato interesse "
+                    f"ma non ha ancora attivato il trial. Ricorda il valore, zero pressione. "
+                    f"Link diretto: {CHECKOUT} Firma: Team GetAutomatik"
+                )
+                new_status = "warm_2"
+                next_date = (date.today() + timedelta(days=3)).isoformat()
+                subject = f"{company} — il trial è ancora disponibile"
+
+            elif status == "warm_2":
+                if _check_converted(db, email_to):
+                    db.table("prospects").update({"status": "converted"}).eq("id", p["id"]).execute()
+                    continue
+                prompt = (
+                    f"Email di chiusura finale (max 60 parole) per {company} ({sector}). "
+                    f"Offri 14 giorni di trial gratuito invece di 7 — offerta valida solo questa settimana. "
+                    f"Link: {CHECKOUT} Alternativa call: {CALENDLY} "
+                    f"Firma: Team GetAutomatik"
+                )
+                new_status = "warm_closed"
+                next_date = None
+                subject = f"14 giorni gratis per {company} — offerta a tempo"
+
+            else:
+                continue
 
             response = claude_client.messages.create(
-                model="claude-haiku-4-5-20251001", max_tokens=150,
+                model="claude-haiku-4-5-20251001", max_tokens=160,
                 messages=[{"role": "user", "content": prompt}]
             )
             body = response.content[0].text
             cost_eur = (len(prompt) / 4 * 0.80 + len(body) / 4 * 4.0) / 1_000_000 * 0.92
-            _track_cost(db, cost_eur, f"followup {company}")
+            _track_cost(db, cost_eur, f"{status} {company}")
 
-            if EMAIL and EMAIL_PASS:
-                msg = MIMEText(body)
-                msg["Subject"] = subject
-                msg["From"] = EMAIL
-                msg["To"] = email_to
-                with smtplib.SMTP_SSL("smtp.zoho.eu", 465) as server:
-                    server.login(EMAIL, EMAIL_PASS)
-                    server.send_message(msg)
+            if _send_plain_email(email_to, subject, body):
                 update = {"status": new_status}
                 if next_date:
                     update["follow_up_at"] = next_date
                 db.table("prospects").update(update).eq("id", p["id"]).execute()
                 sent += 1
-                print(f"Follow-up {new_status} → {company} ({email_to})")
+                print(f"{status} → {new_status}: {company}")
         except Exception as e:
             print(f"Follow-up error for {company}: {e}")
 

@@ -137,6 +137,61 @@ def check_budget(costo):
     send_telegram(f"Spesa approvata: {costo}. Budget rimasto: {BUDGET - nuovo_usato:.2f}")
     return True
 
+def _compute_analytics(db):
+    """Real-time KPIs for CEO decision making."""
+    try:
+        all_p = db.table("prospects").select("sector,status,follow_up_at").execute()
+        sectors = {}
+        warm_count = 0
+        for p in (all_p.data or []):
+            s = p.get("sector", "altro")
+            st = p.get("status", "new")
+            if s not in sectors:
+                sectors[s] = {"total": 0, "contacted": 0, "replied": 0, "warm": 0, "converted": 0}
+            sectors[s]["total"] += 1
+            if st in ("contacted", "followup_1", "replied", "warm_1", "warm_2", "warm_closed", "converted", "dead"):
+                sectors[s]["contacted"] += 1
+            if st in ("replied", "warm_1", "warm_2", "warm_closed", "converted"):
+                sectors[s]["replied"] += 1
+            if st in ("warm_1", "warm_2"):
+                sectors[s]["warm"] += 1
+                warm_count += 1
+            if st == "converted":
+                sectors[s]["converted"] += 1
+
+        reply_rates = {}
+        for s, v in sectors.items():
+            if v["contacted"] >= 5:
+                reply_rates[s] = round(v["replied"] / v["contacted"] * 100, 1)
+
+        best_sector = max(reply_rates, key=reply_rates.get) if reply_rates else None
+        worst_sector = min(reply_rates, key=reply_rates.get) if len(reply_rates) > 1 else None
+
+        spent = _get_budget_usato()
+        clients = db.table("clients").select("mrr").eq("status", "active").execute()
+        mrr = sum(c.get("mrr", 0) for c in (clients.data or []))
+        total_replied = sum(v["replied"] for v in sectors.values())
+        total_contacted = sum(v["contacted"] for v in sectors.values())
+        cost_per_reply = round(spent / total_replied, 2) if total_replied > 0 else 0
+        cost_per_client = round(spent / len(clients.data), 2) if clients.data else 0
+
+        return {
+            "mrr": mrr,
+            "spent": round(spent, 2),
+            "profit": round(mrr - spent, 2),
+            "warm_prospects": warm_count,
+            "reply_rate_by_sector": reply_rates,
+            "best_sector": best_sector,
+            "worst_sector": worst_sector,
+            "cost_per_reply": cost_per_reply,
+            "cost_per_client": cost_per_client,
+            "sector_detail": {s: sectors[s] for s in list(sectors.keys())[:6]}
+        }
+    except Exception as e:
+        print(f"Analytics error: {e}")
+        return {}
+
+
 def ceo_think():
     # Seed nicchie di default se la tabella markets è vuota
     try:
@@ -193,8 +248,23 @@ def ceo_think():
     if worst_market and worst_market["score"] < 20 and best_market and best_market["score"] > 50:
         switch_hint = f" Il mercato {worst_market['sector']} performa male. Considera di spostarti su {best_market['sector']} o esplorare nuovi mercati."
     
+    analytics = _compute_analytics(db)
     niches_available = ", ".join(DEFAULT_NICHES)
-    prompt = f"Sei il CEO di una agenzia AI. Devi massimizzare fatturato.{switch_hint} Nicchie disponibili: {niches_available}. Scegli autonomamente quale attaccare in base ai dati di conversione. Stato: {json.dumps(context)} Agenti: Hunter, Closer, Delivery, Analyst. Puoi cambiare mercato con params: {{sector: 'nuova_nicchia'}}. Rispondi SOLO JSON con: priority, agent, action, params, costo_stimato, reasoning."
+    prompt = (
+        f"Sei il CEO di GetAutomatik AI, agenzia che vende agenti AI a PMI italiane (197€/mese).\n"
+        f"Obiettivo: massimizzare MRR e chiudere contratti.\n\n"
+        f"ANALYTICS REALI:\n{json.dumps(analytics, ensure_ascii=False)}\n\n"
+        f"STATO OPERATIVO:\n{json.dumps(context, ensure_ascii=False)}\n\n"
+        f"REGOLE:\n"
+        f"- Se ci sono prospect warm (warm_prospects > 0), dai ALTA priorità a Closer per inviargli email\n"
+        f"- Attacca il settore con reply rate più alto ({analytics.get('best_sector', 'sconosciuto')})\n"
+        f"- Evita settori con reply rate < 2% se hai alternative\n"
+        f"- Hunter cerca nuovi prospect, Closer li contatta, Delivery serve clienti, Analyst ottimizza\n"
+        f"- Nicchie disponibili: {niches_available}\n"
+        f"- Puoi cambiare mercato con params: {{\"sector\": \"nuova_nicchia\"}}\n\n"
+        f"{switch_hint}\n\n"
+        f"Rispondi SOLO JSON: {{\"priority\": str, \"agent\": str, \"action\": str, \"params\": dict, \"costo_stimato\": float, \"reasoning\": str}}"
+    )
     
     response = claude.messages.create(
         model="claude-opus-4-8",
@@ -392,6 +462,16 @@ def dashboard():
                 <div class="value" id="markets">5</div>
                 <div class="label">Mercati Attivi</div>
             </div>
+            <div class="metric-card" style="border-color:rgba(255,170,0,0.3);grid-column:span 4;">
+                <div style="display:flex;align-items:center;gap:20px;">
+                    <div style="font-size:28px;">🔥</div>
+                    <div>
+                        <div style="font-size:32px;font-weight:900;color:#ffaa00;" id="warm-count">0</div>
+                        <div style="font-size:13px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;">Prospect Caldi in Closing Sequence</div>
+                    </div>
+                    <div style="margin-left:auto;font-size:13px;color:rgba(255,255,255,0.3);">warm_1 / warm_2 / call_scheduled</div>
+                </div>
+            </div>
         </div>
 
         <div class="metrics-grid" style="margin-bottom:30px;">
@@ -491,6 +571,7 @@ def dashboard():
                 document.getElementById('prospects').textContent = data.prospects;
                 document.getElementById('markets').textContent = data.markets;
                 document.getElementById('budget-footer').textContent = data.budget + '€';
+                if (data.warm !== undefined) document.getElementById('warm-count').textContent = data.warm;
             } catch(e) {}
         }
         
@@ -571,7 +652,16 @@ def status():
     clients = db.table("clients").select("*").eq("status", "active").execute()
     prospects = db.table("prospects").select("*").execute()
     markets = db.table("markets").select("*").eq("active", True).execute()
-    return jsonify({"clients": len(clients.data) if clients.data else 0, "mrr": sum(c["mrr"] for c in clients.data) if clients.data else 0, "prospects": len(prospects.data) if prospects.data else 0, "markets": len(markets.data) if markets.data else 0, "budget": BUDGET - float(os.getenv("BUDGET_USATO", 0))})
+    warm = db.table("prospects").select("id").in_("status", ["warm_1", "warm_2", "call_scheduled"]).execute()
+    budget_usato = _get_budget_usato()
+    return jsonify({
+        "clients": len(clients.data) if clients.data else 0,
+        "mrr": sum(c["mrr"] for c in clients.data) if clients.data else 0,
+        "prospects": len(prospects.data) if prospects.data else 0,
+        "markets": len(markets.data) if markets.data else 0,
+        "budget": round(BUDGET - budget_usato, 2),
+        "warm": len(warm.data) if warm.data else 0
+    })
 
 
 @app.route("/api/logs")
@@ -600,9 +690,11 @@ def prospects_pipeline():
             if s not in pipeline:
                 pipeline[s] = {"total": 0, "contacted": 0, "replied": 0}
             pipeline[s]["total"] += 1
-            if p.get("status") in ("contacted", "followup_1", "replied", "converted", "dead"):
+            if p.get("status") in ("contacted", "followup_1", "replied", "warm_1", "warm_2",
+                                      "warm_closed", "call_scheduled", "converted", "dead"):
                 pipeline[s]["contacted"] += 1
-            if p.get("status") in ("replied", "converted"):
+            if p.get("status") in ("replied", "warm_1", "warm_2", "warm_closed",
+                                   "call_scheduled", "converted"):
                 pipeline[s]["replied"] += 1
         result = []
         for sector, stats in pipeline.items():
@@ -855,6 +947,75 @@ def stripe_webhook():
     # Return 200 immediately, process in background to avoid Stripe timeout
     threading.Thread(target=_handle_stripe_event, args=(raw_event,), daemon=True).start()
     return jsonify({"status": "ok"}), 200
+
+@app.route("/webhook/calendly", methods=["POST"])
+def calendly_webhook():
+    """Triggered when someone books a call via Calendly."""
+    try:
+        data = request.json or {}
+        event = data.get("event", "")
+        payload = data.get("payload", {})
+
+        if event == "invitee.created":
+            invitee = payload.get("invitee", {})
+            name = invitee.get("name", "")
+            email = invitee.get("email", "")
+            scheduled = payload.get("scheduled_event", {})
+            start_time = scheduled.get("start_time", "")[:16].replace("T", " ") if scheduled.get("start_time") else "da definire"
+
+            send_telegram(
+                f"📅 CALL PRENOTATA!\n"
+                f"Nome: {name}\nEmail: {email}\n"
+                f"Orario: {start_time}"
+            )
+
+            # Find matching prospect and update status
+            try:
+                db.table("prospects").update({"status": "call_scheduled"}).eq("contact_email", email).execute()
+            except Exception:
+                pass
+
+            # Send pre-call prep email
+            if email:
+                prep_body = (
+                    f"Ciao {name or 'a te'},\n\n"
+                    f"Perfetto! La tua call è confermata per {start_time}.\n\n"
+                    f"Per sfruttare al massimo i 30 minuti, ti chiedo di avere pronti:\n"
+                    f"• Il numero approssimativo di clienti che vuoi acquisire al mese\n"
+                    f"• Il tuo settore principale e la città target\n"
+                    f"• Come acquisisci clienti oggi (passaparola, Google Ads, ecc.)\n\n"
+                    f"Saremo puntuali. A presto!\n\n"
+                    f"Team GetAutomatik"
+                )
+                EMAIL = os.getenv("EMAIL_ADDRESS")
+                EMAIL_PASS = os.getenv("EMAIL_PASSWORD")
+                if EMAIL and EMAIL_PASS:
+                    import smtplib
+                    from email.mime.multipart import MIMEMultipart
+                    from email.mime.text import MIMEText as MIMEText2
+                    msg = MIMEMultipart("alternative")
+                    msg["Subject"] = "La tua call GetAutomatik è confermata"
+                    msg["From"] = f"GetAutomatik AI <{EMAIL}>"
+                    msg["To"] = email
+                    msg.attach(MIMEText2(prep_body, "plain", "utf-8"))
+                    with smtplib.SMTP_SSL("smtp.zoho.eu", 465) as srv:
+                        srv.login(EMAIL, EMAIL_PASS)
+                        srv.send_message(msg)
+
+        elif event == "invitee.canceled":
+            invitee = payload.get("invitee", {})
+            email = invitee.get("email", "")
+            name = invitee.get("name", "")
+            send_telegram(f"❌ Call cancellata: {name} ({email})")
+            try:
+                db.table("prospects").update({"status": "warm_2"}).eq("contact_email", email).eq("status", "call_scheduled").execute()
+            except Exception:
+                pass
+
+    except Exception as e:
+        print(f"Calendly webhook error: {e}")
+    return jsonify({"status": "ok"}), 200
+
 
 if __name__ == "__main__":
     try:
