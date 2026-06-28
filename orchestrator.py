@@ -566,6 +566,13 @@ def webhook_debug():
     secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
     return jsonify({"secret_prefix": secret[:12] if secret else "NOT_SET", "len": len(secret)})
 
+@app.route("/webhook/capture", methods=["POST"])
+def webhook_capture():
+    payload = request.get_data(as_text=True)
+    sig = request.headers.get("Stripe-Signature", "NO_SIG")
+    send_telegram(f"STRIPE CAPTURE\nSig: {sig[:80]}\nPayload size: {len(payload)}\nFirst 200: {payload[:200]}")
+    return jsonify({"status": "captured"}), 200
+
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():
     import stripe as stripe_lib
