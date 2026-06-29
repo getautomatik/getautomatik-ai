@@ -1,4 +1,4 @@
-﻿import os, json, requests as req, time, re, random
+import os, json, requests as req, time, re, random
 from datetime import date, timedelta, datetime
 from dotenv import load_dotenv
 load_dotenv()
@@ -204,6 +204,9 @@ def scrape_google_maps(db, params):
     except:
         pass
 
+    if added:
+        send_telegram(f"Trovati {added} prospect oggi — {sector} ({location})")
+
     print(f"Trovati {len(raw_results)} da Maps, email reali: {len(prospects)}, salvati: {added}")
     return {"prospects_found": added, "sector": sector, "location": location, "source": "apify"}
 
@@ -219,21 +222,23 @@ def evaluate_market(db, params):
     return {"sector": sector, "score": score, "conversion_rate": conversion}
 
 def _handle_reply(db, prospect, body_text):
-    """Classify reply with Claude, auto-respond, push warm prospects toward checkout."""
+    """Classify reply with Claude, auto-respond, push warm prospects toward landing."""
     import anthropic
 
     company = prospect.get("company_name", "")
     email_to = prospect.get("contact_email", "")
     sector = prospect.get("sector", "")
-    CHECKOUT = os.getenv("CHECKOUT_URL", "https://getautomatik.com/checkout")
+    prospect_id = prospect.get("id", "")
+    LANDING = os.getenv("FLOWOPS_LANDING", "https://getautomatik.com/landing")
+    landing_url = f"{LANDING}?ref={prospect_id}" if prospect_id else LANDING
 
-    claude_client = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
+    claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY"))
 
     clf = claude_client.messages.create(
         model="claude-haiku-4-5-20251001", max_tokens=10,
         messages=[{"role": "user", "content":
             f"Classifica questa risposta email di un'azienda italiana ({company}, settore {sector}) "
-            f"a una proposta di agente AI:\n\"{body_text[:400]}\"\n\n"
+            f"a una proposta FlowOps (rispondente automatico AI):\n\"{body_text[:400]}\"\n\n"
             f"Rispondi SOLO con: INTERESTED / NOT_INTERESTED / QUESTION / OUT_OF_OFFICE"
         }]
     ).content[0].text.strip().upper()
@@ -242,55 +247,54 @@ def _handle_reply(db, prospect, body_text):
         body = claude_client.messages.create(
             model="claude-haiku-4-5-20251001", max_tokens=300,
             messages=[{"role": "user", "content":
-                f"Scrivi una email di chiusura vendita (100 parole max) per {company} ({sector}) "
-                f"che ha mostrato interesse al nostro agente AI.\n"
-                f"1. Frase di apertura personalizzata per il settore {sector}\n"
-                f"2. Cosa ottengono: l'agente trova e contatta clienti qualificati ogni giorno in automatico\n"
-                f"3. CTA unico e diretto: inizia il trial gratuito di 7 giorni → {CHECKOUT}\n"
-                f"4. P.S.: entro 24h dall'attivazione l'agente è operativo\n"
-                f"Tono: diretto, caldo, zero pressione. Firma: Team GetAutomatik"
+                f"Scrivi una email di chiusura vendita (100 parole max) per {company} (settore {sector}) "
+                f"che ha mostrato interesse a FlowOps, il sistema AI che risponde automaticamente ai clienti.\n"
+                f"1. Apertura personalizzata per {sector}\n"
+                f"2. Beneficio: nessuna richiesta persa, risposta entro 2 minuti\n"
+                f"3. CTA: prova gratis 7 giorni -> {landing_url}\n"
+                f"4. P.S.: attivo in 15 minuti, setup guidato\n"
+                f"Tono: caldo, diretto, zero pressione. Firma: Team FlowOps"
             }]
         ).content[0].text
 
-        _send_plain_email(email_to, f"Come funziona per {company} — inizia gratis", body)
+        _send_plain_email(email_to, f"Come funziona FlowOps per {company}", body, sender_name="FlowOps")
 
         warm_date = (date.today() + timedelta(days=2)).isoformat()
         db.table("prospects").update({
             "status": "warm_1",
             "follow_up_at": warm_date,
+            "replied_at": date.today().isoformat(),
             "agent_notes": f"INTERESTED: {body_text[:120]}"
         }).eq("id", prospect["id"]).execute()
-        send_telegram(
-            f"🔥 PROSPECT CALDO → warm sequence!\n"
-            f"{company} ({sector}) — {email_to}\n"
-            f"Closing email inviata → trial {CHECKOUT}"
-        )
+        send_telegram(f"RISPOSTA da {company} ({sector})! Controlla email\nClassificato: INTERESSATO\nEmail: {email_to}")
 
     elif "QUESTION" in clf:
         body = claude_client.messages.create(
             model="claude-haiku-4-5-20251001", max_tokens=250,
             messages=[{"role": "user", "content":
-                f"Un prospect italiano ({company}, {sector}) ha fatto questa domanda:\n\"{body_text[:300]}\"\n"
+                f"Un artigiano italiano ({company}, {sector}) ha fatto questa domanda su FlowOps:\n\"{body_text[:300]}\"\n"
                 f"Rispondi in modo convincente e diretto (max 80 parole). "
-                f"Servizio: agente AI che trova e contatta clienti automaticamente, 197€/mese, 7gg trial gratuito.\n"
-                f"Chiudi con CTA diretto: prova gratis → {CHECKOUT}\n"
-                f"Firma: Team GetAutomatik"
+                f"FlowOps: AI che risponde ai clienti automaticamente, 197 EUR/mese, 7gg trial.\n"
+                f"Chiudi con CTA: prova gratis -> {landing_url}\n"
+                f"Firma: Team FlowOps"
             }]
         ).content[0].text
-        _send_plain_email(email_to, f"Re: Agente AI per {company}", body)
+        _send_plain_email(email_to, f"Re: FlowOps per {company}", body, sender_name="FlowOps")
         db.table("prospects").update({
             "status": "warm_1",
             "follow_up_at": (date.today() + timedelta(days=3)).isoformat(),
+            "replied_at": date.today().isoformat(),
             "agent_notes": f"QUESTION: {body_text[:120]}"
         }).eq("id", prospect["id"]).execute()
-        send_telegram(f"❓ Domanda da {company} → risposta + trial link inviati")
+        send_telegram(f"RISPOSTA da {company} ({sector})! Controlla email\nDomanda ricevuta — risposta + link inviati")
 
     elif "NOT_INTERESTED" in clf:
         db.table("prospects").update({
             "status": "dead",
+            "replied_at": date.today().isoformat(),
             "agent_notes": f"NOT_INTERESTED: {body_text[:120]}"
         }).eq("id", prospect["id"]).execute()
-        send_telegram(f"🚫 {company} non interessato → dead")
+        send_telegram(f"{company} non interessato -- archiviato")
 
     elif "OUT_OF_OFFICE" in clf:
         db.table("prospects").update({
@@ -298,7 +302,6 @@ def _handle_reply(db, prospect, body_text):
             "follow_up_at": (date.today() + timedelta(days=5)).isoformat(),
             "agent_notes": "OUT_OF_OFFICE — ricontatto +5gg"
         }).eq("id", prospect["id"]).execute()
-        send_telegram(f"🏖ï¸ {company} fuori ufficio → ricontatto +5gg")
 
     _track_cost(db, 0.0006, f"reply handler {company}")
 
@@ -343,9 +346,11 @@ def generate_email(db, params):
             raise Exception("no setting")
     except Exception:
         prompt = (
-            f"Scrivi email fredda di vendita per: {company}, settore: {sector}. "
-            f"Servizio: Agente AI che trova e contatta clienti in automatico, 197€/mese, 7 giorni trial gratuito. "
-            f"Includi CTA per demo gratuita. Max 120 parole. Italiano."
+            f"Scrivi email fredda in italiano (max 110 parole) per {company} (settore {sector}). "
+            f"Proponi FlowOps: sistema AI che risponde automaticamente alle email dei loro clienti. "
+            f"Oggetto: quante richieste perdi ogni settimana? "
+            f"Tono: diretto, specifico per artigiani. CTA: prova gratis su getautomatik.com/landing"
+            f"Firma: Team FlowOps. No template generico."
         )
 
     if company_context:
@@ -360,7 +365,7 @@ def generate_email(db, params):
     cost_eur = (len(prompt) / 4 * 0.80 + len(email_body) / 4 * 4.0) / 1_000_000 * 0.92
     _track_cost(db, cost_eur, f"email {company}")
 
-    sent = _send_plain_email(email_to, f"Automatizza la crescita di {company}", email_body)
+    sent = _send_plain_email(email_to, f"{company} — quante richieste perdi ogni settimana?", email_body, sender_name="FlowOps")
 
     follow_up_date = (date.today() + timedelta(days=3)).isoformat()
     db.table("prospects").update({
@@ -446,7 +451,7 @@ def send_followups(db):
     import anthropic
 
     today = date.today().isoformat()
-    CHECKOUT = os.getenv("CHECKOUT_URL", "https://getautomatik.com/checkout")
+    LANDING = os.getenv("FLOWOPS_LANDING", "https://getautomatik.com/landing")
 
     try:
         due = db.table("prospects").select("*").in_(
@@ -475,21 +480,21 @@ def send_followups(db):
                 prompt = (
                     f"Follow-up email brevissima (max 60 parole) per {company} ({sector}). "
                     f"Amichevole, zero pressione. Chiedi se hanno avuto modo di leggere la proposta "
-                    f"sull'agente AI. CTA: risposta sì/no. Firma: Team GetAutomatik"
+                    f"su FlowOps. CTA: risposta si/no. Firma: Team FlowOps"
                 )
                 new_status = "followup_1"
                 next_date = (date.today() + timedelta(days=4)).isoformat()
-                subject = f"Hai 2 minuti, {company}?"
+                subject = f"Re: {company}"
 
             elif status == "followup_1":
                 prompt = (
                     f"Email finale (max 55 parole) per {company} ({sector}). "
-                    f"Ultima email, poi non scriverò più. Offri trial gratuito 7 giorni: {CHECKOUT} "
-                    f"Firma: Team GetAutomatik"
+                    f"Ultima email. Offri trial gratuito 7 giorni: {LANDING} "
+                    f"Firma: Team FlowOps"
                 )
                 new_status = "dead"
                 next_date = None
-                subject = f"Ultima proposta per {company}"
+                subject = f"Ultima email — {company}"
 
             # --- Warm closing sequence (prospect ha già risposto con interesse) ---
             elif status == "warm_1":
@@ -498,12 +503,12 @@ def send_followups(db):
                     continue
                 prompt = (
                     f"Follow-up caldo (max 70 parole) per {company} ({sector}) che aveva mostrato interesse "
-                    f"ma non ha ancora attivato il trial. Ricorda il valore, zero pressione. "
-                    f"Link diretto: {CHECKOUT} Firma: Team GetAutomatik"
+                    f"ma non ha ancora attivato FlowOps. Ricorda il valore, zero pressione. "
+                    f"Link diretto: {LANDING} Firma: Team FlowOps"
                 )
                 new_status = "warm_2"
                 next_date = (date.today() + timedelta(days=3)).isoformat()
-                subject = f"{company} — il trial è ancora disponibile"
+                subject = f"{company} — il trial FlowOps e' ancora disponibile"
 
             elif status == "warm_2":
                 if _check_converted(db, email_to):
@@ -512,12 +517,12 @@ def send_followups(db):
                 prompt = (
                     f"Email di chiusura finale (max 60 parole) per {company} ({sector}). "
                     f"Offri 14 giorni di trial gratuito invece di 7 — offerta valida solo questa settimana. "
-                    f"Link diretto: {CHECKOUT} "
-                    f"Firma: Team GetAutomatik"
+                    f"Link diretto: {LANDING} "
+                    f"Firma: Team FlowOps"
                 )
                 new_status = "warm_closed"
                 next_date = None
-                subject = f"14 giorni gratis per {company} — offerta a tempo"
+                subject = f"14 giorni gratis per {company} — offerta a tempo (FlowOps)"
 
             else:
                 continue
@@ -827,9 +832,9 @@ class WebsiteAuditAgent:
                 import anthropic
                 client = anthropic.Anthropic(api_key=self.api_key)
                 prompt = (
-                    "Analizza questo sito di uno studio dentistico italiano per una micro-agenzia AI. "
-                    "Usa solo il contenuto fornito. Trova problemi che fanno perdere richieste pazienti "
-                    "e opportunita per recuperare richieste e riempire calendario. "
+                    "Analizza questo sito di un'azienda artigianale italiana. "
+                    "Usa solo il contenuto fornito. Trova problemi che fanno perdere richieste clienti "
+                    "e opportunita per recuperare richieste non risposte. "
                     "Rispondi SOLO JSON con chiavi: company_name, problems (array), opportunities (array), "
                     "estimated_lost_leads (integer mensile), score (0-100).\n\n"
                     f"URL: {website_url}\nTitolo: {title}\nHTTP: {status_code}\n"
@@ -886,7 +891,7 @@ class LeadScoring:
             score += 25
         if _is_real_email(prospect.get("contact_email")):
             score += 30
-        if (prospect.get("sector") or "").lower() in ("dentisti", "dentista", "studio dentistico"):
+        if (prospect.get("sector") or "").lower() in ("fotovoltaico", "climatizzazione", "idraulici", "ristrutturazioni", "infissi", "dentisti", "dentista", "studio dentistico"):
             score += 15
         if audit.get("estimated_lost_leads", 0) >= 4:
             score += 15
@@ -894,7 +899,7 @@ class LeadScoring:
             score += 10
         if prospect.get("contact_phone"):
             score += 5
-        reason = "email business + sito + audit dentisti" if score >= 65 else "lead debole o audit poco urgente"
+        reason = "email business + sito + audit artigiani" if score >= 65 else "lead debole o audit poco urgente"
         return {"score": min(100, score), "qualified": score >= 65, "reason": reason}
 
 
@@ -904,22 +909,50 @@ class OutreachGenerator:
     def __init__(self):
         self.api_key = os.getenv("CLAUDE_API_KEY")
 
-    def generate(self, prospect, audit, score):
-        company = prospect.get("company_name") or audit.get("company_name") or "Studio"
-        first_problem = (audit.get("problems") or ["alcune richieste pazienti possono perdersi fuori orario"])[0]
+    def generate(self, prospect, audit, score, email_number=1):
+        company = prospect.get("company_name") or audit.get("company_name") or "Azienda"
+        sector = prospect.get("sector", "artigiano")
+        prospect_id = prospect.get("id", "")
+        first_problem = (audit.get("problems") or ["alcune richieste clienti possono perdersi"])[0]
         lost = audit.get("estimated_lost_leads", 3)
+        LANDING = os.getenv("FLOWOPS_LANDING", "https://getautomatik.com/landing")
+        landing_url = f"{LANDING}?ref={prospect_id}" if prospect_id else LANDING
+
+        subjects = {
+            1: f"{company} — quante richieste perdi ogni settimana?",
+            2: f"Re: {company}",
+            3: f"Ultima email — {company}",
+        }
+        subject = subjects.get(email_number, subjects[1])
+
         if self.api_key:
             try:
                 import anthropic
                 client = anthropic.Anthropic(api_key=self.api_key)
-                prompt = (
-                    "Scrivi una email cold B2B in italiano per uno studio dentistico. "
-                    "Obiettivo: offrire audit gratuito, non vendere subito abbonamento. Max 110 parole. "
-                    "Tono: diretto, concreto, professionale. CTA: Ricevi audit gratuito. "
-                    "Non inventare dati oltre quelli forniti.\n\n"
-                    f"Studio: {company}\nProblema rilevato: {first_problem}\n"
-                    f"Richieste potenzialmente perse/mese: {lost}\nScore lead: {score.get('score')}\n"
-                )
+                if email_number == 1:
+                    prompt = (
+                        f"Scrivi email cold B2B in italiano (max 110 parole) per {company} (settore {sector}).\n"
+                        f"Proponi FlowOps: sistema AI che risponde automaticamente alle email dei loro clienti.\n"
+                        f"Problema rilevato dal sito: {first_problem}\n"
+                        f"Stima richieste perse/mese: {lost}\n"
+                        f"CTA: scopri come funziona -> {landing_url}\n"
+                        f"Tono: diretto, specifico, umano. Firma: Team FlowOps. NO template generico."
+                    )
+                elif email_number == 2:
+                    prompt = (
+                        f"Scrivi follow-up brevissimo (max 60 parole) per {company} ({sector}).\n"
+                        f"E' il secondo contatto — sii ancora piu' breve e diretto.\n"
+                        f"Menziona un caso studio specifico per {sector}: un artigiano che non perdeva piu' richieste.\n"
+                        f"CTA: risposta rapida o link -> {landing_url}\n"
+                        f"Firma: Team FlowOps"
+                    )
+                else:
+                    prompt = (
+                        f"Scrivi email finale (max 55 parole) per {company} ({sector}).\n"
+                        f"E' l'ultima email — sii diretto e usa la scarsita'.\n"
+                        f"CTA: trial gratis 7 giorni, link -> {landing_url}\n"
+                        f"Firma: Team FlowOps"
+                    )
                 response = client.messages.create(
                     model=AUDIT_MODEL,
                     max_tokens=240,
@@ -934,15 +967,15 @@ class OutreachGenerator:
 
         if not body:
             body = (
-                f"Buongiorno, ho analizzato il sito di {company} e ho notato questo punto: {first_problem}.\n\n"
-                f"Per studi dentistici questo spesso significa richieste pazienti non recuperate, soprattutto fuori orario. "
-                f"Abbiamo preparato un audit gratuito con 3 azioni pratiche per recuperare richieste perse e riempire meglio il calendario.\n\n"
-                "Vuole che glielo invii?\n\nTeam GetAutomatik"
+                f"Buongiorno,\n\nHo analizzato il sito di {company}: {first_problem}.\n\n"
+                f"FlowOps risponde automaticamente alle email dei vostri clienti entro 2 minuti, "
+                f"anche fuori orario.\n\nProva gratis 7 giorni: {landing_url}\n\nTeam FlowOps"
             )
         return {
-            "subject": f"Audit gratuito per {company}",
+            "subject": subject,
             "body": body,
-            "cta": "Ricevi audit gratuito",
+            "cta": "Prova FlowOps gratis",
+            "email_number": email_number,
         }
 
 
@@ -950,6 +983,7 @@ class CampaignSender:
     """Sends queued outreach with existing SMTP and logs to Supabase."""
 
     def queue(self, db, prospect, audit, scoring, message):
+        email_number = message.get("email_number", 1)
         payload = {
             "prospect_id": prospect.get("id"),
             "company_name": prospect.get("company_name") or audit.get("company_name"),
@@ -959,11 +993,12 @@ class CampaignSender:
             "score": scoring.get("score"),
             "subject": message.get("subject"),
             "body": message.get("body"),
+            "email_number": email_number,
             "audit": json.dumps(audit, ensure_ascii=False),
             "created_at": datetime_now_iso(),
         }
         try:
-            existing = db.table("outreach").select("id,status").eq("contact_email", payload["contact_email"]).execute()
+            existing = db.table("outreach").select("id,status").eq("contact_email", payload["contact_email"]).eq("email_number", email_number).execute()
             if existing.data:
                 return {"queued": False, "reason": "duplicate_outreach"}
             db.table("outreach").insert(payload).execute()
@@ -981,20 +1016,39 @@ class CampaignSender:
         sent = 0
         for row in rows.data or []:
             email_to = row.get("contact_email")
+            email_number = row.get("email_number", 1)
             if not _is_real_email(email_to):
                 db.table("outreach").update({"status": "skipped", "error": "invalid_email"}).eq("id", row.get("id")).execute()
                 continue
             if not _check_and_increment_daily_emails(db):
                 break
-            ok = _send_plain_email(email_to, row.get("subject", "Audit gratuito"), row.get("body", ""))
+            ok = _send_plain_email(email_to, row.get("subject", "FlowOps"), row.get("body", ""), sender_name="FlowOps")
             status = "sent" if ok else "failed"
             update = {"status": status, "sent_at": datetime_now_iso()}
             if not ok:
                 update["error"] = "smtp_failed"
             try:
                 db.table("outreach").update(update).eq("id", row.get("id")).execute()
+                # Track in outreach_emails table
                 if row.get("prospect_id"):
-                    db.table("prospects").update({"status": "contacted", "follow_up_at": (date.today() + timedelta(days=3)).isoformat()}).eq("id", row.get("prospect_id")).execute()
+                    try:
+                        db.table("outreach_emails").insert({
+                            "prospect_id": row.get("prospect_id"),
+                            "email_number": email_number,
+                            "subject": row.get("subject"),
+                            "body": (row.get("body") or "")[:1000],
+                            "status": status,
+                            "sent_at": datetime_now_iso(),
+                        }).execute()
+                    except Exception:
+                        pass
+                    next_days = {1: 3, 2: 4, 3: None}
+                    nxt = next_days.get(email_number)
+                    if ok:
+                        upd = {"status": "contacted", "contacted_at": datetime_now_iso()}
+                        if nxt:
+                            upd["follow_up_at"] = (date.today() + timedelta(days=nxt)).isoformat()
+                        db.table("prospects").update(upd).eq("id", row.get("prospect_id")).execute()
             except Exception as e:
                 print(f"outreach status update failed: {e}")
             if ok:
@@ -1387,3 +1441,147 @@ def send_request_followups(db):
     return sent
 
 
+def metrics_report(db):
+    """
+    Analizza performance 72h: settore migliore, citta' migliore, email che converte di piu'.
+    Aggiorna market scores. Invia report Telegram.
+    """
+    import anthropic
+
+    try:
+        all_p = db.table("prospects").select("sector,status,company_name,agent_notes,contacted_at,replied_at").execute()
+        rows = all_p.data or []
+    except Exception as e:
+        print(f"metrics_report query error: {e}")
+        return
+
+    # Per-sector stats
+    sectors = {}
+    for p in rows:
+        s = p.get("sector", "altro")
+        if s not in sectors:
+            sectors[s] = {"total": 0, "contacted": 0, "replied": 0, "converted": 0}
+        sectors[s]["total"] += 1
+        if p.get("status") in ("contacted", "followup_1", "replied", "warm_1", "warm_2", "warm_closed", "converted"):
+            sectors[s]["contacted"] += 1
+        if p.get("status") in ("replied", "warm_1", "warm_2", "warm_closed", "converted"):
+            sectors[s]["replied"] += 1
+        if p.get("status") == "converted":
+            sectors[s]["converted"] += 1
+
+    best_sector = max(sectors, key=lambda s: sectors[s]["replied"] / max(sectors[s]["contacted"], 1)) if sectors else "n/d"
+
+    # Active clients
+    try:
+        clients = db.table("clients").select("mrr").eq("status", "active").execute()
+        n_clients = len(clients.data or [])
+        mrr = sum(c.get("mrr", 0) or 0 for c in (clients.data or []))
+    except Exception:
+        n_clients, mrr = 0, 0
+
+    # Requests this month
+    from_date = datetime.now().replace(day=1, hour=0, minute=0, second=0).isoformat()
+    try:
+        reqs = db.table("requests").select("estimated_value,converted").gte("received_at", from_date).execute()
+        req_data = reqs.data or []
+        req_value = sum(r.get("estimated_value") or 0 for r in req_data)
+        req_converted = sum(1 for r in req_data if r.get("converted"))
+    except Exception:
+        req_value, req_converted = 0, 0
+
+    total_contacted = sum(s["contacted"] for s in sectors.values())
+    total_replied = sum(s["replied"] for s in sectors.values())
+    reply_rate = round(total_replied / total_contacted * 100, 1) if total_contacted else 0
+
+    # Update market scores in DB
+    for sector_name, stats in sectors.items():
+        if stats["contacted"] >= 5:
+            rr = stats["replied"] / stats["contacted"]
+            score = min(100, int(rr * 1000))  # 10% reply rate = score 100
+            try:
+                existing = db.table("markets").select("id").eq("sector", sector_name).execute()
+                if existing.data:
+                    db.table("markets").update({"score": score, "conversion_rate": round(rr * 100, 1)}).eq("sector", sector_name).execute()
+            except Exception:
+                pass
+
+    sector_lines = "\n".join(
+        f"  {s}: {d['contacted']} contattati, {d['replied']} risposte ({round(d['replied']/max(d['contacted'],1)*100,1)}%)"
+        for s, d in sorted(sectors.items(), key=lambda x: x[1]["replied"], reverse=True)
+    ) or "  Nessun dato"
+
+    send_telegram(
+        f"Report 72h FlowOps:\n"
+        f"Email inviate: {total_contacted} | Risposte: {total_replied} | Reply rate: {reply_rate}%\n"
+        f"Clienti attivi: {n_clients} | MRR: EUR {mrr}\n"
+        f"Richieste mese: EUR {req_value:,} | Convertite: {req_converted}\n"
+        f"Settore migliore: {best_sector}\n\n"
+        f"Per settore:\n{sector_lines}"
+    )
+    return {"sectors": sectors, "best_sector": best_sector, "reply_rate": reply_rate}
+
+
+def ceo_pivot(db):
+    """
+    Analizza reply rate per settore ogni 6h.
+    - reply rate < 2% dopo 50 email: abbassa score mercato
+    - reply rate > 5%: aumenta volume e score
+    Invia Telegram con decisione.
+    """
+    try:
+        all_p = db.table("prospects").select("sector,status").execute()
+        rows = all_p.data or []
+    except Exception as e:
+        print(f"ceo_pivot query error: {e}")
+        return
+
+    sectors = {}
+    for p in rows:
+        s = p.get("sector", "altro")
+        if s not in sectors:
+            sectors[s] = {"contacted": 0, "replied": 0}
+        if p.get("status") in ("contacted", "followup_1", "replied", "warm_1", "warm_2", "warm_closed", "converted", "dead"):
+            sectors[s]["contacted"] += 1
+        if p.get("status") in ("replied", "warm_1", "warm_2", "warm_closed", "converted"):
+            sectors[s]["replied"] += 1
+
+    decisions = []
+    for sector_name, stats in sectors.items():
+        contacted = stats["contacted"]
+        replied = stats["replied"]
+        if contacted < 10:
+            continue
+        rr = replied / contacted * 100
+        try:
+            mkt = db.table("markets").select("score").eq("sector", sector_name).execute()
+            current_score = mkt.data[0]["score"] if mkt.data else 50
+        except Exception:
+            current_score = 50
+
+        if rr < 2.0 and contacted >= 50:
+            new_score = max(10, current_score - 15)
+            action = f"Abbasso priorita' {sector_name} (reply rate {rr:.1f}% su {contacted} email)"
+        elif rr > 5.0:
+            new_score = min(100, current_score + 20)
+            action = f"Aumento volume {sector_name} (reply rate {rr:.1f}% -- ottimo!)"
+        else:
+            continue
+
+        try:
+            db.table("markets").update({"score": new_score}).eq("sector", sector_name).execute()
+            db.table("decisions").insert({
+                "agent_name": "CEO",
+                "thought_process": f"Reply rate {sector_name}: {rr:.1f}% su {contacted} email",
+                "decision": "PIVOT_SETTORE",
+                "action_taken": action,
+                "result": f"Score: {current_score} -> {new_score}",
+            }).execute()
+        except Exception as e:
+            print(f"ceo_pivot update error: {e}")
+
+        decisions.append(f"Pivot: {action} (score {current_score}->{new_score})")
+
+    if decisions:
+        send_telegram("CEO Pivot:\n" + "\n".join(decisions))
+
+    return decisions

@@ -1,6 +1,7 @@
 ﻿from flask import Flask, jsonify, request, redirect, render_template
 from agents import (check_email_replies, send_followups, run_revenue_pipeline,
-                    MetricsTracker, process_inbound_email, send_request_followups)
+                    MetricsTracker, process_inbound_email, send_request_followups,
+                    metrics_report, ceo_pivot)
 from supabase import create_client
 from dotenv import load_dotenv
 import os
@@ -12,7 +13,7 @@ import hashlib
 import base64
 import random
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests as req
 
 load_dotenv()
@@ -153,41 +154,72 @@ def imap_loop():
             print(f"Request followup loop error: {e}")
         time.sleep(1800)
 
-def agency_loop():
-    send_telegram("FlowOps AI avviata - artigiani italiani")
-    print("FlowOps AI AVVIATA")
+def discovery_loop():
+    """Runs every 24h: find new prospects via Apify across all sectors."""
+    time.sleep(300)  # let other services start first
+    while True:
+        total_found = 0
+        for sector in DEFAULT_NICHES:
+            try:
+                result = run_revenue_pipeline(db, sector=sector, hunt_count=8, audit_limit=0, send_limit=0)
+                total_found += result.get("hunted", 0)
+            except Exception as e:
+                print(f"Discovery {sector} error: {e}")
+        send_telegram(f"Discovery completata: {total_found} nuovi prospect su {len(DEFAULT_NICHES)} settori")
+        time.sleep(86400)  # 24h
+
+
+def outreach_loop():
+    """Runs every 12h: audit qualified prospects, generate and send personalized emails."""
+    time.sleep(600)
     iteration = 0
     while True:
         iteration += 1
         try:
-            try:
-                followups_sent = send_followups(db)
-                if followups_sent:
-                    send_telegram(f"Follow-up inviati: {followups_sent}")
-            except Exception as e:
-                print(f"Follow-up failed: {e}")
-
-            for sector in DEFAULT_NICHES:
-                try:
-                    result = run_revenue_pipeline(db, sector=sector, hunt_count=5, audit_limit=3, send_limit=6)
-                    msg = (
-                        f"Ciclo {iteration} [{sector}] - "
-                        f"lead: {result.get('hunted', 0)}, audit: {result.get('audited', 0)}, "
-                        f"qualificati: {result.get('qualified', 0)}, email: {result.get('sent', 0)}"
-                    )
-                    print(msg)
-                except Exception as e:
-                    print(f"Pipeline {sector} error: {e}")
-
-            send_telegram(f"FlowOps ciclo {iteration} completato - {len(DEFAULT_NICHES)} settori processati")
+            followups_sent = send_followups(db)
+            if followups_sent:
+                send_telegram(f"Sequenza follow-up: {followups_sent} email inviate")
         except Exception as e:
-            send_telegram(f"ERRORE PIPELINE: {str(e)[:200]}")
-            print(f"ERRORE PIPELINE: {e}")
-        time.sleep(7200)
+            print(f"Follow-up failed: {e}")
+        summary_parts = []
+        for sector in DEFAULT_NICHES:
+            try:
+                result = run_revenue_pipeline(db, sector=sector, hunt_count=0, audit_limit=4, send_limit=6)
+                if result.get("sent", 0):
+                    summary_parts.append(f"{sector}: {result['sent']} email")
+            except Exception as e:
+                print(f"Outreach {sector} error: {e}")
+        if summary_parts:
+            send_telegram(f"Outreach ciclo {iteration}: " + ", ".join(summary_parts))
+        time.sleep(43200)  # 12h
+
+
+def pivot_loop():
+    """Runs every 6h: CEO analyzes reply rates and pivots sector priorities."""
+    time.sleep(1800)
+    iteration = 0
+    while True:
+        iteration += 1
+        try:
+            ceo_pivot(db)
+        except Exception as e:
+            print(f"CEO pivot error: {e}")
+        if iteration % 12 == 0:  # every 72h (12 * 6h)
+            try:
+                metrics_report(db)
+            except Exception as e:
+                print(f"Metrics report error: {e}")
+        time.sleep(21600)  # 6h
 
 @app.route("/landing")
 def landing():
-    return open("templates/landing.html", "r").read()
+    ref = request.args.get("ref", "")
+    html = open("templates/landing.html", "r", encoding="utf-8").read()
+    # Inject ref into all CTA links
+    if ref:
+        html = html.replace('href="/onboarding"', f'href="/onboarding?ref={ref}"')
+        html = html.replace('href="/checkout"', f'href="/checkout?ref={ref}"')
+    return html
 
 @app.route("/")
 def dashboard():
@@ -370,6 +402,55 @@ def dashboard():
             </div>
         </div>
         
+        <div class="pipeline-section" style="margin-bottom:20px;">
+            <div class="section-title">Sales Loop — Metriche</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+                <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:22px;font-weight:900;color:#fff;" id="m-p-today">0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Prospect oggi</div>
+                </div>
+                <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:22px;font-weight:900;color:#fff;" id="m-p-week">0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Questa settimana</div>
+                </div>
+                <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:22px;font-weight:900;color:#fff;" id="m-p-total">0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Totale prospect</div>
+                </div>
+                <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:22px;font-weight:900;color:#00e87a;" id="m-best">n/d</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Settore top</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+                <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:22px;font-weight:900;color:#00b4d8;" id="m-emails">0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Email inviate</div>
+                </div>
+                <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:22px;font-weight:900;color:#ffaa00;" id="m-rr">0%</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Reply rate</div>
+                </div>
+                <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:22px;font-weight:900;color:#00e87a;" id="m-clients">0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">Clienti attivi</div>
+                </div>
+                <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:22px;font-weight:900;color:#00e87a;" id="m-mrr">€0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">MRR</div>
+                </div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="font-size:11px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;">
+                    <th style="text-align:left;padding:6px 12px;">Settore</th>
+                    <th style="text-align:left;padding:6px 12px;">Contattati</th>
+                    <th style="text-align:left;padding:6px 12px;">Risposte</th>
+                    <th style="text-align:left;padding:6px 12px;">Reply Rate</th>
+                </tr></thead>
+                <tbody id="m-sector-table"></tbody>
+            </table>
+        </div>
+
         <div class="pipeline-section" style="padding:16px 25px;margin-bottom:20px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <span id="daily-label" style="font-size:13px;color:rgba(255,255,255,0.5);">Email oggi: 0/30</span>
@@ -512,16 +593,43 @@ def dashboard():
             } catch(e) {}
         }
 
+        async function updateMetrics() {
+            try {
+                const resp = await fetch('/api/metrics');
+                const d = await resp.json();
+                const el = id => document.getElementById(id);
+                if (el('m-p-today')) el('m-p-today').textContent = d.prospects_today;
+                if (el('m-p-week')) el('m-p-week').textContent = d.prospects_week;
+                if (el('m-p-total')) el('m-p-total').textContent = d.prospects_total;
+                if (el('m-emails')) el('m-emails').textContent = d.emails_sent;
+                if (el('m-rr')) el('m-rr').textContent = d.overall_reply_rate + '%';
+                if (el('m-mrr')) el('m-mrr').textContent = '€' + (d.mrr || 0);
+                if (el('m-clients')) el('m-clients').textContent = d.active_clients;
+                if (el('m-req-val')) el('m-req-val').textContent = '€' + (d.requests_value_month || 0).toLocaleString('it-IT');
+                if (el('m-best')) el('m-best').textContent = d.best_sector;
+                if (el('m-sector-table') && d.sector_stats && d.sector_stats.length) {
+                    el('m-sector-table').innerHTML = d.sector_stats.map(s =>
+                        `<tr><td style="padding:8px 12px;font-weight:600;text-transform:capitalize;">${s.sector}</td>
+                         <td style="padding:8px 12px;">${s.contacted}</td>
+                         <td style="padding:8px 12px;">${s.replied}</td>
+                         <td style="padding:8px 12px;color:${s.reply_rate>5?'#00e87a':s.reply_rate>2?'#ffaa00':'#ff6b35'};font-weight:700;">${s.reply_rate}%</td></tr>`
+                    ).join('');
+                }
+            } catch(e) {}
+        }
+
         setInterval(updateDashboard, 5000);
         setInterval(updateLogs, 10000);
         setInterval(updatePipeline, 30000);
         setInterval(updatePL, 60000);
         setInterval(updateROI, 60000);
+        setInterval(updateMetrics, 30000);
         updateDashboard();
         updateLogs();
         updatePipeline();
         updatePL();
         updateROI();
+        updateMetrics();
     </script>
 </body>
 </html>"""
@@ -620,6 +728,79 @@ def pl_report():
         return jsonify({"mrr": 0, "spent": 0, "profit": 0, "emails_sent": 0, "replies": 0, "reply_rate": 0})
 
 
+@app.route("/api/metrics")
+def metrics_endpoint():
+    try:
+        today = datetime.now().date().isoformat()
+        week_ago = (datetime.now().date() - timedelta(days=7)).isoformat()
+        month_start = datetime.now().replace(day=1).date().isoformat()
+
+        # Prospects counts
+        all_p = db.table("prospects").select("sector,status,created_at").execute()
+        rows = all_p.data or []
+        today_p = sum(1 for r in rows if (r.get("created_at") or "")[:10] == today)
+        week_p = sum(1 for r in rows if (r.get("created_at") or "")[:10] >= week_ago)
+        total_p = len(rows)
+
+        # Per-sector reply rate
+        sectors = {}
+        for r in rows:
+            s = r.get("sector", "altro")
+            if s not in sectors:
+                sectors[s] = {"contacted": 0, "replied": 0}
+            if r.get("status") in ("contacted", "followup_1", "replied", "warm_1", "warm_2", "warm_closed", "converted", "dead"):
+                sectors[s]["contacted"] += 1
+            if r.get("status") in ("replied", "warm_1", "warm_2", "warm_closed", "converted"):
+                sectors[s]["replied"] += 1
+        sector_stats = [
+            {
+                "sector": s,
+                "contacted": d["contacted"],
+                "replied": d["replied"],
+                "reply_rate": round(d["replied"] / max(d["contacted"], 1) * 100, 1)
+            }
+            for s, d in sorted(sectors.items(), key=lambda x: x[1]["replied"], reverse=True)
+        ]
+        best_sector = sector_stats[0]["sector"] if sector_stats else "n/d"
+
+        # Active clients and MRR
+        clients = db.table("clients").select("mrr,status").execute()
+        active_clients = [c for c in (clients.data or []) if c.get("status") in ("active", "trial")]
+        mrr = sum(c.get("mrr") or 0 for c in active_clients)
+
+        # Emails sent
+        total_emailed = sum(d["contacted"] for d in sectors.values())
+        total_replied = sum(d["replied"] for d in sectors.values())
+        overall_rr = round(total_replied / max(total_emailed, 1) * 100, 1)
+
+        # Requests value this month
+        reqs = db.table("requests").select("estimated_value,converted").gte("received_at", month_start + "T00:00:00").execute()
+        req_data = reqs.data or []
+        req_value = sum(r.get("estimated_value") or 0 for r in req_data)
+
+        return jsonify({
+            "prospects_today": today_p,
+            "prospects_week": week_p,
+            "prospects_total": total_p,
+            "emails_sent": total_emailed,
+            "replies": total_replied,
+            "overall_reply_rate": overall_rr,
+            "active_clients": len(active_clients),
+            "mrr": mrr,
+            "requests_value_month": req_value,
+            "best_sector": best_sector,
+            "sector_stats": sector_stats,
+        })
+    except Exception as e:
+        print(f"metrics_endpoint error: {e}")
+        return jsonify({
+            "prospects_today": 0, "prospects_week": 0, "prospects_total": 0,
+            "emails_sent": 0, "replies": 0, "overall_reply_rate": 0,
+            "active_clients": 0, "mrr": 0, "requests_value_month": 0,
+            "best_sector": "n/d", "sector_stats": [],
+        })
+
+
 @app.route("/api/roi")
 def roi_report():
     try:
@@ -669,11 +850,11 @@ def roi_report():
 
 @app.route("/webhook/signup", methods=["POST"])
 def signup():
-    data = request.json
+    data = request.json or request.form.to_dict()
     company = data.get("company", "")
     email = data.get("email", "")
-    sector = data.get("sector", "dentisti")
-    whatsapp = data.get("whatsapp", "")
+    sector = data.get("sector", "artigiani")
+    prospect_ref = data.get("ref", "")
 
     if company and email:
         try:
@@ -683,9 +864,22 @@ def signup():
                 "sector": sector,
                 "plan": "monthly",
                 "mrr": 0,
-                "status": "audit_requested"
+                "status": "trial",
             }).execute()
-            send_telegram(f"🎉 Nuova richiesta audit dentisti! {company} ({email}) - Settore: {sector}")
+            # Link prospect to client if ref provided
+            if prospect_ref:
+                try:
+                    db.table("prospects").update({
+                        "status": "converted",
+                        "converted_at": datetime.now().isoformat(),
+                    }).eq("id", prospect_ref).execute()
+                except Exception as e:
+                    print(f"prospect link error: {e}")
+            send_telegram(
+                f"NUOVO CLIENTE: {company} — 197 EUR/mese trial avviato\n"
+                f"Settore: {sector} | Email: {email}"
+                + (f"\nProspect collegato: {prospect_ref}" if prospect_ref else "")
+            )
         except Exception as e:
             print(f"Errore signup: {e}")
         return jsonify({"status": "ok"})
@@ -965,8 +1159,11 @@ if __name__ == "__main__":
         db.table("metrics").insert({"date": datetime.now().date().isoformat()}).execute()
     except:
         pass
-    threading.Thread(target=agency_loop, daemon=True).start()
+    threading.Thread(target=discovery_loop, daemon=True).start()
+    threading.Thread(target=outreach_loop, daemon=True).start()
+    threading.Thread(target=pivot_loop, daemon=True).start()
     threading.Thread(target=imap_loop, daemon=True).start()
+    send_telegram("FlowOps AI avviata: discovery 24h, outreach 12h, pivot 6h, IMAP 30min")
     app.run(host="0.0.0.0", port=8080)
 
 
