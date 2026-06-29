@@ -1,5 +1,5 @@
 ﻿from flask import Flask, jsonify, request, redirect, render_template
-from agents import check_email_replies, send_followups, run_revenue_pipeline, MetricsTracker
+from agents import check_email_replies, send_followups, run_revenue_pipeline, MetricsTracker, process_inbound_email
 from supabase import create_client
 from dotenv import load_dotenv
 import os
@@ -9,6 +9,8 @@ import time
 import hmac as hmac_mod
 import hashlib
 import base64
+import random
+import string
 from datetime import datetime
 import requests as req
 
@@ -19,8 +21,14 @@ db = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 BUDGET = float(os.getenv("BUDGET_MENSILE", 500))
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT = os.getenv("TELEGRAM_CHAT_ID")
+FLOWOPS_DOMAIN = os.getenv("FLOWOPS_DOMAIN", "getautomatik.com")
 
-DEFAULT_NICHES = ["dentisti"]
+DEFAULT_NICHES = ["fotovoltaico", "climatizzazione", "idraulici", "ristrutturazioni", "infissi"]
+
+def generate_forwarding_address():
+    suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    return f"richieste-{suffix}@{FLOWOPS_DOMAIN}"
+
 
 def send_telegram(message):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT:
@@ -139,8 +147,8 @@ def imap_loop():
         time.sleep(1800)
 
 def agency_loop():
-    send_telegram("MICRO-AGENZIA AI AVVIATA - verticale dentisti")
-    print("MICRO-AGENZIA AI AVVIATA")
+    send_telegram("FlowOps AI avviata - artigiani italiani")
+    print("FlowOps AI AVVIATA")
     iteration = 0
     while True:
         iteration += 1
@@ -152,14 +160,19 @@ def agency_loop():
             except Exception as e:
                 print(f"Follow-up failed: {e}")
 
-            result = run_revenue_pipeline(db, sector="dentisti", hunt_count=8, audit_limit=5, send_limit=30)
-            msg = (
-                f"Ciclo {iteration} pipeline dentisti - "
-                f"lead: {result.get('hunted', 0)}, audit: {result.get('audited', 0)}, "
-                f"qualificati: {result.get('qualified', 0)}, email: {result.get('sent', 0)}"
-            )
-            send_telegram(msg)
-            print(msg)
+            for sector in DEFAULT_NICHES:
+                try:
+                    result = run_revenue_pipeline(db, sector=sector, hunt_count=5, audit_limit=3, send_limit=6)
+                    msg = (
+                        f"Ciclo {iteration} [{sector}] - "
+                        f"lead: {result.get('hunted', 0)}, audit: {result.get('audited', 0)}, "
+                        f"qualificati: {result.get('qualified', 0)}, email: {result.get('sent', 0)}"
+                    )
+                    print(msg)
+                except Exception as e:
+                    print(f"Pipeline {sector} error: {e}")
+
+            send_telegram(f"FlowOps ciclo {iteration} completato - {len(DEFAULT_NICHES)} settori processati")
         except Exception as e:
             send_telegram(f"ERRORE PIPELINE: {str(e)[:200]}")
             print(f"ERRORE PIPELINE: {e}")
@@ -617,54 +630,138 @@ def success():
     </div>
     </body></html>"""
 
-@app.route("/onboarding", methods=["GET", "POST"])
+@app.route("/onboarding")
 def onboarding():
-    if request.method == "GET":
-        token = request.args.get("token", "")
-        email = decode_onboarding_token(token)
-        if not email:
-            return render_template("onboarding.html", error="Link non valido o scaduto. Contatta info@getautomatik.com", success=False, token="", agency_name="", step=1)
-        try:
-            client = db.table("clients").select("company_name").eq("contact_email", email).execute()
-            agency_name = client.data[0]["company_name"] if client.data else ""
-        except Exception:
-            agency_name = ""
-        return render_template("onboarding.html", error=None, success=False, token=token, agency_name=agency_name, step=2)
+    return render_template("onboarding.html")
 
-    # POST — salva i dati
-    token = request.form.get("token", "")
-    email = decode_onboarding_token(token)
-    if not email:
-        return render_template("onboarding.html", error="Link non valido.", success=False, token="", agency_name="", step=1)
 
-    agency_name = request.form.get("agency_name", "")
-    portals = request.form.get("portals", "")
-    lead_criteria = request.form.get("lead_criteria", "")
-    contact_channel = request.form.get("contact_channel", "")
-    work_hours = request.form.get("work_hours", "")
+@app.route("/api/onboarding/generate", methods=["POST"])
+def onboarding_generate():
+    import anthropic
+    data = request.json or {}
+    nome_azienda = data.get("nome_azienda", "").strip()
+    settore = data.get("settore", "").strip()
+    email_titolare = data.get("email_titolare", "").strip()
+
+    if not nome_azienda or not settore or not email_titolare:
+        return jsonify({"error": "Dati mancanti"}), 400
+
+    forwarding_address = generate_forwarding_address()
+
+    SETTORI = {
+        "fotovoltaico": "pannelli solari e impianti fotovoltaici",
+        "climatizzazione": "climatizzazione e condizionatori",
+        "idraulici": "impianti idraulici e riparazioni",
+        "ristrutturazioni": "ristrutturazioni edili",
+        "infissi": "infissi, finestre e porte",
+    }
+    settore_desc = SETTORI.get(settore, settore)
 
     try:
-        db.table("clients").update({
-            "company_name": agency_name,
-            "onboarding_completed": True,
-            "onboarding_data": json.dumps({
-                "portals": portals,
-                "lead_criteria": lead_criteria,
-                "contact_channel": contact_channel,
-                "work_hours": work_hours
-            })
-        }).eq("contact_email", email).execute()
+        client_ai = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        prompt = (
+            f"Immagina di essere l'assistente AI di '{nome_azienda}', "
+            f"un'azienda di {settore_desc}.\n\n"
+            f"Scrivi un messaggio di benvenuto breve (2-3 frasi) che mostra come risponderesti "
+            f"a un cliente che chiede un preventivo. Sii professionale, cordiale e specifico per il settore {settore}. "
+            f"Usa il nome dell'azienda nel messaggio."
+        )
+        msg = client_ai.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=200,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        aha_response = msg.content[0].text.strip()
     except Exception as e:
-        print(f"Errore salvataggio onboarding: {e}")
+        print(f"Claude AHA error: {e}")
+        aha_response = (
+            f"Grazie per aver contattato {nome_azienda}! "
+            f"Abbiamo ricevuto la sua richiesta per {settore_desc} "
+            f"e la contatteremo entro poche ore con un preventivo personalizzato."
+        )
+
+    return jsonify({
+        "forwarding_address": forwarding_address,
+        "aha_response": aha_response,
+    })
+
+
+@app.route("/api/onboarding/save", methods=["POST"])
+def onboarding_save():
+    data = request.json or {}
+    nome_azienda = data.get("nome_azienda", "").strip()
+    settore = data.get("settore", "").strip()
+    email_titolare = data.get("email_titolare", "").strip()
+    forwarding_address = data.get("forwarding_address", "").strip()
+
+    if not all([nome_azienda, settore, email_titolare, forwarding_address]):
+        return jsonify({"error": "Dati mancanti"}), 400
+
+    try:
+        existing = db.table("client_configs").select("id").eq("email_titolare", email_titolare).execute()
+        if existing.data:
+            db.table("client_configs").update({
+                "forwarding_address": forwarding_address,
+                "settore": settore,
+                "nome_azienda": nome_azienda,
+                "status": "active",
+            }).eq("email_titolare", email_titolare).execute()
+        else:
+            db.table("client_configs").insert({
+                "forwarding_address": forwarding_address,
+                "settore": settore,
+                "nome_azienda": nome_azienda,
+                "email_titolare": email_titolare,
+                "status": "active",
+            }).execute()
+    except Exception as e:
+        print(f"Errore salvataggio client_configs: {e}")
+        return jsonify({"error": "Errore database"}), 500
 
     send_telegram(
-        f"📋 ONBOARDING COMPLETATO!\n"
-        f"Agenzia: {agency_name}\nEmail: {email}\n"
-        f"Portali: {portals}\nCriteri: {lead_criteria}\n"
-        f"Contatto: {contact_channel}\nOrari: {work_hours}"
+        f"FlowOps nuovo cliente!\n"
+        f"Azienda: {nome_azienda} ({settore})\n"
+        f"Email: {email_titolare}\n"
+        f"Forwarding: {forwarding_address}"
     )
-    return render_template("onboarding.html", error=None, success=True, token=token, agency_name=agency_name, step=3)
+    return jsonify({"status": "ok"})
 
+
+@app.route("/webhook/email-inbound", methods=["POST"])
+def email_inbound():
+    content_type = request.content_type or ""
+    if "application/json" in content_type:
+        data = request.json or {}
+        to_address = data.get("To", data.get("OriginalRecipient", "")).lower().strip()
+        from_email = data.get("From", "").strip()
+        from_name = data.get("FromName", "")
+        subject = data.get("Subject", "")
+        body_text = data.get("TextBody", data.get("body-plain", ""))
+    else:
+        to_address = (request.form.get("recipient") or request.form.get("To", "")).lower().strip()
+        from_email = (request.form.get("sender") or request.form.get("From", "")).strip()
+        from_name = request.form.get("from_name", "")
+        subject = request.form.get("subject", "")
+        body_text = request.form.get("body-plain", request.form.get("stripped-text", ""))
+
+    if not to_address or not from_email:
+        return jsonify({"error": "Dati email incompleti"}), 400
+
+    import re as re_mod
+    m = re_mod.search(r'<([^>]+)>', from_email)
+    if m:
+        from_name = from_name or from_email.split("<")[0].strip().strip('"')
+        from_email = m.group(1)
+    m2 = re_mod.search(r'<([^>]+)>', to_address)
+    if m2:
+        to_address = m2.group(1)
+
+    threading.Thread(
+        target=process_inbound_email,
+        args=(db, to_address, from_email, from_name, subject, body_text),
+        daemon=True
+    ).start()
+    return jsonify({"status": "ok"}), 200
 
 
 def _handle_stripe_event(event):

@@ -3,95 +3,330 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configura il tuo Agente — GetAutomatik AI</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <title>Configura FlowOps per la tua azienda</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #050510; color: #fff; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 60px 20px; }
-        .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(0,255,136,0.2); border-radius: 24px; padding: 48px 44px; max-width: 560px; width: 100%; position: relative; overflow: hidden; }
-        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #00ff88, #00b4d8); }
-        .logo { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.4); margin-bottom: 32px; }
-        .logo span { color: #00ff88; }
-        h1 { font-size: 28px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
-        .subtitle { font-size: 15px; color: rgba(255,255,255,0.45); margin-bottom: 36px; line-height: 1.5; }
-        .step-indicator { display: flex; gap: 6px; margin-bottom: 32px; }
-        .step-dot { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); flex: 1; }
-        .step-dot.active { background: linear-gradient(90deg, #00ff88, #00b4d8); }
-        label { display: block; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6); margin-bottom: 7px; letter-spacing: 0.3px; }
-        .field { margin-bottom: 18px; }
-        input, select, textarea { width: 100%; padding: 13px 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: white; font-size: 14px; font-family: inherit; transition: border-color 0.2s; }
-        input:focus, select:focus, textarea:focus { outline: none; border-color: rgba(0,255,136,0.4); }
-        select option { background: #1a1a2e; }
-        textarea { resize: vertical; min-height: 90px; }
-        .hint { font-size: 12px; color: rgba(255,255,255,0.25); margin-top: 6px; line-height: 1.5; }
-        .submit-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #00ff88, #00b4d8); color: #050510; border: none; border-radius: 10px; font-size: 15px; font-weight: 800; cursor: pointer; margin-top: 8px; font-family: inherit; transition: opacity 0.2s; }
-        .submit-btn:hover { opacity: 0.88; }
-        .error { background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); border-radius: 10px; padding: 14px 16px; font-size: 14px; color: #ff6b6b; margin-bottom: 20px; }
-        .success-msg { text-align: center; padding: 20px 0; }
-        .success-msg .icon { font-size: 52px; margin-bottom: 16px; }
-        .success-msg h2 { font-size: 24px; font-weight: 800; margin-bottom: 10px; }
-        .success-msg p { font-size: 15px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --bg:#080812; --surface:#0f0f1e; --border:rgba(255,255,255,0.08); --green:#00e87a; --blue:#00b4d8; --text:#f0f0f5; --muted:rgba(240,240,245,0.5); }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:40px 20px 60px; }
+
+        /* LOGO */
+        .top-logo { font-weight:900; font-size:18px; margin-bottom:40px; letter-spacing:-0.4px; align-self:flex-start; max-width:560px; width:100%; }
+        .top-logo span { color:var(--green); }
+
+        /* PROGRESS */
+        .progress-bar { display:flex; gap:8px; width:100%; max-width:560px; margin-bottom:36px; }
+        .prog-step { flex:1; height:4px; border-radius:2px; background:var(--border); transition:background .4s; }
+        .prog-step.done { background:linear-gradient(90deg,var(--green),var(--blue)); }
+        .prog-step.active { background:var(--green); }
+
+        /* CARD */
+        .card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:40px 36px; max-width:560px; width:100%; position:relative; overflow:hidden; }
+        .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--green),var(--blue)); }
+
+        h2 { font-size:24px; font-weight:800; letter-spacing:-0.8px; margin-bottom:8px; }
+        .card-sub { font-size:14px; color:var(--muted); margin-bottom:28px; line-height:1.5; }
+
+        /* STEP 1 — settore cards */
+        .settori-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+        .settore-card { border:1.5px solid var(--border); border-radius:14px; padding:20px 16px; text-align:center; cursor:pointer; transition:border-color .2s, background .2s; background:rgba(255,255,255,0.02); }
+        .settore-card:hover { border-color:rgba(0,232,122,0.35); background:rgba(0,232,122,0.04); }
+        .settore-card.selected { border-color:var(--green); background:rgba(0,232,122,0.08); }
+        .settore-icon { font-size:34px; display:block; margin-bottom:10px; }
+        .settore-name { font-size:14px; font-weight:700; }
+        .settore-infissi { grid-column:span 2; display:flex; align-items:center; justify-content:center; gap:12px; padding:16px; }
+        .settore-infissi .settore-icon { margin-bottom:0; font-size:28px; }
+
+        /* INPUTS */
+        .field { margin-bottom:16px; }
+        label { display:block; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:7px; }
+        input { width:100%; padding:13px 15px; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,0.04); color:var(--text); font-size:15px; font-family:inherit; transition:border-color .2s; }
+        input:focus { outline:none; border-color:rgba(0,232,122,0.4); }
+
+        /* BUTTONS */
+        .btn-main { width:100%; padding:16px; background:var(--green); color:#080812; border:none; border-radius:11px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; transition:opacity .2s; margin-top:8px; }
+        .btn-main:hover { opacity:.88; }
+        .btn-main:disabled { opacity:.45; cursor:not-allowed; }
+        .btn-back { background:none; border:none; color:var(--muted); font-family:inherit; font-size:14px; cursor:pointer; margin-top:14px; display:block; width:100%; text-align:center; }
+        .btn-back:hover { color:var(--text); }
+
+        /* AHA MOMENT */
+        .aha-box { background:rgba(0,232,122,0.05); border:1px solid rgba(0,232,122,0.2); border-radius:14px; padding:22px 20px; margin-bottom:24px; min-height:100px; }
+        .aha-label { font-size:11px; font-weight:700; color:var(--green); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+        .aha-text { font-size:14px; line-height:1.7; color:var(--text); }
+        .aha-cursor { display:inline-block; width:2px; height:16px; background:var(--green); margin-left:2px; animation:blink 1s infinite; vertical-align:middle; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        /* FORWARDING */
+        .address-box { background:rgba(0,180,216,0.08); border:1px solid rgba(0,180,216,0.25); border-radius:12px; padding:18px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:24px; }
+        .address-text { font-family:monospace; font-size:14px; color:var(--blue); word-break:break-all; }
+        .copy-btn { background:rgba(0,180,216,0.15); border:1px solid rgba(0,180,216,0.3); color:var(--blue); border-radius:8px; padding:8px 14px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; transition:background .2s; }
+        .copy-btn:hover { background:rgba(0,180,216,0.25); }
+        .copy-btn.copied { background:rgba(0,232,122,0.15); border-color:rgba(0,232,122,0.3); color:var(--green); }
+
+        .guide-steps { display:flex; flex-direction:column; gap:12px; margin-bottom:24px; }
+        .guide-step { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+        .guide-step .guide-title { font-size:13px; font-weight:700; margin-bottom:4px; }
+        .guide-step .guide-desc { font-size:12px; color:var(--muted); line-height:1.5; }
+        .guide-step .provider-tag { display:inline-block; background:rgba(255,255,255,0.07); border-radius:4px; padding:1px 7px; font-size:11px; font-weight:600; margin-right:6px; }
+
+        /* STEP 5 SUCCESS */
+        .success-center { text-align:center; padding:16px 0 8px; }
+        .success-icon { font-size:56px; margin-bottom:18px; display:block; }
+        .success-center h2 { font-size:26px; letter-spacing:-1px; margin-bottom:10px; }
+        .success-center p { font-size:15px; color:var(--muted); line-height:1.6; }
+        .spinner { width:20px; height:20px; border:2px solid rgba(0,232,122,0.3); border-top-color:var(--green); border-radius:50%; animation:spin .8s linear infinite; display:inline-block; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* LOADER */
+        .loading-dots { display:flex; gap:6px; justify-content:center; padding:20px 0; }
+        .dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:bounce 1.2s infinite; }
+        .dot:nth-child(2) { animation-delay:.2s; }
+        .dot:nth-child(3) { animation-delay:.4s; }
+        @keyframes bounce { 0%,80%,100%{transform:translateY(0);opacity:.5} 40%{transform:translateY(-8px);opacity:1} }
+
+        .step-section { display:none; }
+        .step-section.active { display:block; }
     </style>
 </head>
 <body>
-<div class="card">
-    <div class="logo">Getautomatik <span>AI</span></div>
+<div class="top-logo">Flow<span>Ops</span></div>
 
-    {% if error %}
-    <div class="error">{{ error }}</div>
-    {% endif %}
-
-    {% if success %}
-    <div class="success-msg">
-        <div class="icon">🚀</div>
-        <h2>Configurazione completata!</h2>
-        <p>Il tuo agente AI viene attivato entro 24 ore lavorative.<br>Riceverai una email di conferma quando è pronto.</p>
-    </div>
-    {% else %}
-    <div class="step-indicator">
-        <div class="step-dot active"></div>
-        <div class="step-dot active"></div>
-        <div class="step-dot {{ 'active' if step >= 3 else '' }}"></div>
-    </div>
-
-    <h1>Configura il tuo agente 👋</h1>
-    <p class="subtitle">Bastano 5 minuti. Più dettagli ci dai, meglio l'agente si comporta con i tuoi lead.</p>
-
-    <form method="POST" action="/onboarding">
-        <input type="hidden" name="token" value="{{ token }}">
-
-        <div class="field">
-            <label>Nome agenzia *</label>
-            <input type="text" name="agency_name" value="{{ agency_name }}" placeholder="Es. Agenzia Rossi Immobiliare" required>
-        </div>
-
-        <div class="field">
-            <label>Portali che usi per ricevere lead *</label>
-            <input type="text" name="portals" placeholder="Es. Immobiliare.it, Idealista, Casa.it, WhatsApp" required>
-            <p class="hint">Elenca i portali o canali da cui ricevi le richieste dei clienti.</p>
-        </div>
-
-        <div class="field">
-            <label>Come qualifichi un lead? *</label>
-            <textarea name="lead_criteria" placeholder="Es. Budget minimo 300.000€, cerca trilocale in zona X, disponibile entro 6 mesi" required></textarea>
-            <p class="hint">L'agente userà questi criteri per filtrare i lead e passarti solo quelli validi.</p>
-        </div>
-
-        <div class="field">
-            <label>WhatsApp o email per ricevere i lead qualificati *</label>
-            <input type="text" name="contact_channel" placeholder="Es. +39 333 1234567 oppure leads@miagenzia.it" required>
-            <p class="hint">Qui ti arriverà la notifica ogni volta che l'agente qualifica un lead caldo.</p>
-        </div>
-
-        <div class="field">
-            <label>Orari di lavoro della tua agenzia</label>
-            <input type="text" name="work_hours" placeholder="Es. Lun-Ven 9:00-19:00, Sab 9:00-13:00">
-            <p class="hint">L'agente risponde sempre 24/7, ma sa quando sei disponibile per fissare appuntamenti.</p>
-        </div>
-
-        <button type="submit" class="submit-btn">Attiva il mio agente AI →</button>
-    </form>
-    {% endif %}
+<div class="progress-bar" id="progressBar">
+    <div class="prog-step active" id="p1"></div>
+    <div class="prog-step" id="p2"></div>
+    <div class="prog-step" id="p3"></div>
+    <div class="prog-step" id="p4"></div>
+    <div class="prog-step" id="p5"></div>
 </div>
+
+<div class="card">
+
+    <!-- STEP 1: Settore -->
+    <div class="step-section active" id="step1">
+        <h2>In che settore lavori?</h2>
+        <p class="card-sub">Seleziona il settore della tua azienda.</p>
+        <div class="settori-grid">
+            <div class="settore-card" data-settore="Fotovoltaico" onclick="selectSettore(this)">
+                <span class="settore-icon">☀️</span>
+                <span class="settore-name">Fotovoltaico</span>
+            </div>
+            <div class="settore-card" data-settore="Climatizzazione" onclick="selectSettore(this)">
+                <span class="settore-icon">❄️</span>
+                <span class="settore-name">Climatizzazione</span>
+            </div>
+            <div class="settore-card" data-settore="Idraulico" onclick="selectSettore(this)">
+                <span class="settore-icon">🔧</span>
+                <span class="settore-name">Idraulico</span>
+            </div>
+            <div class="settore-card" data-settore="Ristrutturazioni" onclick="selectSettore(this)">
+                <span class="settore-icon">🏗️</span>
+                <span class="settore-name">Ristrutturazioni</span>
+            </div>
+            <div class="settore-card settore-infissi" data-settore="Infissi" onclick="selectSettore(this)">
+                <span class="settore-icon">🪟</span>
+                <span class="settore-name">Infissi</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEP 2: Nome azienda + email -->
+    <div class="step-section" id="step2">
+        <h2>Chi sei?</h2>
+        <p class="card-sub">Bastano due campi. Zero burocrazia.</p>
+        <div class="field">
+            <label>Nome azienda</label>
+            <input type="text" id="nomeAzienda" placeholder="Es. Termoidraulica Rossi" autocomplete="organization">
+        </div>
+        <div class="field">
+            <label>La tua email</label>
+            <input type="email" id="emailTitolare" placeholder="Es. info@termoidraulica-rossi.it" autocomplete="email">
+        </div>
+        <button class="btn-main" id="btnStep2" onclick="goStep3()">Continua →</button>
+        <button class="btn-back" onclick="goStep(1)">← Indietro</button>
+    </div>
+
+    <!-- STEP 3: AHA moment -->
+    <div class="step-section" id="step3">
+        <h2>Ecco come rispondo ai tuoi clienti</h2>
+        <p class="card-sub">Guarda come FlowOps gestisce una richiesta reale per <strong id="ahaAziendaName"></strong>.</p>
+
+        <div class="aha-box">
+            <div class="aha-label">FlowOps risponde automaticamente</div>
+            <div class="aha-text" id="ahaText">
+                <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+            </div>
+        </div>
+
+        <button class="btn-main" id="btnStep3" onclick="goStep4()" disabled>Attiva il sistema per la mia azienda →</button>
+        <button class="btn-back" onclick="goStep(2)">← Indietro</button>
+    </div>
+
+    <!-- STEP 4: Forwarding address -->
+    <div class="step-section" id="step4">
+        <h2>Collega la tua email</h2>
+        <p class="card-sub">Imposta il reindirizzamento automatico dalla tua email a questo indirizzo FlowOps. Ci vogliono 2 minuti.</p>
+
+        <div style="margin-bottom:14px;">
+            <label>Il tuo indirizzo FlowOps</label>
+        </div>
+        <div class="address-box">
+            <span class="address-text" id="forwardingAddress">—</span>
+            <button class="copy-btn" id="copyBtn" onclick="copyAddress()">Copia</button>
+        </div>
+
+        <div class="guide-steps">
+            <div class="guide-step">
+                <div class="guide-title"><span class="provider-tag">Gmail</span> Come impostare il forwarding</div>
+                <div class="guide-desc">Impostazioni (⚙️) → Visualizza tutte le impostazioni → Forwarding e POP/IMAP → Aggiungi un indirizzo di forwarding → incolla l'indirizzo sopra → conferma.</div>
+            </div>
+            <div class="guide-step">
+                <div class="guide-title"><span class="provider-tag">Outlook</span> Come impostare il forwarding</div>
+                <div class="guide-desc">Impostazioni → Posta → Regole → Nuova regola → "Forwarding a" → incolla l'indirizzo sopra → Salva.</div>
+            </div>
+            <div class="guide-step">
+                <div class="guide-title"><span class="provider-tag">Altro</span> Qualsiasi provider email</div>
+                <div class="guide-desc">Vai nelle impostazioni della tua email e cerca "Reindirizzamento" o "Forwarding". Incolla l'indirizzo FlowOps sopra. Se hai bisogno di aiuto scrivici: info@getautomatik.com</div>
+            </div>
+        </div>
+
+        <button class="btn-main" onclick="goStep5()">Ho impostato il reindirizzamento →</button>
+        <button class="btn-back" onclick="goStep(3)">← Indietro</button>
+    </div>
+
+    <!-- STEP 5: Success -->
+    <div class="step-section" id="step5">
+        <div class="success-center">
+            <span class="success-icon">✅</span>
+            <h2>FlowOps è attivo per <span id="successName" style="color:var(--green);"></span></h2>
+            <p style="margin-bottom:24px;">Da questo momento rispondo automaticamente a tutte le richieste che arrivano via email. Ti avviso ogni volta che c'è un lead pronto.</p>
+            <p style="font-size:13px; color:var(--muted);">Redirect alla dashboard tra pochi secondi... <span class="spinner"></span></p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const state = {
+    settore: '',
+    nomeAzienda: '',
+    emailTitolare: '',
+    forwardingAddress: '',
+    currentStep: 1
+};
+
+function updateProgress(step) {
+    for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById('p' + i);
+        el.className = 'prog-step' + (i < step ? ' done' : (i === step ? ' active' : ''));
+    }
+}
+
+function goStep(n) {
+    document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+    state.currentStep = n;
+    updateProgress(n);
+    window.scrollTo({top: 0, behavior:'smooth'});
+}
+
+function selectSettore(card) {
+    document.querySelectorAll('.settore-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    state.settore = card.dataset.settore;
+    setTimeout(() => goStep(2), 250);
+}
+
+function goStep3() {
+    const nome = document.getElementById('nomeAzienda').value.trim();
+    const email = document.getElementById('emailTitolare').value.trim();
+    if (!nome || !email || !email.includes('@')) {
+        alert('Inserisci nome azienda e email valida.');
+        return;
+    }
+    state.nomeAzienda = nome;
+    state.emailTitolare = email;
+    document.getElementById('ahaAziendaName').textContent = nome;
+    goStep(3);
+    triggerAha();
+}
+
+async function triggerAha() {
+    const btn = document.getElementById('btnStep3');
+    btn.disabled = true;
+    try {
+        const resp = await fetch('/api/onboarding/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                nome_azienda: state.nomeAzienda,
+                email_titolare: state.emailTitolare,
+                settore: state.settore
+            })
+        });
+        const data = await resp.json();
+        state.forwardingAddress = data.forwarding_address || '';
+        const text = data.aha_response || 'FlowOps è pronto a rispondere per te.';
+        typewrite('ahaText', text, () => { btn.disabled = false; });
+    } catch(e) {
+        document.getElementById('ahaText').textContent = 'Servizio temporaneamente non disponibile. Riprova tra un momento.';
+        btn.disabled = false;
+    }
+}
+
+function typewrite(elId, text, callback) {
+    const el = document.getElementById(elId);
+    el.innerHTML = '';
+    const cursor = document.createElement('span');
+    cursor.className = 'aha-cursor';
+    el.appendChild(cursor);
+    let i = 0;
+    const speed = 18;
+    function tick() {
+        if (i < text.length) {
+            cursor.insertAdjacentText('beforebegin', text[i]);
+            i++;
+            setTimeout(tick, speed);
+        } else {
+            cursor.remove();
+            if (callback) callback();
+        }
+    }
+    tick();
+}
+
+function goStep4() {
+    document.getElementById('forwardingAddress').textContent = state.forwardingAddress || 'richieste-xxxxx@getautomatik.com';
+    goStep(4);
+}
+
+async function goStep5() {
+    goStep(5);
+    document.getElementById('successName').textContent = state.nomeAzienda;
+    try {
+        await fetch('/api/onboarding/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                nome_azienda: state.nomeAzienda,
+                email_titolare: state.emailTitolare,
+                settore: state.settore,
+                forwarding_address: state.forwardingAddress
+            })
+        });
+    } catch(e) { console.warn('save error', e); }
+    setTimeout(() => { window.location.href = '/dashboard'; }, 3500);
+}
+
+function copyAddress() {
+    const addr = state.forwardingAddress || document.getElementById('forwardingAddress').textContent;
+    navigator.clipboard.writeText(addr).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copiato!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copia'; btn.classList.remove('copied'); }, 2000);
+    });
+}
+</script>
 </body>
 </html>

@@ -1,148 +1,317 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GetAutomatik AI - Audit gratuito per studi dentistici</title>
+    <title>FlowOps — Nessuna richiesta cliente persa. Mai più.</title>
+    <meta name="description" content="FlowOps risponde ai tuoi clienti entro 2 minuti, genera preventivi automatici e ti avvisa solo quando serve la tua firma.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Inter, sans-serif; background: #f7f7f2; color: #101415; line-height: 1.6; }
-        .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
-        nav { padding: 20px 0; border-bottom: 1px solid rgba(16,20,21,.08); background: rgba(247,247,242,.92); position: sticky; top: 0; backdrop-filter: blur(10px); z-index: 10; }
-        .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-        .logo { font-weight: 900; letter-spacing: -.4px; font-size: 18px; }
-        .logo span { color: #147a5c; }
-        .nav-cta, .hero-cta, button { background: #147a5c; color: #fff; border: 0; border-radius: 10px; padding: 13px 20px; font-weight: 800; text-decoration: none; cursor: pointer; font-family: inherit; }
-        .hero { padding: 74px 0 54px; }
-        .hero-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
-        .eyebrow { color: #147a5c; text-transform: uppercase; font-size: 12px; letter-spacing: 1.4px; font-weight: 800; margin-bottom: 18px; }
-        h1 { font-size: clamp(38px, 6vw, 68px); line-height: 1.02; letter-spacing: -2.2px; margin-bottom: 24px; }
-        .lead { font-size: 19px; color: rgba(16,20,21,.68); max-width: 660px; margin-bottom: 30px; }
-        .proof { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 34px; }
-        .proof div, .audit-card, .form-card { background: #fff; border: 1px solid rgba(16,20,21,.09); border-radius: 14px; box-shadow: 0 20px 60px rgba(20,122,92,.08); }
-        .proof div { padding: 18px; }
-        .proof strong { display: block; font-size: 24px; margin-bottom: 4px; }
-        .proof span { color: rgba(16,20,21,.56); font-size: 13px; }
-        .audit-card { padding: 28px; }
-        .audit-card h2 { font-size: 24px; letter-spacing: -.6px; margin-bottom: 18px; }
-        .check { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(16,20,21,.07); }
-        .check:last-child { border-bottom: 0; }
-        .mark { color: #147a5c; font-weight: 900; }
-        section { padding: 56px 0; }
-        .section-title { font-size: 34px; letter-spacing: -1px; line-height: 1.12; margin-bottom: 14px; }
-        .muted { color: rgba(16,20,21,.6); max-width: 720px; }
-        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
-        .step { background: #fff; border: 1px solid rgba(16,20,21,.08); border-radius: 14px; padding: 24px; }
-        .step-num { color: #147a5c; font-weight: 900; margin-bottom: 12px; }
-        .step h3 { margin-bottom: 8px; }
-        .form-band { background: #101415; color: #fff; padding: 62px 0; }
-        .form-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 36px; align-items: start; }
-        .form-card { padding: 28px; color: #101415; }
-        input, select { width: 100%; border: 1px solid rgba(16,20,21,.14); border-radius: 10px; padding: 14px 15px; font: inherit; margin-bottom: 12px; }
-        .form-msg { min-height: 22px; margin-top: 10px; font-size: 14px; }
-        footer { padding: 34px 0; color: rgba(16,20,21,.46); font-size: 13px; }
-        @media (max-width: 860px) { .hero-grid, .form-grid, .steps { grid-template-columns: 1fr; } .proof { grid-template-columns: 1fr; } }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #080812;
+            --surface: #0f0f1e;
+            --border: rgba(255,255,255,0.07);
+            --green: #00e87a;
+            --blue: #00b4d8;
+            --text: #f0f0f5;
+            --muted: rgba(240,240,245,0.52);
+        }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+        /* NAV */
+        nav { position: sticky; top: 0; z-index: 100; background: rgba(8,8,18,0.85); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); padding: 16px 0; }
+        .nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-weight: 900; font-size: 20px; letter-spacing: -0.5px; }
+        .logo span { color: var(--green); }
+        .btn-primary { background: var(--green); color: #080812; border: none; border-radius: 10px; padding: 12px 22px; font-weight: 800; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity .2s; }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-ghost { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+        .btn-ghost:hover { color: var(--text); }
+
+        /* HERO */
+        .hero { max-width: 1100px; margin: 0 auto; padding: 90px 24px 70px; text-align: center; }
+        .eyebrow { display: inline-block; background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.25); color: var(--green); padding: 6px 16px; border-radius: 50px; font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 28px; }
+        h1 { font-size: clamp(38px, 6vw, 72px); font-weight: 900; letter-spacing: -2.5px; line-height: 1.02; margin-bottom: 22px; }
+        h1 span { color: var(--green); }
+        .hero-sub { font-size: 19px; color: var(--muted); max-width: 600px; margin: 0 auto 38px; line-height: 1.65; }
+        .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+        .btn-lg { padding: 16px 32px; font-size: 16px; border-radius: 12px; }
+        .btn-outline { border: 1px solid var(--border); color: var(--text); text-decoration: none; display: inline-block; border-radius: 12px; padding: 15px 32px; font-size: 16px; font-weight: 600; transition: border-color .2s; }
+        .btn-outline:hover { border-color: rgba(255,255,255,0.25); }
+        .hero-trust { margin-top: 48px; display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; }
+        .trust-item { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 7px; }
+        .trust-item::before { content: '✓'; color: var(--green); font-weight: 700; }
+
+        /* SECTION */
+        section { padding: 72px 0; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+        .section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px; color: var(--green); margin-bottom: 14px; }
+        .section-title { font-size: clamp(28px, 4vw, 44px); font-weight: 900; letter-spacing: -1.2px; line-height: 1.1; margin-bottom: 14px; }
+        .section-sub { font-size: 17px; color: var(--muted); max-width: 560px; }
+
+        /* TARGET */
+        .target-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 40px; }
+        .target-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px 14px; text-align: center; transition: border-color .2s, transform .2s; }
+        .target-card:hover { border-color: rgba(0,232,122,0.3); transform: translateY(-3px); }
+        .target-icon { font-size: 36px; margin-bottom: 12px; display: block; }
+        .target-card span:last-child { font-size: 13px; font-weight: 600; color: var(--muted); }
+
+        /* PROBLEMA */
+        .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }
+        .problem-card { background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.18); border-radius: 16px; padding: 28px 24px; }
+        .problem-card .arrow { font-size: 13px; color: #ef4444; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 14px; opacity: 0.8; }
+        .problem-card p { font-size: 15px; line-height: 1.6; color: rgba(240,240,245,0.75); }
+
+        /* COME FUNZIONA */
+        .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; position: relative; }
+        .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; }
+        .step-num { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--blue)); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; color: #080812; margin-bottom: 18px; }
+        .step-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+        .step-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+        /* NUMERI */
+        .numbers-bg { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .numbers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+        .number-item { padding: 48px 32px; text-align: center; border-right: 1px solid var(--border); }
+        .number-item:last-child { border-right: none; }
+        .number-val { font-size: 52px; font-weight: 900; letter-spacing: -2px; color: var(--green); line-height: 1; margin-bottom: 8px; }
+        .number-label { font-size: 14px; color: var(--muted); }
+
+        /* PRICING */
+        .pricing-wrap { display: flex; justify-content: center; margin-top: 48px; }
+        .pricing-card { background: var(--surface); border: 1px solid rgba(0,232,122,0.3); border-radius: 24px; padding: 44px 48px; max-width: 460px; width: 100%; position: relative; overflow: hidden; }
+        .pricing-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--green), var(--blue)); }
+        .trial-badge { display: inline-block; background: rgba(0,232,122,0.12); border: 1px solid rgba(0,232,122,0.3); color: var(--green); padding: 5px 14px; border-radius: 50px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 20px; }
+        .price-main { font-size: 58px; font-weight: 900; letter-spacing: -3px; line-height: 1; }
+        .price-period { font-size: 16px; color: var(--muted); margin-bottom: 28px; margin-top: 6px; }
+        .features-list { list-style: none; margin-bottom: 32px; }
+        .features-list li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+        .features-list li:last-child { border-bottom: none; }
+        .features-list .check { color: var(--green); font-weight: 700; flex-shrink: 0; }
+        .price-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: 14px; }
+
+        /* FAQ */
+        .faq-list { margin-top: 40px; max-width: 720px; }
+        .faq-item { border-bottom: 1px solid var(--border); }
+        .faq-q { width: 100%; text-align: left; background: none; border: none; color: var(--text); font-family: inherit; font-size: 16px; font-weight: 600; padding: 22px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        .faq-q::after { content: '+'; font-size: 22px; font-weight: 300; color: var(--green); flex-shrink: 0; transition: transform .25s; }
+        .faq-item.open .faq-q::after { transform: rotate(45deg); }
+        .faq-a { font-size: 15px; color: var(--muted); line-height: 1.7; max-height: 0; overflow: hidden; transition: max-height .3s ease, padding .3s; }
+        .faq-item.open .faq-a { max-height: 200px; padding-bottom: 18px; }
+
+        /* FOOTER */
+        footer { border-top: 1px solid var(--border); padding: 32px 0; }
+        .footer-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+        .footer-links { display: flex; gap: 24px; }
+        .footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color .2s; }
+        .footer-links a:hover { color: var(--text); }
+
+        @media (max-width: 860px) {
+            .target-grid { grid-template-columns: repeat(3, 1fr); }
+            .problem-grid, .steps-grid, .numbers-grid { grid-template-columns: 1fr; }
+            .number-item { border-right: none; border-bottom: 1px solid var(--border); }
+            .number-item:last-child { border-bottom: none; }
+            h1 { letter-spacing: -1.5px; }
+        }
+        @media (max-width: 500px) {
+            .target-grid { grid-template-columns: repeat(2, 1fr); }
+            .pricing-card { padding: 32px 24px; }
+        }
     </style>
 </head>
 <body>
+
 <nav>
-    <div class="container nav-inner">
-        <div class="logo">GetAutomatik <span>AI</span></div>
-        <a class="nav-cta" href="#audit">Ricevi audit gratuito</a>
+    <div class="nav-inner">
+        <div class="logo">Flow<span>Ops</span></div>
+        <div style="display:flex;align-items:center;gap:20px;">
+            <a href="#come-funziona" class="btn-ghost">Come funziona</a>
+            <a href="/onboarding" class="btn-primary">Inizia gratis — 7 giorni</a>
+        </div>
     </div>
 </nav>
 
 <main>
-    <section class="hero">
-        <div class="container hero-grid">
-            <div>
-                <div class="eyebrow">Micro-agenzia AI per studi dentistici</div>
-                <h1>Recuperiamo richieste perse e riempiamo automaticamente il calendario dello studio</h1>
-                <p class="lead">Analizziamo sito, canali di contatto e punti in cui i nuovi pazienti si bloccano. Poi prepariamo un audit gratuito con azioni pratiche per recuperare richieste fuori orario, WhatsApp non gestiti e form lasciati senza risposta.</p>
-                <a class="hero-cta" href="#audit">Ricevi audit gratuito</a>
-                <div class="proof">
-                    <div><strong>24h</strong><span>per ricevere il primo audit</span></div>
-                    <div><strong>0€</strong><span>nessun impegno iniziale</span></div>
-                    <div><strong>3 step</strong><span>audit, priorita, piano operativo</span></div>
-                </div>
-            </div>
-            <div class="audit-card">
-                <h2>Cosa controlliamo nello studio</h2>
-                <div class="check"><div class="mark">✓</div><div>Richieste pazienti fuori orario non recuperate.</div></div>
-                <div class="check"><div class="mark">✓</div><div>Assenza di CTA chiare per prenotare prima visita o igiene.</div></div>
-                <div class="check"><div class="mark">✓</div><div>WhatsApp, telefono e form non collegati a follow-up rapido.</div></div>
-                <div class="check"><div class="mark">✓</div><div>Messaggi automatici per riattivare chi non prenota subito.</div></div>
-            </div>
-        </div>
-    </section>
 
-    <section>
-        <div class="container">
-            <h2 class="section-title">Non serve una piattaforma. Serve una pipeline che porta pazienti.</h2>
-            <p class="muted">Per i primi 30 giorni lavoriamo solo sul flusso che genera ricavi: trovare studi adatti, analizzare il sito, stimare le richieste perse, inviare un audit utile e trasformare le risposte in call.</p>
-            <div class="steps">
-                <div class="step"><div class="step-num">01</div><h3>Audit del sito</h3><p>Identifichiamo dove lo studio perde contatti: form, CTA, WhatsApp, telefono e richieste fuori orario.</p></div>
-                <div class="step"><div class="step-num">02</div><h3>Piano recupero richieste</h3><p>Prepariamo priorita semplici: risposta automatica, follow-up e qualificazione paziente.</p></div>
-                <div class="step"><div class="step-num">03</div><h3>Calendario piu pieno</h3><p>Quando ha senso, attiviamo una campagna controllata per riempire appuntamenti senza aumentare il carico dello staff.</p></div>
-            </div>
-        </div>
-    </section>
+<!-- HERO -->
+<section class="hero">
+    <div class="eyebrow">Per artigiani e imprenditori locali</div>
+    <h1>Nessuna richiesta<br>cliente persa. <span>Mai più.</span></h1>
+    <p class="hero-sub">FlowOps risponde ai tuoi clienti entro 2 minuti, genera preventivi automatici e ti avvisa solo quando serve la tua firma.</p>
+    <div class="hero-ctas">
+        <a href="/onboarding" class="btn-primary btn-lg">Inizia gratis — 7 giorni senza rischi</a>
+        <a href="#come-funziona" class="btn-outline">Guarda come funziona ↓</a>
+    </div>
+    <div class="hero-trust">
+        <div class="trust-item">Setup in 15 minuti</div>
+        <div class="trust-item">Nessun costo nei primi 7 giorni</div>
+        <div class="trust-item">Cancelli quando vuoi</div>
+    </div>
+</section>
 
-    <section class="form-band" id="audit">
-        <div class="container form-grid">
-            <div>
-                <div class="eyebrow" style="color:#7be0bf;">Audit gratuito</div>
-                <h2 class="section-title">Ricevi una diagnosi rapida dei punti in cui perdi richieste pazienti.</h2>
-                <p style="color:rgba(255,255,255,.65);">Compila il form. Ti inviamo un audit sintetico con problemi, opportunita e priorita operative. Nessuna carta richiesta.</p>
-            </div>
-            <form class="form-card" id="signup-form" onsubmit="submitForm(event)">
-                <input type="text" id="company" placeholder="Nome studio dentistico" required>
-                <input type="email" id="email" placeholder="Email dello studio" required>
-                <input type="tel" id="whatsapp" placeholder="Telefono o WhatsApp">
-                <input type="hidden" id="sector" value="dentisti">
-                <button type="submit" style="width:100%;">Ricevi audit gratuito</button>
-                <div class="form-msg" id="form-msg"></div>
-            </form>
+<!-- TARGET -->
+<section>
+    <div class="container">
+        <div class="section-label">Settori</div>
+        <h2 class="section-title">Fatto per chi lavora con le mani,<br>non con i fogli Excel</h2>
+        <div class="target-grid">
+            <div class="target-card"><span class="target-icon">☀️</span><span>Fotovoltaico</span></div>
+            <div class="target-card"><span class="target-icon">❄️</span><span>Climatizzazione</span></div>
+            <div class="target-card"><span class="target-icon">🔧</span><span>Idraulico</span></div>
+            <div class="target-card"><span class="target-icon">🏗️</span><span>Ristrutturazioni</span></div>
+            <div class="target-card"><span class="target-icon">🪟</span><span>Infissi</span></div>
         </div>
-    </section>
+    </div>
+</section>
+
+<!-- PROBLEMA -->
+<section>
+    <div class="container">
+        <div class="section-label">Il problema</div>
+        <h2 class="section-title">Quante richieste hai perso questa settimana?</h2>
+        <p class="section-sub">Ogni richiesta senza risposta rapida è un cliente che chiama il tuo concorrente.</p>
+        <div class="problem-grid">
+            <div class="problem-card">
+                <div class="arrow">SCENARIO 1</div>
+                <p><strong>Richiesta alle 21:00</strong><br>→ risposta il giorno dopo alle 10:00<br>→ il cliente ha già firmato con qualcun altro.</p>
+            </div>
+            <div class="problem-card">
+                <div class="arrow">SCENARIO 2</div>
+                <p><strong>Preventivi scritti a mano</strong><br>→ ore perse ogni settimana<br>→ errori, ritardi, clienti che aspettano.</p>
+            </div>
+            <div class="problem-card">
+                <div class="arrow">SCENARIO 3</div>
+                <p><strong>Follow-up dimenticati</strong><br>→ cliente che aveva chiesto info e non ha ricevuto risposta<br>→ soldi lasciati sul tavolo.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- COME FUNZIONA -->
+<section id="come-funziona">
+    <div class="container">
+        <div class="section-label">Come funziona</div>
+        <h2 class="section-title">Tre passi. Zero complicazioni.</h2>
+        <p class="section-sub">Colleghi la tua email, FlowOps fa il resto.</p>
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <h3>Il cliente scrive</h3>
+                <p>Arriva una richiesta via email — anche alle 22:00, anche nel weekend, anche mentre sei sul cantiere.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <h3>FlowOps risponde in 2 minuti</h3>
+                <p>L'AI risponde in modo professionale, chiede le informazioni che servono per fare un preventivo, qualifica il cliente.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <h3>Tu ricevi solo i lead pronti</h3>
+                <p>Ti arriva una notifica email solo quando la richiesta è qualificata e il cliente è pronto a sentirsi. Nessun rumore.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- NUMERI -->
+<section class="numbers-bg" style="padding:0;">
+    <div class="container">
+        <div class="numbers-grid">
+            <div class="number-item">
+                <div class="number-val">2 min</div>
+                <div class="number-label">Tempo medio di risposta</div>
+            </div>
+            <div class="number-item">
+                <div class="number-val">0</div>
+                <div class="number-label">Richieste perse</div>
+            </div>
+            <div class="number-item">
+                <div class="number-val">15 min</div>
+                <div class="number-label">Setup dall'iscrizione alla prima risposta</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PRICING -->
+<section>
+    <div class="container" style="text-align:center;">
+        <div class="section-label">Prezzi</div>
+        <h2 class="section-title">Un prezzo. Tutto incluso.</h2>
+        <div class="pricing-wrap">
+            <div class="pricing-card">
+                <div class="trial-badge">7 giorni gratis</div>
+                <div class="price-main">197€</div>
+                <div class="price-period">al mese dopo il trial</div>
+                <ul class="features-list">
+                    <li><span class="check">✓</span> Risposta automatica entro 2 minuti</li>
+                    <li><span class="check">✓</span> Preventivi generati dall'AI</li>
+                    <li><span class="check">✓</span> Dashboard richieste in tempo reale</li>
+                    <li><span class="check">✓</span> Email di notifica per ogni richiesta</li>
+                    <li><span class="check">✓</span> Supporto via email</li>
+                    <li><span class="check">✓</span> Cancelli quando vuoi, nessun vincolo</li>
+                </ul>
+                <a href="/onboarding" class="btn-primary" style="width:100%;display:block;text-align:center;padding:17px;font-size:16px;border-radius:12px;">Inizia gratis ora →</a>
+                <p class="price-note">Nessuna carta richiesta per il trial. Dopo 7 giorni Stripe addebita 197€/mese.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section>
+    <div class="container">
+        <div class="section-label">FAQ</div>
+        <h2 class="section-title">Domande frequenti</h2>
+        <div class="faq-list">
+            <div class="faq-item">
+                <button class="faq-q">Devo cambiare la mia email?</button>
+                <div class="faq-a">No. Imposti un reindirizzamento automatico dalla tua email attuale al tuo indirizzo FlowOps. Un click nelle impostazioni Gmail o Outlook, guida inclusa nell'onboarding.</div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-q">I clienti capiscono che è un AI?</button>
+                <div class="faq-a">La risposta è professionale e immediata. Se un cliente chiede esplicitamente se sta parlando con un sistema automatico, FlowOps lo indica. In tutti gli altri casi risponde come un assistente professionale del tuo studio.</div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-q">Cosa succede dopo 7 giorni?</button>
+                <div class="faq-a">Stripe addebita automaticamente 197€/mese. Puoi cancellare in qualsiasi momento dalla dashboard, senza penali e senza scuse.</div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-q">Funziona con Gmail, Outlook e altre email?</button>
+                <div class="faq-a">Sì. Funziona con qualsiasi provider email che supporta il forwarding automatico — Gmail, Outlook, Aruba, libero.it, email aziendali custom. Se usi qualcosa di particolare, il supporto ti guida in 5 minuti.</div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-q">Quanto tempo ci vuole per configurarlo?</button>
+                <div class="faq-a">15 minuti dal signup alla prima risposta automatica. Selezioni il settore, inserisci il nome della tua azienda, imposti il reindirizzamento email seguendo le istruzioni guidate. Fatto.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
 </main>
 
 <footer>
-    <div class="container">GetAutomatik AI - Micro-agenzia AI per studi dentistici - info@getautomatik.com</div>
+    <div class="footer-inner">
+        <div class="logo" style="font-size:16px;">Flow<span style="color:var(--green);">Ops</span> <span style="font-weight:400;color:var(--muted);font-size:13px;">© 2026</span></div>
+        <div class="footer-links">
+            <a href="mailto:info@getautomatik.com">info@getautomatik.com</a>
+            <a href="#">Privacy</a>
+            <a href="#">Termini</a>
+        </div>
+    </div>
 </footer>
 
 <script>
-async function submitForm(e) {
-    e.preventDefault();
-    const btn = e.target.querySelector('button');
-    const msg = document.getElementById('form-msg');
-    btn.disabled = true;
-    btn.textContent = 'Invio richiesta...';
-    msg.textContent = '';
-    const data = {
-        company: document.getElementById('company').value,
-        email: document.getElementById('email').value,
-        sector: 'dentisti',
-        whatsapp: document.getElementById('whatsapp').value
-    };
-    try {
-        const resp = await fetch('/webhook/signup', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        if (!resp.ok) throw new Error('signup failed');
-        msg.textContent = 'Richiesta ricevuta. Ti inviamo l audit gratuito entro 24 ore.';
-        msg.style.color = '#147a5c';
-        btn.textContent = 'Richiesta inviata';
-    } catch (e) {
-        msg.textContent = 'Errore. Scrivi a info@getautomatik.com o riprova.';
-        msg.style.color = '#b42318';
-        btn.disabled = false;
-        btn.textContent = 'Ricevi audit gratuito';
-    }
-}
+document.querySelectorAll('.faq-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const item = btn.closest('.faq-item');
+        const isOpen = item.classList.contains('open');
+        document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+        if (!isOpen) item.classList.add('open');
+    });
+});
 </script>
 </body>
 </html>
