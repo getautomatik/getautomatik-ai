@@ -1165,7 +1165,7 @@ def _start_background_threads():
     # imap_loop disabilitato: IMAP non disponibile su piano Zoho attuale
     send_telegram("GetAutomatik AI avviata: discovery 24h, outreach 12h, pivot 6h")
 
-_start_background_threads()
+threading.Thread(target=_start_background_threads, daemon=True).start()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
