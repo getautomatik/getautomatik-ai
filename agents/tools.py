@@ -232,7 +232,7 @@ def _handle_reply(db, prospect, body_text):
     LANDING = os.getenv("FLOWOPS_LANDING", "https://getautomatik.com/landing")
     landing_url = f"{LANDING}?ref={prospect_id}" if prospect_id else LANDING
 
-    claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY"))
+    claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
 
     clf = claude_client.messages.create(
         model="claude-haiku-4-5-20251001", max_tokens=10,
@@ -322,7 +322,7 @@ def generate_email(db, params):
     import anthropic
     import smtplib
     from email.mime.text import MIMEText
-    claude = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
+    claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     prospect = params.get("prospect", {})
     company = prospect.get("company_name", "cliente")
     sector = prospect.get("sector", "azienda")
@@ -465,7 +465,7 @@ def send_followups(db):
         return 0
 
     sent = 0
-    claude_client = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
+    claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
     for p in due.data:
         status = p.get("status", "contacted")
@@ -587,7 +587,7 @@ def ceo_optimize_emails(db):
             f"Rispondi SOLO con il nuovo prompt ottimizzato, niente altro."
         )
 
-        claude_client = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
+        claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         response = claude_client.messages.create(
             model="claude-haiku-4-5-20251001", max_tokens=300,
             messages=[{"role": "user", "content": meta_prompt}]
@@ -629,7 +629,7 @@ def send_linkedin_connection(db, params):
 
 def qualify_lead(db, params):
     import anthropic
-    claude = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
+    claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     client_id = params.get("client_id")
     lead_data = params.get("lead", {})
     client = db.table("clients").select("*").eq("id", client_id).execute()
@@ -748,7 +748,7 @@ def _extract_domain(url):
 
 def _metric_increment(db, field, amount=1):
     today = _today_key()
-    allowed = {"emails_sent", "replies", "calls_booked", "clients_closed", "mrr", "leads_found"}
+    allowed = {"prospects_found", "emails_sent", "replies_received", "new_clients", "mrr_total", "requests_handled", "value_recovered"}
     if field not in allowed:
         return False
     try:
@@ -760,12 +760,13 @@ def _metric_increment(db, field, amount=1):
         else:
             payload = {
                 "date": today,
-                "leads_found": 0,
+                "prospects_found": 0,
                 "emails_sent": 0,
-                "replies": 0,
-                "calls_booked": 0,
-                "clients_closed": 0,
-                "mrr": 0,
+                "replies_received": 0,
+                "new_clients": 0,
+                "mrr_total": 0,
+                "requests_handled": 0,
+                "value_recovered": 0,
             }
             payload[field] = amount
             db.table("daily_metrics").insert(payload).execute()
@@ -779,7 +780,7 @@ class WebsiteAuditAgent:
     """Audits a prospect website and returns commercial problems/opportunities."""
 
     def __init__(self):
-        self.api_key = os.getenv("CLAUDE_API_KEY")
+        self.api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
 
     def audit(self, website_url, company_name=""):
         website_url = _normalize_url(website_url)
@@ -907,7 +908,7 @@ class OutreachGenerator:
     """Creates audit-led outreach copy for dentists."""
 
     def __init__(self):
-        self.api_key = os.getenv("CLAUDE_API_KEY")
+        self.api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
 
     def generate(self, prospect, audit, score, email_number=1):
         company = prospect.get("company_name") or audit.get("company_name") or "Azienda"
@@ -1065,25 +1066,25 @@ def datetime_now_iso():
 class MetricsTracker:
     def snapshot(self, db):
         today = _today_key()
-        result = {"leads_today": 0, "emails_sent": 0, "replies": 0, "calls_booked": 0, "clients_closed": 0, "mrr": 0}
+        result = {"prospects_found": 0, "emails_sent": 0, "replies_received": 0, "new_clients": 0, "mrr_total": 0, "requests_handled": 0}
         try:
             metrics = db.table("daily_metrics").select("*").eq("date", today).execute()
             if metrics.data:
                 row = metrics.data[0]
                 result.update({
-                    "leads_today": _safe_int(row.get("leads_found"), 0),
+                    "prospects_found": _safe_int(row.get("prospects_found"), 0),
                     "emails_sent": _safe_int(row.get("emails_sent"), 0),
-                    "replies": _safe_int(row.get("replies"), 0),
-                    "calls_booked": _safe_int(row.get("calls_booked"), 0),
-                    "clients_closed": _safe_int(row.get("clients_closed"), 0),
-                    "mrr": _safe_int(row.get("mrr"), 0),
+                    "replies_received": _safe_int(row.get("replies_received"), 0),
+                    "new_clients": _safe_int(row.get("new_clients"), 0),
+                    "mrr_total": _safe_int(row.get("mrr_total"), 0),
+                    "requests_handled": _safe_int(row.get("requests_handled"), 0),
                 })
         except Exception as e:
             print(f"daily_metrics read fallback: {e}")
         try:
             clients = db.table("clients").select("mrr").eq("status", "active").execute()
-            result["clients_closed"] = len(clients.data or [])
-            result["mrr"] = sum(_safe_int(c.get("mrr"), 0) for c in (clients.data or []))
+            result["new_clients"] = len(clients.data or [])
+            result["mrr_total"] = sum(_safe_int(c.get("mrr"), 0) for c in (clients.data or []))
         except Exception:
             pass
         return result
@@ -1096,7 +1097,7 @@ def run_revenue_pipeline(db, sector=DENTIST_VERTICAL, location=None, hunt_count=
     hunt = scrape_google_maps(db, {"sector": sector, "location": location or _rotation_city(), "count": hunt_count})
     summary["hunted"] = hunt.get("prospects_found", 0)
     if summary["hunted"]:
-        _metric_increment(db, "leads_found", summary["hunted"])
+        _metric_increment(db, "prospects_found", summary["hunted"])
 
     auditor = WebsiteAuditAgent()
     scorer = LeadScoring()
@@ -1356,6 +1357,13 @@ def process_inbound_email(db, to_address, from_email, from_name, subject, body_t
         f"Valore stimato: EUR {estimated_value:,}\n"
         f"Risposta AI inviata."
     )
+
+    try:
+        _metric_increment(db, "requests_handled", 1)
+        if estimated_value:
+            _metric_increment(db, "value_recovered", estimated_value)
+    except Exception:
+        pass
 
     return True
 

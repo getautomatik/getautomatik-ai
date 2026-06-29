@@ -23,7 +23,7 @@ db = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 BUDGET = float(os.getenv("BUDGET_MENSILE", 500))
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT = os.getenv("TELEGRAM_CHAT_ID")
-FLOWOPS_DOMAIN = os.getenv("FLOWOPS_DOMAIN", "getautomatik.com")
+FLOWOPS_DOMAIN = os.getenv("FLOWOPS_DOMAIN", "in.getautomatik.com")
 
 DEFAULT_NICHES = ["fotovoltaico", "climatizzazione", "idraulici", "ristrutturazioni", "infissi"]
 
