@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configura FlowOps per la tua azienda</title>
+    <title>Configura GetAutomatik per la tua azienda</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -149,10 +149,10 @@
     <!-- STEP 3: AHA moment -->
     <div class="step-section" id="step3">
         <h2>Ecco come rispondo ai tuoi clienti</h2>
-        <p class="card-sub">Guarda come FlowOps gestisce una richiesta reale per <strong id="ahaAziendaName"></strong>.</p>
+        <p class="card-sub">Guarda come GetAutomatik gestisce una richiesta reale per <strong id="ahaAziendaName"></strong>.</p>
 
         <div class="aha-box">
-            <div class="aha-label">FlowOps risponde automaticamente</div>
+            <div class="aha-label">GetAutomatik risponde automaticamente</div>
             <div class="aha-text" id="ahaText">
                 <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
             </div>
@@ -165,10 +165,10 @@
     <!-- STEP 4: Forwarding address -->
     <div class="step-section" id="step4">
         <h2>Collega la tua email</h2>
-        <p class="card-sub">Imposta il reindirizzamento automatico dalla tua email a questo indirizzo FlowOps. Ci vogliono 2 minuti.</p>
+        <p class="card-sub">Imposta il reindirizzamento automatico dalla tua email a questo indirizzo GetAutomatik. Ci vogliono 2 minuti.</p>
 
         <div style="margin-bottom:14px;">
-            <label>Il tuo indirizzo FlowOps</label>
+            <label>Il tuo indirizzo GetAutomatik</label>
         </div>
         <div class="address-box">
             <span class="address-text" id="forwardingAddress">—</span>
@@ -186,7 +186,7 @@
             </div>
             <div class="guide-step">
                 <div class="guide-title"><span class="provider-tag">Altro</span> Qualsiasi provider email</div>
-                <div class="guide-desc">Vai nelle impostazioni della tua email e cerca "Reindirizzamento" o "Forwarding". Incolla l'indirizzo FlowOps sopra. Se hai bisogno di aiuto scrivici: info@getautomatik.com</div>
+                <div class="guide-desc">Vai nelle impostazioni della tua email e cerca "Reindirizzamento" o "Forwarding". Incolla l'indirizzo GetAutomatik sopra. Se hai bisogno di aiuto scrivici: info@getautomatik.com</div>
             </div>
         </div>
 
@@ -198,7 +198,7 @@
     <div class="step-section" id="step5">
         <div class="success-center">
             <span class="success-icon">✅</span>
-            <h2>FlowOps è attivo per <span id="successName" style="color:var(--green);"></span></h2>
+            <h2>GetAutomatik è attivo per <span id="successName" style="color:var(--green);"></span></h2>
             <p style="margin-bottom:24px;">Da questo momento rispondo automaticamente a tutte le richieste che arrivano via email. Ti avviso ogni volta che c'è un lead pronto.</p>
             <p style="font-size:13px; color:var(--muted);">Redirect alla dashboard tra pochi secondi... <span class="spinner"></span></p>
         </div>
@@ -266,7 +266,7 @@ async function triggerAha() {
         });
         const data = await resp.json();
         state.forwardingAddress = data.forwarding_address || '';
-        const text = data.aha_response || 'FlowOps è pronto a rispondere per te.';
+        const text = data.aha_response || 'GetAutomatik è pronto a rispondere per te.';
         typewrite('ahaText', text, () => { btn.disabled = false; });
     } catch(e) {
         document.getElementById('ahaText').textContent = 'Servizio temporaneamente non disponibile. Riprova tra un momento.';

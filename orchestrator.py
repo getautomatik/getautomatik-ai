@@ -1,4 +1,4 @@
-﻿from flask import Flask, jsonify, request, redirect, render_template
+from flask import Flask, jsonify, request, redirect, render_template
 from agents import (check_email_replies, send_followups, run_revenue_pipeline,
                     MetricsTracker, process_inbound_email, send_request_followups,
                     metrics_report, ceo_pivot)
@@ -149,7 +149,7 @@ def imap_loop():
         try:
             fu = send_request_followups(db)
             if fu:
-                send_telegram(f"FlowOps: {fu} follow-up richieste inviati automaticamente")
+                send_telegram(f"GetAutomatik: {fu} follow-up richieste inviati automaticamente")
         except Exception as e:
             print(f"Request followup loop error: {e}")
         time.sleep(1800)
@@ -467,7 +467,7 @@ def dashboard():
         </div>
 
         <div class="pipeline-section" style="margin-bottom:30px;border-color:rgba(0,232,122,0.25);background:linear-gradient(135deg,rgba(0,232,122,0.04),rgba(0,180,216,0.04));">
-            <div class="section-title" style="color:#00e87a;">FlowOps ROI questo mese</div>
+            <div class="section-title" style="color:#00e87a;">GetAutomatik ROI questo mese</div>
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px;" id="roi-grid">
                 <div style="text-align:center;">
                     <div style="font-size:28px;font-weight:900;color:#fff;" id="roi-requests">0</div>
@@ -491,7 +491,7 @@ def dashboard():
                 </div>
             </div>
             <div style="background:rgba(0,232,122,0.08);border:1px solid rgba(0,232,122,0.2);border-radius:10px;padding:14px 20px;text-align:center;">
-                <span style="font-size:15px;font-weight:700;color:#00e87a;" id="roi-summary">FlowOps ha risparmiato 0 ore e recuperato €0 questo mese</span>
+                <span style="font-size:15px;font-weight:700;color:#00e87a;" id="roi-summary">GetAutomatik ha risparmiato 0 ore e recuperato €0 questo mese</span>
             </div>
         </div>
 
@@ -502,7 +502,7 @@ def dashboard():
             </div>
         </div>
 
-        <div class="footer">FlowOps AI © 2026 | Artigiani italiani | Budget: <span id="budget-footer">500€</span></div>
+        <div class="footer">GetAutomatik AI © 2026 | Artigiani italiani | Budget: <span id="budget-footer">500€</span></div>
     </div>
 
     <script>
@@ -588,7 +588,7 @@ def dashboard():
                 document.getElementById('roi-converted').textContent = d.converted_count;
                 document.getElementById('roi-recovered').textContent = '€' + (d.recovered_value || 0).toLocaleString('it-IT');
                 document.getElementById('roi-summary').textContent =
-                    'FlowOps ti ha fatto risparmiare ' + d.hours_saved + ' ore e recuperato €' +
+                    'GetAutomatik ti ha fatto risparmiare ' + d.hours_saved + ' ore e recuperato €' +
                     (d.recovered_value || 0).toLocaleString('it-IT') + ' questo mese';
             } catch(e) {}
         }
@@ -1014,7 +1014,7 @@ def onboarding_save():
         return jsonify({"error": "Errore database"}), 500
 
     send_telegram(
-        f"FlowOps nuovo cliente!\n"
+        f"GetAutomatik nuovo cliente!\n"
         f"Azienda: {nome_azienda} ({settore})\n"
         f"Email: {email_titolare}\n"
         f"Forwarding: {forwarding_address}"
@@ -1163,7 +1163,7 @@ if __name__ == "__main__":
     threading.Thread(target=outreach_loop, daemon=True).start()
     threading.Thread(target=pivot_loop, daemon=True).start()
     threading.Thread(target=imap_loop, daemon=True).start()
-    send_telegram("FlowOps AI avviata: discovery 24h, outreach 12h, pivot 6h, IMAP 30min")
+    send_telegram("GetAutomatik AI avviata: discovery 24h, outreach 12h, pivot 6h, IMAP 30min")
     app.run(host="0.0.0.0", port=8080)
 
 

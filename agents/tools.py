@@ -70,7 +70,7 @@ def _send_plain_email(to_email, subject, body, sender_name=None):
     if not EMAIL or not EMAIL_PASS or not to_email:
         return False
     try:
-        display_name = sender_name or "FlowOps"
+        display_name = sender_name or "GetAutomatik"
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = f"{display_name} <{EMAIL}>"
@@ -238,7 +238,7 @@ def _handle_reply(db, prospect, body_text):
         model="claude-haiku-4-5-20251001", max_tokens=10,
         messages=[{"role": "user", "content":
             f"Classifica questa risposta email di un'azienda italiana ({company}, settore {sector}) "
-            f"a una proposta FlowOps (rispondente automatico AI):\n\"{body_text[:400]}\"\n\n"
+            f"a una proposta GetAutomatik (rispondente automatico AI):\n\"{body_text[:400]}\"\n\n"
             f"Rispondi SOLO con: INTERESTED / NOT_INTERESTED / QUESTION / OUT_OF_OFFICE"
         }]
     ).content[0].text.strip().upper()
@@ -248,16 +248,16 @@ def _handle_reply(db, prospect, body_text):
             model="claude-haiku-4-5-20251001", max_tokens=300,
             messages=[{"role": "user", "content":
                 f"Scrivi una email di chiusura vendita (100 parole max) per {company} (settore {sector}) "
-                f"che ha mostrato interesse a FlowOps, il sistema AI che risponde automaticamente ai clienti.\n"
+                f"che ha mostrato interesse a GetAutomatik, il sistema AI che risponde automaticamente ai clienti.\n"
                 f"1. Apertura personalizzata per {sector}\n"
                 f"2. Beneficio: nessuna richiesta persa, risposta entro 2 minuti\n"
                 f"3. CTA: prova gratis 7 giorni -> {landing_url}\n"
                 f"4. P.S.: attivo in 15 minuti, setup guidato\n"
-                f"Tono: caldo, diretto, zero pressione. Firma: Team FlowOps"
+                f"Tono: caldo, diretto, zero pressione. Firma: Team GetAutomatik"
             }]
         ).content[0].text
 
-        _send_plain_email(email_to, f"Come funziona FlowOps per {company}", body, sender_name="FlowOps")
+        _send_plain_email(email_to, f"Come funziona GetAutomatik per {company}", body, sender_name="GetAutomatik")
 
         warm_date = (date.today() + timedelta(days=2)).isoformat()
         db.table("prospects").update({
@@ -272,14 +272,14 @@ def _handle_reply(db, prospect, body_text):
         body = claude_client.messages.create(
             model="claude-haiku-4-5-20251001", max_tokens=250,
             messages=[{"role": "user", "content":
-                f"Un artigiano italiano ({company}, {sector}) ha fatto questa domanda su FlowOps:\n\"{body_text[:300]}\"\n"
+                f"Un artigiano italiano ({company}, {sector}) ha fatto questa domanda su GetAutomatik:\n\"{body_text[:300]}\"\n"
                 f"Rispondi in modo convincente e diretto (max 80 parole). "
-                f"FlowOps: AI che risponde ai clienti automaticamente, 197 EUR/mese, 7gg trial.\n"
+                f"GetAutomatik: AI che risponde ai clienti automaticamente, 197 EUR/mese, 7gg trial.\n"
                 f"Chiudi con CTA: prova gratis -> {landing_url}\n"
-                f"Firma: Team FlowOps"
+                f"Firma: Team GetAutomatik"
             }]
         ).content[0].text
-        _send_plain_email(email_to, f"Re: FlowOps per {company}", body, sender_name="FlowOps")
+        _send_plain_email(email_to, f"Re: GetAutomatik per {company}", body, sender_name="GetAutomatik")
         db.table("prospects").update({
             "status": "warm_1",
             "follow_up_at": (date.today() + timedelta(days=3)).isoformat(),
@@ -347,10 +347,10 @@ def generate_email(db, params):
     except Exception:
         prompt = (
             f"Scrivi email fredda in italiano (max 110 parole) per {company} (settore {sector}). "
-            f"Proponi FlowOps: sistema AI che risponde automaticamente alle email dei loro clienti. "
+            f"Proponi GetAutomatik: sistema AI che risponde automaticamente alle email dei loro clienti. "
             f"Oggetto: quante richieste perdi ogni settimana? "
             f"Tono: diretto, specifico per artigiani. CTA: prova gratis su getautomatik.com/landing"
-            f"Firma: Team FlowOps. No template generico."
+            f"Firma: Team GetAutomatik. No template generico."
         )
 
     if company_context:
@@ -365,7 +365,7 @@ def generate_email(db, params):
     cost_eur = (len(prompt) / 4 * 0.80 + len(email_body) / 4 * 4.0) / 1_000_000 * 0.92
     _track_cost(db, cost_eur, f"email {company}")
 
-    sent = _send_plain_email(email_to, f"{company} — quante richieste perdi ogni settimana?", email_body, sender_name="FlowOps")
+    sent = _send_plain_email(email_to, f"{company} — quante richieste perdi ogni settimana?", email_body, sender_name="GetAutomatik")
 
     follow_up_date = (date.today() + timedelta(days=3)).isoformat()
     db.table("prospects").update({
@@ -480,7 +480,7 @@ def send_followups(db):
                 prompt = (
                     f"Follow-up email brevissima (max 60 parole) per {company} ({sector}). "
                     f"Amichevole, zero pressione. Chiedi se hanno avuto modo di leggere la proposta "
-                    f"su FlowOps. CTA: risposta si/no. Firma: Team FlowOps"
+                    f"su GetAutomatik. CTA: risposta si/no. Firma: Team GetAutomatik"
                 )
                 new_status = "followup_1"
                 next_date = (date.today() + timedelta(days=4)).isoformat()
@@ -490,7 +490,7 @@ def send_followups(db):
                 prompt = (
                     f"Email finale (max 55 parole) per {company} ({sector}). "
                     f"Ultima email. Offri trial gratuito 7 giorni: {LANDING} "
-                    f"Firma: Team FlowOps"
+                    f"Firma: Team GetAutomatik"
                 )
                 new_status = "dead"
                 next_date = None
@@ -503,12 +503,12 @@ def send_followups(db):
                     continue
                 prompt = (
                     f"Follow-up caldo (max 70 parole) per {company} ({sector}) che aveva mostrato interesse "
-                    f"ma non ha ancora attivato FlowOps. Ricorda il valore, zero pressione. "
-                    f"Link diretto: {LANDING} Firma: Team FlowOps"
+                    f"ma non ha ancora attivato GetAutomatik. Ricorda il valore, zero pressione. "
+                    f"Link diretto: {LANDING} Firma: Team GetAutomatik"
                 )
                 new_status = "warm_2"
                 next_date = (date.today() + timedelta(days=3)).isoformat()
-                subject = f"{company} — il trial FlowOps e' ancora disponibile"
+                subject = f"{company} — il trial GetAutomatik e' ancora disponibile"
 
             elif status == "warm_2":
                 if _check_converted(db, email_to):
@@ -518,11 +518,11 @@ def send_followups(db):
                     f"Email di chiusura finale (max 60 parole) per {company} ({sector}). "
                     f"Offri 14 giorni di trial gratuito invece di 7 — offerta valida solo questa settimana. "
                     f"Link diretto: {LANDING} "
-                    f"Firma: Team FlowOps"
+                    f"Firma: Team GetAutomatik"
                 )
                 new_status = "warm_closed"
                 next_date = None
-                subject = f"14 giorni gratis per {company} — offerta a tempo (FlowOps)"
+                subject = f"14 giorni gratis per {company} — offerta a tempo (GetAutomatik)"
 
             else:
                 continue
@@ -933,11 +933,11 @@ class OutreachGenerator:
                 if email_number == 1:
                     prompt = (
                         f"Scrivi email cold B2B in italiano (max 110 parole) per {company} (settore {sector}).\n"
-                        f"Proponi FlowOps: sistema AI che risponde automaticamente alle email dei loro clienti.\n"
+                        f"Proponi GetAutomatik: sistema AI che risponde automaticamente alle email dei loro clienti.\n"
                         f"Problema rilevato dal sito: {first_problem}\n"
                         f"Stima richieste perse/mese: {lost}\n"
                         f"CTA: scopri come funziona -> {landing_url}\n"
-                        f"Tono: diretto, specifico, umano. Firma: Team FlowOps. NO template generico."
+                        f"Tono: diretto, specifico, umano. Firma: Team GetAutomatik. NO template generico."
                     )
                 elif email_number == 2:
                     prompt = (
@@ -945,14 +945,14 @@ class OutreachGenerator:
                         f"E' il secondo contatto — sii ancora piu' breve e diretto.\n"
                         f"Menziona un caso studio specifico per {sector}: un artigiano che non perdeva piu' richieste.\n"
                         f"CTA: risposta rapida o link -> {landing_url}\n"
-                        f"Firma: Team FlowOps"
+                        f"Firma: Team GetAutomatik"
                     )
                 else:
                     prompt = (
                         f"Scrivi email finale (max 55 parole) per {company} ({sector}).\n"
                         f"E' l'ultima email — sii diretto e usa la scarsita'.\n"
                         f"CTA: trial gratis 7 giorni, link -> {landing_url}\n"
-                        f"Firma: Team FlowOps"
+                        f"Firma: Team GetAutomatik"
                     )
                 response = client.messages.create(
                     model=AUDIT_MODEL,
@@ -969,13 +969,13 @@ class OutreachGenerator:
         if not body:
             body = (
                 f"Buongiorno,\n\nHo analizzato il sito di {company}: {first_problem}.\n\n"
-                f"FlowOps risponde automaticamente alle email dei vostri clienti entro 2 minuti, "
-                f"anche fuori orario.\n\nProva gratis 7 giorni: {landing_url}\n\nTeam FlowOps"
+                f"GetAutomatik risponde automaticamente alle email dei vostri clienti entro 2 minuti, "
+                f"anche fuori orario.\n\nProva gratis 7 giorni: {landing_url}\n\nTeam GetAutomatik"
             )
         return {
             "subject": subject,
             "body": body,
-            "cta": "Prova FlowOps gratis",
+            "cta": "Prova GetAutomatik gratis",
             "email_number": email_number,
         }
 
@@ -1023,7 +1023,7 @@ class CampaignSender:
                 continue
             if not _check_and_increment_daily_emails(db):
                 break
-            ok = _send_plain_email(email_to, row.get("subject", "FlowOps"), row.get("body", ""), sender_name="FlowOps")
+            ok = _send_plain_email(email_to, row.get("subject", "GetAutomatik"), row.get("body", ""), sender_name="GetAutomatik")
             status = "sent" if ok else "failed"
             update = {"status": status, "sent_at": datetime_now_iso()}
             if not ok:
@@ -1240,7 +1240,7 @@ def generate_reply(client_ai, body_text, nome_azienda, settore, from_name):
 
 
 def notify_owner(email_titolare, from_email, from_name, subject, body_text, ai_response,
-                 lead_type=None, estimated_value=None, nome_azienda="FlowOps"):
+                 lead_type=None, estimated_value=None, nome_azienda="GetAutomatik"):
     """
     Invia email di notifica al titolare dell'azienda con il dettaglio della richiesta e la risposta AI.
     """
@@ -1249,7 +1249,7 @@ def notify_owner(email_titolare, from_email, from_name, subject, body_text, ai_r
     value_line = f"Valore stimato: EUR {estimated_value:,}" if estimated_value else ""
     type_line = f"Tipo richiesta: {lead_type}" if lead_type else ""
     body = (
-        f"FlowOps ha ricevuto e risposto automaticamente a una richiesta cliente.\n\n"
+        f"GetAutomatik ha ricevuto e risposto automaticamente a una richiesta cliente.\n\n"
         f"Da: {from_name or from_email} <{from_email}>\n"
         f"Oggetto: {subject}\n"
         f"{type_line}\n{value_line}\n\n"
@@ -1259,9 +1259,9 @@ def notify_owner(email_titolare, from_email, from_name, subject, body_text, ai_r
     )
     return _send_plain_email(
         email_titolare,
-        f"FlowOps: nuova richiesta {lead_type or ''} da {from_name or from_email}",
+        f"GetAutomatik: nuova richiesta {lead_type or ''} da {from_name or from_email}",
         body,
-        sender_name="FlowOps"
+        sender_name="GetAutomatik"
     )
 
 
@@ -1350,7 +1350,7 @@ def process_inbound_email(db, to_address, from_email, from_name, subject, body_t
     })
 
     send_telegram(
-        f"FlowOps nuova richiesta [{lead_type}]!\n"
+        f"GetAutomatik nuova richiesta [{lead_type}]!\n"
         f"Azienda: {nome_azienda} ({settore})\n"
         f"Da: {from_name or from_email}\n"
         f"Oggetto: {subject[:80]}\n"
@@ -1519,7 +1519,7 @@ def metrics_report(db):
     ) or "  Nessun dato"
 
     send_telegram(
-        f"Report 72h FlowOps:\n"
+        f"Report 72h GetAutomatik:\n"
         f"Email inviate: {total_contacted} | Risposte: {total_replied} | Reply rate: {reply_rate}%\n"
         f"Clienti attivi: {n_clients} | MRR: EUR {mrr}\n"
         f"Richieste mese: EUR {req_value:,} | Convertite: {req_converted}\n"
