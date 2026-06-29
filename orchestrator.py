@@ -1154,7 +1154,7 @@ def stripe_webhook():
     return jsonify({"status": "ok"}), 200
 
 
-if __name__ == "__main__":
+def _start_background_threads():
     try:
         db.table("metrics").insert({"date": datetime.now().date().isoformat()}).execute()
     except:
@@ -1164,7 +1164,11 @@ if __name__ == "__main__":
     threading.Thread(target=pivot_loop, daemon=True).start()
     threading.Thread(target=imap_loop, daemon=True).start()
     send_telegram("GetAutomatik AI avviata: discovery 24h, outreach 12h, pivot 6h, IMAP 30min")
-    app.run(host="0.0.0.0", port=8080)
+
+_start_background_threads()
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
 
 
 
