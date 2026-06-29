@@ -60,7 +60,7 @@ def _check_and_increment_daily_emails(db):
 def _rotation_city():
     return CITIES[date.today().timetuple().tm_yday % len(CITIES)]
 
-def _send_plain_email(to_email, subject, body):
+def _send_plain_email(to_email, subject, body, sender_name=None):
     """Send plain-text email with proper deliverability headers."""
     import smtplib
     from email.mime.multipart import MIMEMultipart
@@ -70,9 +70,10 @@ def _send_plain_email(to_email, subject, body):
     if not EMAIL or not EMAIL_PASS or not to_email:
         return False
     try:
+        display_name = sender_name or "FlowOps"
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = f"GetAutomatik AI <{EMAIL}>"
+        msg["From"] = f"{display_name} <{EMAIL}>"
         msg["To"] = to_email
         msg["Reply-To"] = EMAIL
         msg["List-Unsubscribe"] = f"<mailto:{EMAIL}?subject=unsubscribe>"
@@ -1089,16 +1090,167 @@ SETTORE_CONTESTO = {
     "infissi": "installazione e sostituzione di infissi, finestre e porte",
 }
 
+# Fasce di valore di default per settore usate come fallback di classify_request
+SETTORE_VALUE_RANGE = {
+    "fotovoltaico":    (4000, 12000),
+    "climatizzazione": (800,  3000),
+    "idraulici":       (200,  1500),
+    "ristrutturazioni":(5000, 30000),
+    "infissi":         (1500, 6000),
+}
+
+
+def classify_request(client_ai, body_text, settore, nome_azienda):
+    """
+    Classifica la richiesta del cliente e stima il valore economico.
+    Returns dict: {lead_type, estimated_value}
+    """
+    value_range = SETTORE_VALUE_RANGE.get(settore, (500, 5000))
+    prompt = (
+        f"Sei un analista business per '{nome_azienda}', settore {settore}.\n\n"
+        f"Analizza questa richiesta cliente e rispondi SOLO con JSON valido, nessun altro testo:\n\n"
+        f"Richiesta:\n{body_text[:800]}\n\n"
+        f"Rispondi con questo JSON esatto:\n"
+        f'{{"lead_type": "preventivo|info|urgenza|altro", '
+        f'"estimated_value": <numero intero in euro, fascia {value_range[0]}-{value_range[1]}>, '
+        f'"reason": "<breve motivazione>"}}'
+    )
+    try:
+        msg = client_ai.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=150,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw = msg.content[0].text.strip()
+        # Extract JSON from response (handle markdown code blocks)
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if match:
+            data = json.loads(match.group())
+            lead_type = data.get("lead_type", "altro")
+            if lead_type not in ("preventivo", "info", "urgenza", "altro"):
+                lead_type = "altro"
+            estimated_value = int(data.get("estimated_value", value_range[0]))
+            return {"lead_type": lead_type, "estimated_value": estimated_value}
+    except Exception as e:
+        print(f"classify_request error: {e}")
+
+    # Fallback: keyword-based classification
+    text_lower = body_text.lower()
+    if any(w in text_lower for w in ("urgente", "urgenza", "guasto", "perdita", "rottura", "emergenza")):
+        lead_type = "urgenza"
+        estimated_value = value_range[0]
+    elif any(w in text_lower for w in ("preventivo", "quanto costa", "prezzo", "offerta", "costo")):
+        lead_type = "preventivo"
+        estimated_value = (value_range[0] + value_range[1]) // 2
+    elif any(w in text_lower for w in ("informazioni", "info", "come funziona", "vorrei sapere")):
+        lead_type = "info"
+        estimated_value = value_range[0]
+    else:
+        lead_type = "altro"
+        estimated_value = value_range[0]
+    return {"lead_type": lead_type, "estimated_value": estimated_value}
+
+
+def generate_reply(client_ai, body_text, nome_azienda, settore, from_name):
+    """
+    Genera risposta professionale AI per il cliente.
+    Returns stringa testo risposta.
+    """
+    contesto_settore = SETTORE_CONTESTO.get(settore, settore)
+    prompt = (
+        f'Sei l\'assistente virtuale di "{nome_azienda}", specializzata in {contesto_settore}.\n\n'
+        f"Un cliente ha inviato questa richiesta:\nMittente: {from_name}\n\n{body_text[:1500]}\n\n"
+        f"Scrivi una risposta in italiano (3-5 frasi) che:\n"
+        f"1. Ringrazia il cliente\n"
+        f"2. Conferma la ricezione e che qualcuno li contatterà presto\n"
+        f"3. Se la richiesta e' vaga, chiede dettagli specifici\n"
+        f"4. Firma come assistente di {nome_azienda}\n\n"
+        f"Solo il testo della risposta, nessun altro commento."
+    )
+    try:
+        msg = client_ai.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return msg.content[0].text.strip()
+    except Exception as e:
+        print(f"generate_reply error: {e}")
+        return (
+            f"Gentile {from_name or 'Cliente'},\n\n"
+            f"Grazie per aver contattato {nome_azienda}. Abbiamo ricevuto la sua richiesta "
+            f"e la contatteremo al piu' presto.\n\n"
+            f"Cordiali saluti,\nIl team di {nome_azienda}"
+        )
+
+
+def notify_owner(email_titolare, from_email, from_name, subject, body_text, ai_response,
+                 lead_type=None, estimated_value=None, nome_azienda="FlowOps"):
+    """
+    Invia email di notifica al titolare dell'azienda con il dettaglio della richiesta e la risposta AI.
+    """
+    if not email_titolare:
+        return False
+    value_line = f"Valore stimato: EUR {estimated_value:,}" if estimated_value else ""
+    type_line = f"Tipo richiesta: {lead_type}" if lead_type else ""
+    body = (
+        f"FlowOps ha ricevuto e risposto automaticamente a una richiesta cliente.\n\n"
+        f"Da: {from_name or from_email} <{from_email}>\n"
+        f"Oggetto: {subject}\n"
+        f"{type_line}\n{value_line}\n\n"
+        f"--- Richiesta ---\n{body_text[:600]}\n\n"
+        f"--- Risposta inviata ---\n{ai_response}\n\n"
+        f"Accedi alla dashboard per gestire la conversazione."
+    )
+    return _send_plain_email(
+        email_titolare,
+        f"FlowOps: nuova richiesta {lead_type or ''} da {from_name or from_email}",
+        body,
+        sender_name="FlowOps"
+    )
+
+
+def save_request(db, client_config_id, data):
+    """
+    Salva la richiesta nella tabella requests.
+    data: dict con chiavi from_email, from_name, subject, body, ai_response,
+          lead_type, estimated_value, source, replied_at
+    """
+    try:
+        db.table("requests").insert({
+            "client_config_id": client_config_id,
+            "from_email": data.get("from_email", ""),
+            "from_name": data.get("from_name", ""),
+            "subject": data.get("subject", ""),
+            "body": (data.get("body", ""))[:2000],
+            "ai_response": data.get("ai_response", ""),
+            "lead_type": data.get("lead_type"),
+            "estimated_value": data.get("estimated_value"),
+            "source": data.get("source", "email_forwarding"),
+            "followup_count": 0,
+            "converted": False,
+            "status": "replied",
+            "replied_at": data.get("replied_at", datetime.now().isoformat()),
+        }).execute()
+        return True
+    except Exception as e:
+        print(f"save_request error: {e}")
+        return False
+
 
 def process_inbound_email(db, to_address, from_email, from_name, subject, body_text):
     """
-    Called by /webhook/email-inbound when a client's customer sends an email.
-    Looks up the client config by forwarding address, generates an AI reply, sends it,
-    and notifies the business owner.
+    Orchestrates the full pipeline when a customer email arrives via forwarding.
+    1. Lookup client config
+    2. Classify request (lead_type, estimated_value)
+    3. Generate AI reply
+    4. Send reply to customer
+    5. Notify owner
+    6. Save to DB
+    7. Telegram alert
     """
     import anthropic
 
-    # Look up client config by forwarding address
     try:
         result = db.table("client_configs").select("*").eq("forwarding_address", to_address).execute()
         if not result.data:
@@ -1113,84 +1265,125 @@ def process_inbound_email(db, to_address, from_email, from_name, subject, body_t
     settore = config.get("settore", "generale")
     email_titolare = config.get("email_titolare", "")
     config_id = config.get("id")
-    contesto_settore = SETTORE_CONTESTO.get(settore, settore)
 
-    # Generate AI response via Claude Haiku
     client_ai = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-    prompt = f"""Sei l'assistente virtuale di "{nome_azienda}", un'azienda specializzata in {contesto_settore}.
 
-Un cliente potenziale ha inviato questa richiesta via email:
-Mittente: {from_name or from_email}
-Oggetto: {subject}
-Messaggio:
-{body_text[:1500]}
+    classification = classify_request(client_ai, body_text, settore, nome_azienda)
+    lead_type = classification["lead_type"]
+    estimated_value = classification["estimated_value"]
 
-Scrivi una risposta professionale, cordiale e utile in italiano che:
-1. Ringrazia il cliente per la richiesta
-2. Conferma la ricezione e che qualcuno li contatterà presto
-3. Chiede eventuali informazioni aggiuntive necessarie (se la richiesta è vaga)
-4. Firma come assistente di {nome_azienda}
+    ai_response = generate_reply(client_ai, body_text, nome_azienda, settore, from_name or from_email)
 
-La risposta deve essere concisa (3-5 frasi), professionale e rassicurante."""
-
-    try:
-        msg = client_ai.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=400,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        ai_response = msg.content[0].text.strip()
-    except Exception as e:
-        print(f"Claude API error: {e}")
-        ai_response = (
-            f"Gentile {from_name or 'Cliente'},\n\n"
-            f"Grazie per aver contattato {nome_azienda}. Abbiamo ricevuto la sua richiesta "
-            f"e la contatteremo al piu' presto per fornirle tutta l'assistenza necessaria.\n\n"
-            f"Cordiali saluti,\nIl team di {nome_azienda}"
-        )
-
-    # Send reply to customer
-    reply_subject = f"Re: {subject}" if not subject.startswith("Re:") else subject
+    reply_subject = f"Re: {subject}" if not subject.lower().startswith("re:") else subject
     _send_plain_email(from_email, reply_subject, ai_response, sender_name=nome_azienda)
 
-    # Notify business owner
-    if email_titolare:
-        notify_subject = f"FlowOps: nuova richiesta cliente ricevuta"
-        notify_body = (
-            f"Ciao,\n\n"
-            f"FlowOps ha ricevuto e risposto automaticamente a una richiesta cliente:\n\n"
-            f"Da: {from_name or from_email} <{from_email}>\n"
-            f"Oggetto: {subject}\n\n"
-            f"---\n{body_text[:500]}\n---\n\n"
-            f"Risposta inviata automaticamente:\n{ai_response}\n\n"
-            f"Accedi alla dashboard per gestire la conversazione."
-        )
-        _send_plain_email(email_titolare, notify_subject, notify_body, sender_name="FlowOps")
+    notify_owner(
+        email_titolare, from_email, from_name, subject, body_text, ai_response,
+        lead_type=lead_type, estimated_value=estimated_value, nome_azienda=nome_azienda
+    )
 
-    # Save to requests table
-    try:
-        db.table("requests").insert({
-            "client_config_id": config_id,
-            "from_email": from_email,
-            "from_name": from_name or "",
-            "subject": subject,
-            "body": body_text[:2000],
-            "ai_response": ai_response,
-            "status": "replied",
-            "replied_at": datetime.now().isoformat(),
-        }).execute()
-    except Exception as e:
-        print(f"requests insert error: {e}")
+    save_request(db, config_id, {
+        "from_email": from_email,
+        "from_name": from_name or "",
+        "subject": subject,
+        "body": body_text,
+        "ai_response": ai_response,
+        "lead_type": lead_type,
+        "estimated_value": estimated_value,
+        "source": "email_forwarding",
+        "replied_at": datetime.now().isoformat(),
+    })
 
-    # Telegram notification to owner
     send_telegram(
-        f"FlowOps nuova richiesta!\n"
+        f"FlowOps nuova richiesta [{lead_type}]!\n"
         f"Azienda: {nome_azienda} ({settore})\n"
         f"Da: {from_name or from_email}\n"
         f"Oggetto: {subject[:80]}\n"
-        f"Risposta AI inviata automaticamente."
+        f"Valore stimato: EUR {estimated_value:,}\n"
+        f"Risposta AI inviata."
     )
 
     return True
+
+
+def send_request_followups(db):
+    """
+    Controlla le richieste senza risposta del cliente dopo 48h e invia follow-up automatici.
+    Max 2 follow-up per richiesta. Incrementa followup_count.
+    """
+    import anthropic
+    from datetime import timezone
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+    try:
+        rows = (
+            db.table("requests")
+            .select("*, client_configs(nome_azienda, settore, email_titolare)")
+            .eq("status", "replied")
+            .eq("converted", False)
+            .lt("replied_at", cutoff)
+            .lt("followup_count", 2)
+            .execute()
+        )
+    except Exception as e:
+        print(f"send_request_followups query error: {e}")
+        return 0
+
+    if not rows.data:
+        return 0
+
+    client_ai = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    sent = 0
+    for row in rows.data:
+        from_email = row.get("from_email", "")
+        from_name = row.get("from_name", "")
+        subject = row.get("subject", "")
+        original_reply = row.get("ai_response", "")
+        req_id = row.get("id")
+        followup_count = row.get("followup_count", 0)
+
+        config = row.get("client_configs") or {}
+        nome_azienda = config.get("nome_azienda", "la nostra azienda")
+        settore = config.get("settore", "generale")
+
+        if not from_email:
+            continue
+
+        prompt = (
+            f"Sei l'assistente di '{nome_azienda}' (settore {settore}).\n"
+            f"Hai risposto a una richiesta cliente {48 * (followup_count + 1)}h fa ma non hai ricevuto risposta.\n"
+            f"Scrivi un brevissimo follow-up (2-3 frasi) in italiano, cordiale e non invasivo, "
+            f"per assicurarti che abbiano ricevuto la risposta e se hanno bisogno di aiuto.\n"
+            f"Firma come assistente di {nome_azienda}. Solo il testo, nessun commento."
+        )
+        try:
+            msg = client_ai.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=200,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            followup_text = msg.content[0].text.strip()
+        except Exception as e:
+            print(f"followup generation error: {e}")
+            followup_text = (
+                f"Buongiorno {from_name or ''},\n\n"
+                f"Volevamo assicurarci che avesse ricevuto la nostra risposta riguardo la sua richiesta.\n"
+                f"Siamo a disposizione per qualsiasi domanda.\n\n"
+                f"Cordiali saluti,\nIl team di {nome_azienda}"
+            )
+
+        followup_subject = f"Re: {subject}" if not subject.lower().startswith("re:") else subject
+        ok = _send_plain_email(from_email, followup_subject, followup_text, sender_name=nome_azienda)
+        if ok:
+            try:
+                db.table("requests").update({
+                    "followup_count": followup_count + 1,
+                    "status": "followup_sent",
+                }).eq("id", req_id).execute()
+            except Exception as e:
+                print(f"followup update error: {e}")
+            sent += 1
+
+    return sent
 
 

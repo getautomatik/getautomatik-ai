@@ -1,5 +1,6 @@
 ﻿from flask import Flask, jsonify, request, redirect, render_template
-from agents import check_email_replies, send_followups, run_revenue_pipeline, MetricsTracker, process_inbound_email
+from agents import (check_email_replies, send_followups, run_revenue_pipeline,
+                    MetricsTracker, process_inbound_email, send_request_followups)
 from supabase import create_client
 from dotenv import load_dotenv
 import os
@@ -144,6 +145,12 @@ def imap_loop():
                 print(f"IMAP: {n} nuove risposte")
         except Exception as e:
             print(f"IMAP loop error: {e}")
+        try:
+            fu = send_request_followups(db)
+            if fu:
+                send_telegram(f"FlowOps: {fu} follow-up richieste inviati automaticamente")
+        except Exception as e:
+            print(f"Request followup loop error: {e}")
         time.sleep(1800)
 
 def agency_loop():
@@ -378,16 +385,45 @@ def dashboard():
             <div id="pipeline-container"><div class="empty-pipeline">Caricamento...</div></div>
         </div>
 
+        <div class="pipeline-section" style="margin-bottom:30px;border-color:rgba(0,232,122,0.25);background:linear-gradient(135deg,rgba(0,232,122,0.04),rgba(0,180,216,0.04));">
+            <div class="section-title" style="color:#00e87a;">FlowOps ROI questo mese</div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px;" id="roi-grid">
+                <div style="text-align:center;">
+                    <div style="font-size:28px;font-weight:900;color:#fff;" id="roi-requests">0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Richieste</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:28px;font-weight:900;color:#00b4d8;" id="roi-avg-time">0 min</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Tempo medio risposta</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:28px;font-weight:900;color:#ffaa00;" id="roi-total-value">€0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Valore richieste</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:28px;font-weight:900;color:#00e87a;" id="roi-converted">0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Convertiti</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:28px;font-weight:900;color:#00e87a;" id="roi-recovered">€0</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Valore recuperato</div>
+                </div>
+            </div>
+            <div style="background:rgba(0,232,122,0.08);border:1px solid rgba(0,232,122,0.2);border-radius:10px;padding:14px 20px;text-align:center;">
+                <span style="font-size:15px;font-weight:700;color:#00e87a;" id="roi-summary">FlowOps ha risparmiato 0 ore e recuperato €0 questo mese</span>
+            </div>
+        </div>
+
         <div class="log-section">
-            <div class="section-title">📋 Activity Log</div>
+            <div class="section-title">Activity Log</div>
             <div id="log-container">
                 <div class="log-entry"><span class="log-time">--:--</span><span class="log-agent">Sistema</span>In attesa del primo ciclo...</div>
             </div>
         </div>
-        
-        <div class="footer">GetAutomatik AI © 2026 | Fully Autonomous Agency | Budget: <span id="budget-footer">500€</span></div>
+
+        <div class="footer">FlowOps AI © 2026 | Artigiani italiani | Budget: <span id="budget-footer">500€</span></div>
     </div>
-    
+
     <script>
         async function updateDashboard() {
             try {
@@ -461,14 +497,31 @@ def dashboard():
             } catch(e) {}
         }
 
+        async function updateROI() {
+            try {
+                const resp = await fetch('/api/roi');
+                const d = await resp.json();
+                document.getElementById('roi-requests').textContent = d.total_requests;
+                document.getElementById('roi-avg-time').textContent = d.avg_response_min + ' min';
+                document.getElementById('roi-total-value').textContent = '€' + (d.total_value || 0).toLocaleString('it-IT');
+                document.getElementById('roi-converted').textContent = d.converted_count;
+                document.getElementById('roi-recovered').textContent = '€' + (d.recovered_value || 0).toLocaleString('it-IT');
+                document.getElementById('roi-summary').textContent =
+                    'FlowOps ti ha fatto risparmiare ' + d.hours_saved + ' ore e recuperato €' +
+                    (d.recovered_value || 0).toLocaleString('it-IT') + ' questo mese';
+            } catch(e) {}
+        }
+
         setInterval(updateDashboard, 5000);
         setInterval(updateLogs, 10000);
         setInterval(updatePipeline, 30000);
         setInterval(updatePL, 60000);
+        setInterval(updateROI, 60000);
         updateDashboard();
         updateLogs();
         updatePipeline();
         updatePL();
+        updateROI();
     </script>
 </body>
 </html>"""
@@ -565,6 +618,54 @@ def pl_report():
         })
     except Exception as e:
         return jsonify({"mrr": 0, "spent": 0, "profit": 0, "emails_sent": 0, "replies": 0, "reply_rate": 0})
+
+
+@app.route("/api/roi")
+def roi_report():
+    try:
+        from_date = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+        rows = db.table("requests").select(
+            "id,estimated_value,converted,followup_count,received_at,replied_at,lead_type"
+        ).gte("received_at", from_date).execute()
+        data = rows.data or []
+
+        total_requests = len(data)
+        total_value = sum(r.get("estimated_value") or 0 for r in data)
+        converted = [r for r in data if r.get("converted")]
+        converted_count = len(converted)
+        recovered_value = sum(r.get("estimated_value") or 0 for r in converted)
+
+        # Average response time in minutes
+        response_times = []
+        for r in data:
+            try:
+                recv = datetime.fromisoformat(r["received_at"].replace("Z", "+00:00"))
+                repl = datetime.fromisoformat(r["replied_at"].replace("Z", "+00:00"))
+                diff_min = abs((repl - recv).total_seconds()) / 60
+                if diff_min < 1440:  # only count if < 24h (sanity check)
+                    response_times.append(diff_min)
+            except Exception:
+                pass
+        avg_response_min = round(sum(response_times) / len(response_times), 1) if response_times else 0
+
+        # Hours saved: assume 15 min per manual response
+        hours_saved = round(total_requests * 15 / 60, 1)
+
+        return jsonify({
+            "total_requests": total_requests,
+            "total_value": total_value,
+            "converted_count": converted_count,
+            "recovered_value": recovered_value,
+            "avg_response_min": avg_response_min,
+            "hours_saved": hours_saved,
+        })
+    except Exception as e:
+        print(f"roi_report error: {e}")
+        return jsonify({
+            "total_requests": 0, "total_value": 0, "converted_count": 0,
+            "recovered_value": 0, "avg_response_min": 0, "hours_saved": 0,
+        })
+
 
 @app.route("/webhook/signup", methods=["POST"])
 def signup():
