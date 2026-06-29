@@ -1162,8 +1162,8 @@ def _start_background_threads():
     threading.Thread(target=discovery_loop, daemon=True).start()
     threading.Thread(target=outreach_loop, daemon=True).start()
     threading.Thread(target=pivot_loop, daemon=True).start()
-    threading.Thread(target=imap_loop, daemon=True).start()
-    send_telegram("GetAutomatik AI avviata: discovery 24h, outreach 12h, pivot 6h, IMAP 30min")
+    # imap_loop disabilitato: IMAP non disponibile su piano Zoho attuale
+    send_telegram("GetAutomatik AI avviata: discovery 24h, outreach 12h, pivot 6h")
 
 _start_background_threads()
 
