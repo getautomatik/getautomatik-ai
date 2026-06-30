@@ -750,7 +750,7 @@ def pl_report():
             "replies": total_replied,
             "reply_rate": reply_rate,
             "daily_sent": daily_sent,
-            "daily_limit": 30
+            "daily_limit": 10
         })
     except Exception as e:
         return jsonify({"mrr": 0, "spent": 0, "profit": 0, "emails_sent": 0, "replies": 0, "reply_rate": 0})

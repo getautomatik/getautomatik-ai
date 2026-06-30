@@ -3,7 +3,7 @@ from datetime import date, timedelta, datetime
 from dotenv import load_dotenv
 load_dotenv()
 
-DAILY_EMAIL_LIMIT = 30
+DAILY_EMAIL_LIMIT = 10
 CITIES = ["Milano", "Roma", "Torino", "Napoli", "Bologna", "Firenze", "Venezia", "Bari", "Palermo", "Genova"]
 
 def send_telegram(message):
