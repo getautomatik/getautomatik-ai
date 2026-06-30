@@ -156,13 +156,14 @@ def scrape_google_maps(db, params):
                         website = det.get("website", "")
                         phone = det.get("formatted_phone_number", "")
                     raw_results.append({
-                        "company_name": name,
-                        "contact_email": "",
-                        "contact_phone": phone,
-                        "website": website,
-                        "sector": sector,
+                        "nome": name,
+                        "email": "",
+                        "telefono": phone,
+                        "sito": website,
+                        "settore": sector,
                         "source": "google_places",
-                        "score": 8
+                        "score": 8,
+                        "status": "new"
                     })
                     time.sleep(0.1)
         except Exception as e:
@@ -173,10 +174,10 @@ def scrape_google_maps(db, params):
     # Per ogni risultato con sito, estrai email
     prospects = []
     for p in raw_results:
-        if p["website"]:
-            email = _scrape_email_from_website(p["website"], None)
+        if p["sito"]:
+            email = _scrape_email_from_website(p["sito"], None)
             if email:
-                p["contact_email"] = email
+                p["email"] = email
                 prospects.append(p)
         # senza email saltiamo
 
@@ -185,16 +186,12 @@ def scrape_google_maps(db, params):
     added = 0
     for p in prospects:
         try:
-            existing = db.table("prospects").select("id").eq("company_name", p["company_name"]).execute()
+            existing = db.table("prospects").select("id").eq("email", p["email"]).execute()
             if not existing.data:
                 db.table("prospects").insert(p).execute()
                 added += 1
-        except:
-            try:
-                db.table("prospects").insert(p).execute()
-                added += 1
-            except:
-                pass
+        except Exception as ex:
+            print(f"Prospect insert error: {ex}")
 
     try:
         existing = db.table("markets").select("*").eq("sector", sector).execute()
