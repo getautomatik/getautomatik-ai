@@ -1,7 +1,8 @@
 from flask import Flask, jsonify, request, redirect, render_template
 from agents import (check_email_replies, send_followups, run_revenue_pipeline,
                     MetricsTracker, process_inbound_email, send_request_followups,
-                    metrics_report, ceo_pivot)
+                    metrics_report, ceo_pivot, chat_qualify_lead, notify_chat_lead,
+                    handle_missed_call, handle_sms_inbound, send_twilio_sms)
 from supabase import create_client
 from dotenv import load_dotenv
 import os
@@ -993,14 +994,18 @@ def onboarding_save():
         return jsonify({"error": "Dati mancanti"}), 400
 
     try:
-        existing = db.table("client_configs").select("id").eq("email_titolare", email_titolare).execute()
+        chat_token = "".join(random.choices(string.ascii_lowercase + string.digits, k=16))
+        existing = db.table("client_configs").select("id", "chat_token").eq("email_titolare", email_titolare).execute()
         if existing.data:
+            existing_token = existing.data[0].get("chat_token") or chat_token
             db.table("client_configs").update({
                 "forwarding_address": forwarding_address,
                 "settore": settore,
                 "nome_azienda": nome_azienda,
                 "status": "active",
+                "chat_token": existing_token,
             }).eq("email_titolare", email_titolare).execute()
+            chat_token = existing_token
         else:
             db.table("client_configs").insert({
                 "forwarding_address": forwarding_address,
@@ -1008,6 +1013,7 @@ def onboarding_save():
                 "nome_azienda": nome_azienda,
                 "email_titolare": email_titolare,
                 "status": "active",
+                "chat_token": chat_token,
             }).execute()
     except Exception as e:
         print(f"Errore salvataggio client_configs: {e}")
@@ -1019,7 +1025,8 @@ def onboarding_save():
         f"Email: {email_titolare}\n"
         f"Forwarding: {forwarding_address}"
     )
-    return jsonify({"status": "ok"})
+    widget_snippet = f'<script src="https://getautomatik.com/widget.js?cid={chat_token}" defer></script>'
+    return jsonify({"status": "ok", "chat_token": chat_token, "widget_snippet": widget_snippet})
 
 
 @app.route("/webhook/email-inbound", methods=["POST"])
@@ -1125,6 +1132,146 @@ def _handle_stripe_event(event):
                 send_telegram(f"❌ Cancellazione abbonamento: {customer_email}")
     except Exception as e:
         print(f"Errore handler Stripe: {type(e).__name__}: {e}")
+
+@app.route("/widget.js")
+def widget_js():
+    cid = request.args.get("cid", "")
+    js = f"""(function(){{
+  var CID="{cid}";
+  var API="https://getautomatik.com/api/chat";
+  var history=[];
+  var style=document.createElement("style");
+  style.textContent=`
+    #ga-bubble{{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#00e87a;cursor:pointer;z-index:99999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,232,122,.4);transition:transform .2s}}
+    #ga-bubble:hover{{transform:scale(1.08)}}
+    #ga-bubble svg{{width:28px;height:28px;fill:#0a0a0a}}
+    #ga-win{{position:fixed;bottom:96px;right:24px;width:340px;max-height:480px;background:#111;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:99998;display:none;flex-direction:column;overflow:hidden;border:1px solid #222}}
+    #ga-head{{background:#00e87a;padding:14px 18px;font-family:sans-serif;font-size:14px;font-weight:700;color:#0a0a0a}}
+    #ga-msgs{{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;font-family:sans-serif;font-size:13px;min-height:200px;max-height:320px}}
+    .ga-msg-ai{{align-self:flex-start;background:#1e1e1e;color:#e0e0e0;padding:10px 14px;border-radius:0 12px 12px 12px;max-width:80%}}
+    .ga-msg-user{{align-self:flex-end;background:#00e87a;color:#0a0a0a;padding:10px 14px;border-radius:12px 0 12px 12px;max-width:80%}}
+    #ga-input-row{{display:flex;padding:10px;gap:8px;border-top:1px solid #222}}
+    #ga-input{{flex:1;background:#1e1e1e;border:1px solid #333;color:#fff;border-radius:8px;padding:8px 12px;font-size:13px;outline:none}}
+    #ga-send{{background:#00e87a;color:#0a0a0a;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:13px}}
+  `;
+  document.head.appendChild(style);
+  var bubble=document.createElement("div");bubble.id="ga-bubble";
+  bubble.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>';
+  document.body.appendChild(bubble);
+  var win=document.createElement("div");win.id="ga-win";
+  win.innerHTML='<div id="ga-head">Ciao! Come possiamo aiutarti?</div><div id="ga-msgs"></div><div id="ga-input-row"><input id="ga-input" placeholder="Scrivi un messaggio..."/><button id="ga-send">Invia</button></div>';
+  document.body.appendChild(win);
+  var msgs=document.getElementById("ga-msgs");
+  var input=document.getElementById("ga-input");
+  var open=false;
+  function addMsg(text,role){{var d=document.createElement("div");d.className=role==="user"?"ga-msg-user":"ga-msg-ai";d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;}}
+  function send(){{
+    var msg=input.value.trim();if(!msg)return;
+    addMsg(msg,"user");input.value="";
+    history.push({{"role":"user","content":msg}});
+    fetch(API,{{method:"POST",headers:{{"Content-Type":"application/json"}},body:JSON.stringify({{cid:CID,history:history}})}})
+    .then(function(r){{return r.json();}})
+    .then(function(d){{
+      addMsg(d.reply,"ai");
+      history.push({{"role":"assistant","content":d.reply}});
+      if(d.qualified){{setTimeout(function(){{win.style.display="none";open=false;}},3000);}}
+    }}).catch(function(){{addMsg("Errore di connessione. Riprova.","ai");}});
+  }}
+  bubble.onclick=function(){{open=!open;win.style.display=open?"flex":"none";if(open&&history.length===0){{fetch(API,{{method:"POST",headers:{{"Content-Type":"application/json"}},body:JSON.stringify({{cid:CID,history:[]}})}}).then(function(r){{return r.json();}}).then(function(d){{addMsg(d.reply,"ai");history.push({{"role":"assistant","content":d.reply}});}});}}}};
+  document.getElementById("ga-send").onclick=send;
+  input.onkeydown=function(e){{if(e.key==="Enter")send();}};
+}})();"""
+    resp = app.response_class(response=js, status=200, mimetype="application/javascript")
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
+
+
+@app.route("/api/chat", methods=["POST", "OPTIONS"])
+def api_chat():
+    if request.method == "OPTIONS":
+        r = app.response_class(status=200)
+        r.headers["Access-Control-Allow-Origin"] = "*"
+        r.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        r.headers["Access-Control-Allow-Methods"] = "POST"
+        return r
+    data = request.json or {}
+    cid = data.get("cid", "").strip()
+    history = data.get("history", [])
+
+    # Lookup client by chat_token
+    client_config = None
+    if cid:
+        try:
+            r = db.table("client_configs").select("*").eq("chat_token", cid).eq("active", True).execute()
+            if r.data:
+                client_config = r.data[0]
+        except Exception as e:
+            print(f"api_chat lookup error: {e}")
+
+    if not client_config:
+        client_config = {"settore": "servizi", "nome_azienda": "l'azienda", "email_titolare": None}
+
+    result = chat_qualify_lead(client_config, history)
+    reply = result.get("reply", "Ciao! Come posso aiutarti?")
+
+    if result.get("qualified"):
+        try:
+            db.table("chat_sessions").insert({
+                "client_config_id": client_config.get("id"),
+                "lead_name": result.get("lead_name"),
+                "lead_phone": result.get("lead_phone"),
+                "lead_type": result.get("lead_type"),
+                "messages": history,
+                "qualified": True,
+            }).execute()
+        except Exception as e:
+            print(f"chat_sessions save error: {e}")
+        notify_chat_lead(client_config, result.get("lead_name"), result.get("lead_phone"), result.get("lead_type"))
+
+    resp = jsonify({"reply": reply, "qualified": result.get("qualified", False)})
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
+
+@app.route("/webhook/missed-call", methods=["POST"])
+def missed_call_webhook():
+    """Twilio webhook: incoming call that was not answered."""
+    twilio_number = request.form.get("To", "").strip()
+    caller_phone = request.form.get("From", "").strip()
+    call_status = request.form.get("CallStatus", "").lower()
+    if caller_phone and twilio_number and call_status in ("no-answer", "busy", "canceled", ""):
+        threading.Thread(
+            target=handle_missed_call,
+            args=(db, twilio_number, caller_phone),
+            daemon=True,
+        ).start()
+    # Return empty TwiML
+    return app.response_class(
+        response='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        status=200,
+        mimetype="text/xml",
+    )
+
+
+@app.route("/webhook/sms-inbound", methods=["POST"])
+def sms_inbound_webhook():
+    """Twilio webhook: incoming SMS reply."""
+    twilio_number = request.form.get("To", "").strip()
+    from_phone = request.form.get("From", "").strip()
+    body = request.form.get("Body", "").strip()
+    if twilio_number and from_phone and body:
+        threading.Thread(
+            target=handle_sms_inbound,
+            args=(db, twilio_number, from_phone, body),
+            daemon=True,
+        ).start()
+    return app.response_class(
+        response='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        status=200,
+        mimetype="text/xml",
+    )
+
 
 @app.route("/webhook/stripe", methods=["POST"])
 def stripe_webhook():

@@ -1593,3 +1593,209 @@ def ceo_pivot(db):
         send_telegram("CEO Pivot:\n" + "\n".join(decisions))
 
     return decisions
+
+
+# ═══════════════════════════════════════════════════════════════════
+# CHAT WIDGET — qualificazione lead via chatbot sul sito del cliente
+# ═══════════════════════════════════════════════════════════════════
+
+def chat_qualify_lead(client_config, messages):
+    """Continue chat conversation and qualify lead."""
+    import anthropic, json
+
+    settore = client_config.get("settore", "servizi")
+    nome_azienda = client_config.get("nome_azienda", "l'azienda")
+    api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY")
+    fallback = {"reply": "Ciao! Come posso aiutarti?", "qualified": False,
+                "lead_name": None, "lead_phone": None, "lead_type": None}
+    if not api_key:
+        return fallback
+
+    system = (
+        f"Sei l'assistente AI di {nome_azienda}, settore {settore}.\n"
+        f"Stai chattando con un visitatore del sito web.\n"
+        f"Obiettivo: capire il tipo di intervento, raccogliere nome e numero di telefono, poi concludere.\n"
+        f"REGOLE: rispondi in italiano, max 2 frasi, stile conversazionale.\n"
+        f"Prima capisci cosa serve, poi chiedi nome e telefono.\n"
+        f"Rispondi SOLO con JSON valido:\n"
+        f'{"{"}"reply":"...","qualified":false,"lead_name":null,"lead_phone":null,"lead_type":null{"}"}\n'
+        f"Quando hai nome E telefono: qualified=true e compila tutti i campi."
+    )
+    try:
+        client_ai = anthropic.Anthropic(api_key=api_key)
+        resp = client_ai.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            system=system,
+            messages=messages,
+        )
+        text = resp.content[0].text.strip()
+        s = text.find("{")
+        e = text.rfind("}") + 1
+        if s >= 0 and e > s:
+            return json.loads(text[s:e])
+    except Exception as ex:
+        print(f"chat_qualify_lead error: {ex}")
+    return fallback
+
+
+def notify_chat_lead(client_config, lead_name, lead_phone, lead_type):
+    """Email owner when a chat lead is qualified."""
+    owner_email = client_config.get("email_titolare")
+    nome_azienda = client_config.get("nome_azienda", "")
+    if not owner_email:
+        return
+    body = (
+        f"Hai un nuovo lead dal chatbot del tuo sito!\n\n"
+        f"Nome: {lead_name or 'Non fornito'}\n"
+        f"Telefono: {lead_phone or 'Non fornito'}\n"
+        f"Tipo lavoro: {lead_type or 'Non specificato'}\n\n"
+        f"Ricontattalo il prima possibile."
+    )
+    _send_plain_email(owner_email, f"Nuovo lead dal sito: {lead_name or lead_phone}", body, sender_name="GetAutomatik")
+    send_telegram(
+        f"Lead chatbot!\n"
+        f"Azienda: {nome_azienda}\n"
+        f"Lead: {lead_name} — {lead_phone}\n"
+        f"Lavoro: {lead_type}"
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════
+# TWILIO SMS — Missed Call Text-Back + conversazione SMS
+# ═══════════════════════════════════════════════════════════════════
+
+def send_twilio_sms(to_phone, body, from_phone=None):
+    """Send SMS via Twilio."""
+    try:
+        from twilio.rest import Client as TwilioClient
+        sid = os.getenv("TWILIO_ACCOUNT_SID")
+        token = os.getenv("TWILIO_AUTH_TOKEN")
+        from_phone = from_phone or os.getenv("TWILIO_DEFAULT_NUMBER")
+        if not all([sid, token, from_phone]):
+            print("Twilio env vars mancanti")
+            return False
+        TwilioClient(sid, token).messages.create(body=body, from_=from_phone, to=to_phone)
+        return True
+    except Exception as ex:
+        print(f"send_twilio_sms error: {ex}")
+        return False
+
+
+def _generate_missed_call_sms(settore, nome_azienda):
+    """Generate personalized missed-call SMS with Claude Haiku."""
+    import anthropic
+    api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY")
+    default = f"Ciao! Sono {nome_azienda}. Ho visto la tua chiamata — dimmi come posso aiutarti e ti ricontatto subito!"
+    if not api_key:
+        return default
+    try:
+        client_ai = anthropic.Anthropic(api_key=api_key)
+        resp = client_ai.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=80,
+            messages=[{"role": "user", "content":
+                f"SMS (max 140 caratteri) per cliente che ha chiamato senza risposta. "
+                f"Azienda: {nome_azienda}, settore: {settore}. "
+                f"Tono caldo. Invita a rispondere. Solo testo SMS, niente altro."}]
+        )
+        return resp.content[0].text.strip().strip('"')
+    except Exception:
+        return default
+
+
+def handle_missed_call(db, twilio_number, caller_phone):
+    """Process missed call: find client, send first SMS, open conversation."""
+    try:
+        r = db.table("client_configs").select("*").eq("twilio_number", twilio_number).eq("active", True).execute()
+        if not r.data:
+            print(f"handle_missed_call: nessun cliente per {twilio_number}")
+            return False
+        client = r.data[0]
+        existing = db.table("sms_conversations").select("id").eq("client_config_id", client["id"]).eq("caller_phone", caller_phone).execute()
+        if existing.data:
+            return True
+        sms_body = _generate_missed_call_sms(client.get("settore", "servizi"), client.get("nome_azienda", "l'azienda"))
+        if not send_twilio_sms(caller_phone, sms_body, twilio_number):
+            return False
+        db.table("sms_conversations").insert({
+            "client_config_id": client["id"],
+            "caller_phone": caller_phone,
+            "messages": [{"role": "assistant", "content": sms_body}],
+        }).execute()
+        send_telegram(
+            f"Chiamata persa recuperata!\n"
+            f"Azienda: {client.get('nome_azienda')}\n"
+            f"Chiamante: {caller_phone}"
+        )
+        return True
+    except Exception as ex:
+        print(f"handle_missed_call error: {ex}")
+        return False
+
+
+def handle_sms_inbound(db, twilio_number, from_phone, body):
+    """Continue AI SMS conversation when caller replies. Returns reply text."""
+    import anthropic, json
+    try:
+        r = db.table("client_configs").select("*").eq("twilio_number", twilio_number).eq("active", True).execute()
+        if not r.data:
+            return "Grazie per il messaggio!"
+        client = r.data[0]
+        client_id = client["id"]
+
+        conv_r = db.table("sms_conversations").select("*").eq("client_config_id", client_id).eq("caller_phone", from_phone).execute()
+        if not conv_r.data:
+            db.table("sms_conversations").insert({"client_config_id": client_id, "caller_phone": from_phone, "messages": []}).execute()
+            conv_r = db.table("sms_conversations").select("*").eq("client_config_id", client_id).eq("caller_phone", from_phone).execute()
+
+        conv = conv_r.data[0]
+        if conv.get("qualified"):
+            return "Grazie! Il titolare ti contatterà presto."
+
+        messages = conv.get("messages") or []
+        messages.append({"role": "user", "content": body})
+
+        api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY")
+        client_ai = anthropic.Anthropic(api_key=api_key)
+        system = (
+            f"Sei l'assistente di {client.get('nome_azienda')} ({client.get('settore')}).\n"
+            f"Stai raccogliendo info via SMS da un cliente che ha chiamato senza risposta.\n"
+            f"Obiettivo: capire tipo lavoro e zona, raccogliere nome. Max 2 frasi stile SMS.\n"
+            f"Quando hai nome + tipo lavoro: concludi confermando che il titolare ricontatterà presto.\n"
+            f'OUTPUT solo JSON: {"{"}"reply":"...","qualified":false,"lead_name":null,"lead_type":null{"}"}'
+        )
+        resp = client_ai.messages.create(model="claude-haiku-4-5-20251001", max_tokens=150, system=system, messages=messages)
+        text = resp.content[0].text.strip()
+        s = text.find("{")
+        e = text.rfind("}") + 1
+        parsed = {"reply": "Grazie! Ti ricontatto presto.", "qualified": False, "lead_name": None, "lead_type": None}
+        if s >= 0:
+            try:
+                parsed = json.loads(text[s:e])
+            except Exception:
+                pass
+
+        reply = parsed.get("reply", "Grazie!")
+        messages.append({"role": "assistant", "content": reply})
+        update = {"messages": messages}
+
+        if parsed.get("qualified"):
+            update.update({"qualified": True, "lead_name": parsed.get("lead_name"),
+                           "lead_type": parsed.get("lead_type"), "lead_phone": from_phone})
+            owner_email = client.get("email_titolare")
+            if owner_email:
+                _send_plain_email(
+                    owner_email,
+                    f"Nuovo lead SMS: {parsed.get('lead_name') or from_phone}",
+                    f"Lead da chiamata persa!\n\nNome: {parsed.get('lead_name')}\nTelefono: {from_phone}\nLavoro: {parsed.get('lead_type')}\n\nRicontattalo subito.",
+                    sender_name="GetAutomatik"
+                )
+            send_telegram(f"Lead SMS!\nAzienda: {client.get('nome_azienda')}\nLead: {parsed.get('lead_name')} ({from_phone})\nLavoro: {parsed.get('lead_type')}")
+
+        db.table("sms_conversations").update(update).eq("id", conv["id"]).execute()
+        send_twilio_sms(from_phone, reply, twilio_number)
+        return reply
+    except Exception as ex:
+        print(f"handle_sms_inbound error: {ex}")
+        return "Grazie per il messaggio!"

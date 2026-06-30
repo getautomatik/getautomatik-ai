@@ -199,7 +199,17 @@
         <div class="success-center">
             <span class="success-icon">✅</span>
             <h2>GetAutomatik è attivo per <span id="successName" style="color:var(--green);"></span></h2>
-            <p style="margin-bottom:24px;">Da questo momento rispondo automaticamente a tutte le richieste che arrivano via email. Ti avviso ogni volta che c'è un lead pronto.</p>
+            <p style="margin-bottom:24px;">Da questo momento rispondo automaticamente a tutte le richieste via email. Ti avviso ogni volta che c'è un lead pronto.</p>
+
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:left;margin-bottom:24px;">
+                <p style="font-size:13px;color:var(--muted);margin-bottom:8px;">Aggiungi il chatbot sul tuo sito — incolla questo codice prima di <code style="color:#00e87a;">&lt;/body&gt;</code>:</p>
+                <div style="background:#0a0a0a;border-radius:8px;padding:12px;position:relative;">
+                    <code id="widgetSnippet" style="font-size:11px;color:#00e87a;word-break:break-all;"></code>
+                    <button onclick="copySnippet()" style="position:absolute;top:8px;right:8px;background:#222;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Copia</button>
+                </div>
+                <p style="font-size:12px;color:var(--muted);margin-top:8px;">Il chatbot appare in basso a destra e qualifica automaticamente i visitatori del tuo sito.</p>
+            </div>
+
             <p style="font-size:13px; color:var(--muted);">Redirect alla dashboard tra pochi secondi... <span class="spinner"></span></p>
         </div>
     </div>
@@ -304,7 +314,7 @@ async function goStep5() {
     goStep(5);
     document.getElementById('successName').textContent = state.nomeAzienda;
     try {
-        await fetch('/api/onboarding/save', {
+        const res = await fetch('/api/onboarding/save', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -314,8 +324,20 @@ async function goStep5() {
                 forwarding_address: state.forwardingAddress
             })
         });
+        const d = await res.json();
+        if (d.widget_snippet) {
+            document.getElementById('widgetSnippet').textContent = d.widget_snippet;
+        }
     } catch(e) { console.warn('save error', e); }
-    setTimeout(() => { window.location.href = '/dashboard'; }, 3500);
+    setTimeout(() => { window.location.href = '/dashboard'; }, 6000);
+}
+
+function copySnippet() {
+    const code = document.getElementById('widgetSnippet').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        event.target.textContent = 'Copiato!';
+        setTimeout(() => { event.target.textContent = 'Copia'; }, 2000);
+    });
 }
 
 function copyAddress() {
