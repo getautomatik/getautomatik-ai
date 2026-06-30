@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GetAutomatik — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#07070f;color:#fff;min-height:100vh}
+.bg-grid{position:fixed;top:0;left:0;width:100%;height:100%;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,0.025) 1px,transparent 0);background-size:40px 40px;pointer-events:none;z-index:0}
+.wrap{max-width:1500px;margin:0 auto;padding:24px 32px;position:relative;z-index:1}
+
+/* HEADER */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#00ff88,#00b4d8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#000}
+.logo h1{font-size:20px;font-weight:700}
+.logo span{color:#00ff88}
+.header-right{display:flex;align-items:center;gap:12px}
+.badge-live{background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);padding:6px 14px;border-radius:50px;font-size:12px;color:#00ff88;display:flex;align-items:center;gap:6px}
+.pulse{width:7px;height:7px;background:#00ff88;border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.btn{padding:8px 18px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-primary{background:#00ff88;color:#000}
+.btn-primary:hover{background:#00e07a}
+.btn-ghost{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.1)}
+.btn-ghost:hover{background:rgba(255,255,255,0.1)}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-bottom:28px}
+.kpi{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:20px 18px;transition:.2s}
+.kpi:hover{border-color:rgba(0,255,136,0.25);transform:translateY(-1px)}
+.kpi .val{font-size:34px;font-weight:900;letter-spacing:-1.5px;margin:8px 0 4px}
+.kpi .lbl{font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px}
+.kpi .ico{font-size:20px}
+.green .val{color:#00ff88}
+.blue .val{color:#00b4d8}
+.purple .val{color:#a78bfa}
+.orange .val{color:#fb923c}
+.yellow .val{color:#fbbf24}
+.red .val{color:#f87171}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:24px;background:rgba(255,255,255,0.03);border-radius:10px;padding:4px;width:fit-content}
+.tab{padding:8px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.45);transition:.2s;border:none;background:none}
+.tab.active{background:rgba(0,255,136,0.12);color:#00ff88}
+.tab:hover:not(.active){color:rgba(255,255,255,0.7)}
+
+/* PANEL */
+.panel{display:none}
+.panel.active{display:block}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:12px;border:1px solid rgba(255,255,255,0.07)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:rgba(255,255,255,0.03)}
+th{padding:11px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.35);white-space:nowrap}
+td{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.04);vertical-align:middle;color:rgba(255,255,255,0.8)}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.mono{font-family:monospace;font-size:12px}
+
+/* BADGES */
+.badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap}
+.s-new{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5)}
+.s-qualified{background:rgba(0,180,216,0.15);color:#00b4d8}
+.s-contacted{background:rgba(167,139,250,0.15);color:#a78bfa}
+.s-followup_1{background:rgba(251,191,36,0.15);color:#fbbf24}
+.s-warm_1,.s-warm_2{background:rgba(251,146,60,0.2);color:#fb923c}
+.s-replied{background:rgba(0,255,136,0.15);color:#00ff88}
+.s-converted{background:rgba(0,255,136,0.25);color:#00ff88;border:1px solid rgba(0,255,136,0.4)}
+.s-discarded,.s-dead{background:rgba(248,113,113,0.1);color:#f87171}
+.s-sent{background:rgba(167,139,250,0.15);color:#a78bfa}
+.s-queued{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5)}
+.s-failed{background:rgba(248,113,113,0.1);color:#f87171}
+.s-active{background:rgba(0,255,136,0.2);color:#00ff88}
+.s-trial{background:rgba(251,191,36,0.15);color:#fbbf24}
+.s-churned{background:rgba(248,113,113,0.1);color:#f87171}
+
+/* SECTION HEADER */
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.sec-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,0.35)}
+
+/* FILTER ROW */
+.filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-chip{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);transition:.2s}
+.filter-chip.on{background:rgba(0,255,136,0.12);border-color:rgba(0,255,136,0.35);color:#00ff88}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;color:rgba(255,255,255,0.2);font-size:13px}
+
+/* CLIENT CARDS */
+.clients-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.client-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:22px;transition:.2s}
+.client-card:hover{border-color:rgba(0,255,136,0.3)}
+.client-card.active{border-color:rgba(0,255,136,0.2)}
+.cc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.cc-name{font-size:15px;font-weight:700}
+.cc-email{font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px}
+.cc-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid rgba(255,255,255,0.04);font-size:13px}
+.cc-row .lbl{color:rgba(255,255,255,0.4)}
+.cc-mrr{font-size:22px;font-weight:900;color:#00ff88}
+
+/* SECTOR BARS */
+.sector-list{display:grid;gap:12px}
+.sector-row{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px 20px}
+.sr-top{display:flex;justify-content:space-between;margin-bottom:10px}
+.sr-name{font-weight:700;text-transform:capitalize}
+.sr-stats{display:flex;gap:20px;font-size:12px;color:rgba(255,255,255,0.45)}
+.bar-bg{background:rgba(255,255,255,0.07);border-radius:4px;height:5px;margin-top:6px}
+.bar-fill{height:5px;border-radius:4px;background:linear-gradient(90deg,#00ff88,#00b4d8);transition:width .5s}
+
+/* LOG */
+.log-list{display:flex;flex-direction:column;gap:0}
+.log-row{padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:12px;align-items:flex-start;font-size:13px;color:rgba(255,255,255,0.65)}
+.log-row:last-child{border-bottom:none}
+.log-time{font-size:11px;color:rgba(255,255,255,0.2);min-width:48px;padding-top:1px}
+
+/* DAILY BAR */
+.daily-bar-wrap{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:16px}
+.db-label{font-size:13px;color:rgba(255,255,255,0.45);white-space:nowrap}
+.db-track{flex:1;background:rgba(255,255,255,0.07);border-radius:4px;height:6px}
+.db-fill{height:6px;border-radius:4px;background:linear-gradient(90deg,#00ff88,#00b4d8);transition:width .5s}
+.db-count{font-size:13px;font-weight:700;color:#00ff88;white-space:nowrap}
+
+/* LOADING SPINNER */
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.15);border-top-color:#00ff88;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">G</div>
+      <h1>Get<span>Automatik</span></h1>
+    </div>
+    <div class="header-right">
+      <div class="badge-live"><div class="pulse"></div>Sistema Attivo</div>
+      <button class="btn btn-ghost" onclick="refreshAll()">Aggiorna</button>
+      <button class="btn btn-primary" onclick="triggerDiscovery()">+ Avvia Discovery</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi green">
+      <div class="ico">👥</div>
+      <div class="val" id="k-clients">—</div>
+      <div class="lbl">Clienti Attivi</div>
+    </div>
+    <div class="kpi green">
+      <div class="ico">💰</div>
+      <div class="val" id="k-mrr">—</div>
+      <div class="lbl">MRR</div>
+    </div>
+    <div class="kpi blue">
+      <div class="ico">🎯</div>
+      <div class="val" id="k-prospects">—</div>
+      <div class="lbl">Prospect Totali</div>
+    </div>
+    <div class="kpi purple">
+      <div class="ico">📧</div>
+      <div class="val" id="k-emails">—</div>
+      <div class="lbl">Email Inviate</div>
+    </div>
+    <div class="kpi yellow">
+      <div class="ico">💬</div>
+      <div class="val" id="k-rr">—</div>
+      <div class="lbl">Reply Rate</div>
+    </div>
+    <div class="kpi orange">
+      <div class="ico">🔥</div>
+      <div class="val" id="k-warm">—</div>
+      <div class="lbl">Lead Caldi</div>
+    </div>
+  </div>
+
+  <!-- DAILY EMAIL BAR -->
+  <div class="daily-bar-wrap">
+    <div class="db-label">Email oggi</div>
+    <div class="db-track"><div class="db-fill" id="db-fill" style="width:0%"></div></div>
+    <div class="db-count" id="db-count">0 / 30</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.2)">Limite giornaliero</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('prospects')">Prospect</button>
+    <button class="tab" onclick="switchTab('outreach')">Outreach Email</button>
+    <button class="tab" onclick="switchTab('clients')">Clienti</button>
+    <button class="tab" onclick="switchTab('sectors')">Settori</button>
+    <button class="tab" onclick="switchTab('log')">Log</button>
+  </div>
+
+  <!-- TAB: PROSPECT -->
+  <div id="tab-prospects" class="panel active">
+    <div class="sec-hdr">
+      <div class="sec-title">Pipeline Prospect</div>
+      <span id="pct-total" style="font-size:12px;color:rgba(255,255,255,0.3)"></span>
+    </div>
+    <div class="filter-row" id="p-filters">
+      <div class="filter-chip on" data-status="all" onclick="filterProspects(this)">Tutti</div>
+      <div class="filter-chip" data-status="new" onclick="filterProspects(this)">Nuovi</div>
+      <div class="filter-chip" data-status="qualified" onclick="filterProspects(this)">Qualificati</div>
+      <div class="filter-chip" data-status="contacted" onclick="filterProspects(this)">Contattati</div>
+      <div class="filter-chip" data-status="followup_1" onclick="filterProspects(this)">Follow-up</div>
+      <div class="filter-chip" data-status="warm_1,warm_2" onclick="filterProspects(this)">Caldi</div>
+      <div class="filter-chip" data-status="replied" onclick="filterProspects(this)">Risposto</div>
+      <div class="filter-chip" data-status="converted" onclick="filterProspects(this)">Convertiti</div>
+      <div class="filter-chip" data-status="discarded,dead" onclick="filterProspects(this)">Scartati</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Azienda</th>
+          <th>Settore</th>
+          <th>Email</th>
+          <th>Sito</th>
+          <th>Status</th>
+          <th>Score</th>
+          <th>Contattato</th>
+          <th>Follow-up</th>
+        </tr></thead>
+        <tbody id="p-tbody"><tr><td colspan="8" class="empty"><span class="spin"></span> Caricamento...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: OUTREACH -->
+  <div id="tab-outreach" class="panel">
+    <div class="sec-hdr">
+      <div class="sec-title">Email Outreach</div>
+      <span id="out-total" style="font-size:12px;color:rgba(255,255,255,0.3)"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Azienda</th>
+          <th>Email</th>
+          <th>Oggetto</th>
+          <th>N°</th>
+          <th>Status</th>
+          <th>Score</th>
+          <th>Data</th>
+        </tr></thead>
+        <tbody id="out-tbody"><tr><td colspan="7" class="empty"><span class="spin"></span> Caricamento...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: CLIENTI -->
+  <div id="tab-clients" class="panel">
+    <div class="sec-hdr">
+      <div class="sec-title">Clienti</div>
+    </div>
+    <div class="clients-grid" id="clients-grid">
+      <div class="empty" style="grid-column:1/-1"><span class="spin"></span> Caricamento...</div>
+    </div>
+  </div>
+
+  <!-- TAB: SETTORI -->
+  <div id="tab-sectors" class="panel">
+    <div class="sec-hdr">
+      <div class="sec-title">Performance per Settore</div>
+    </div>
+    <div class="sector-list" id="sector-list">
+      <div class="empty"><span class="spin"></span> Caricamento...</div>
+    </div>
+  </div>
+
+  <!-- TAB: LOG -->
+  <div id="tab-log" class="panel">
+    <div class="sec-hdr">
+      <div class="sec-title">Activity Log</div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="log-list" id="log-list">
+        <div class="empty"><span class="spin"></span> Caricamento...</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let allProspects = [];
+let currentFilter = 'all';
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── KPI + daily bar ───────────────────────────────────────────────────────────
+async function loadKPI() {
+  try {
+    const [s, pl] = await Promise.all([fetch('/api/status').then(r=>r.json()), fetch('/api/pl').then(r=>r.json())]);
+    document.getElementById('k-clients').textContent  = s.clients;
+    document.getElementById('k-mrr').textContent      = '€' + (s.mrr || 0);
+    document.getElementById('k-prospects').textContent = s.prospects;
+    document.getElementById('k-emails').textContent   = pl.emails_sent || 0;
+    document.getElementById('k-rr').textContent       = (pl.reply_rate || 0) + '%';
+    document.getElementById('k-warm').textContent     = s.warm || 0;
+    const pct = Math.min(100, Math.round((pl.daily_sent || 0) / (pl.daily_limit || 30) * 100));
+    document.getElementById('db-fill').style.width = pct + '%';
+    document.getElementById('db-count').textContent = (pl.daily_sent || 0) + ' / ' + (pl.daily_limit || 30);
+  } catch(e) {}
+}
+
+// ── Prospects ─────────────────────────────────────────────────────────────────
+function statusBadge(s) {
+  return `<span class="badge s-${s||'new'}">${s||'new'}</span>`;
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return d.slice(0,10);
+}
+function renderProspects(data) {
+  const tbody = document.getElementById('p-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Nessun prospect trovato</td></tr>'; return; }
+  tbody.innerHTML = data.map(p => `
+    <tr>
+      <td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.company_name||'—'}</td>
+      <td style="text-transform:capitalize;color:rgba(255,255,255,0.6)">${p.sector||'—'}</td>
+      <td class="mono" style="color:rgba(255,255,255,0.55);max-width:160px;overflow:hidden;text-overflow:ellipsis">${p.contact_email||'—'}</td>
+      <td>${p.website ? `<a href="${p.website}" target="_blank" style="color:#00b4d8;text-decoration:none;font-size:12px">↗ sito</a>` : '—'}</td>
+      <td>${statusBadge(p.status)}</td>
+      <td style="color:${(p.score||0)>=65?'#00ff88':(p.score||0)>=40?'#fbbf24':'#f87171'};font-weight:700">${p.score||0}</td>
+      <td style="color:rgba(255,255,255,0.4);font-size:12px">${fmtDate(p.contacted_at)}</td>
+      <td style="color:${p.follow_up_at && p.follow_up_at < new Date().toISOString().slice(0,10)?'#fb923c':'rgba(255,255,255,0.4)'};font-size:12px">${fmtDate(p.follow_up_at)}</td>
+    </tr>`).join('');
+}
+function filterProspects(chip) {
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on');
+  const statuses = chip.dataset.status.split(',');
+  const filtered = chip.dataset.status === 'all' ? allProspects : allProspects.filter(p => statuses.includes(p.status||'new'));
+  document.getElementById('pct-total').textContent = filtered.length + ' prospect';
+  renderProspects(filtered);
+}
+async function loadProspects() {
+  try {
+    allProspects = await fetch('/api/prospects-list').then(r=>r.json());
+    document.getElementById('pct-total').textContent = allProspects.length + ' prospect';
+    renderProspects(allProspects);
+  } catch(e) {
+    document.getElementById('p-tbody').innerHTML = '<tr><td colspan="8" class="empty">Errore caricamento</td></tr>';
+  }
+}
+
+// ── Outreach ──────────────────────────────────────────────────────────────────
+async function loadOutreach() {
+  try {
+    const data = await fetch('/api/outreach-list').then(r=>r.json());
+    document.getElementById('out-total').textContent = data.length + ' email';
+    const tbody = document.getElementById('out-tbody');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nessuna email outreach ancora</td></tr>'; return; }
+    tbody.innerHTML = data.map(o => `
+      <tr>
+        <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.company_name||'—'}</td>
+        <td class="mono" style="color:rgba(255,255,255,0.5);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis">${o.contact_email||'—'}</td>
+        <td style="color:rgba(255,255,255,0.7);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${o.subject||''}">${o.subject||'—'}</td>
+        <td style="color:rgba(255,255,255,0.4)">#${o.email_number||1}</td>
+        <td>${statusBadge(o.status)}</td>
+        <td style="color:${(o.score||0)>=65?'#00ff88':'rgba(255,255,255,0.45)'};font-weight:700">${o.score||0}</td>
+        <td style="color:rgba(255,255,255,0.4);font-size:12px">${fmtDate(o.created_at)}</td>
+      </tr>`).join('');
+  } catch(e) {}
+}
+
+// ── Clienti ───────────────────────────────────────────────────────────────────
+async function loadClients() {
+  try {
+    const data = await fetch('/api/clients-list').then(r=>r.json());
+    const grid = document.getElementById('clients-grid');
+    if (!data.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">Nessun cliente ancora — il sistema sta lavorando per trovarne!</div>'; return; }
+    grid.innerHTML = data.map(c => `
+      <div class="client-card ${c.status==='active'?'active':''}">
+        <div class="cc-top">
+          <div>
+            <div class="cc-name">${c.nome_azienda||c.company_name||'Azienda'}</div>
+            <div class="cc-email">${c.email||c.contact_email||'—'}</div>
+          </div>
+          <span class="badge s-${c.status||'trial'}">${c.status||'trial'}</span>
+        </div>
+        <div class="cc-row"><span class="lbl">Settore</span><span style="text-transform:capitalize">${c.settore||c.sector||'—'}</span></div>
+        <div class="cc-row"><span class="lbl">MRR</span><span class="cc-mrr">€${c.mrr||0}</span></div>
+        <div class="cc-row"><span class="lbl">Piano</span><span>${c.plan||'GetAutomatik Pro'}</span></div>
+        <div class="cc-row"><span class="lbl">Chatbot</span><span style="color:${c.chat_token?'#00ff88':'rgba(255,255,255,0.3)'}">${c.chat_token?'Attivo':'Da attivare'}</span></div>
+        <div class="cc-row"><span class="lbl">Attivo dal</span><span style="color:rgba(255,255,255,0.4);font-size:12px">${fmtDate(c.created_at)}</span></div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+// ── Settori ───────────────────────────────────────────────────────────────────
+async function loadSectors() {
+  try {
+    const data = await fetch('/prospects').then(r=>r.json());
+    const el = document.getElementById('sector-list');
+    if (!data.length) { el.innerHTML = '<div class="empty">Nessun dato settore</div>'; return; }
+    const maxTotal = Math.max(...data.map(s=>s.total), 1);
+    el.innerHTML = data.map(s => {
+      const pct = Math.round(s.total / maxTotal * 100);
+      const rr  = s.contacted > 0 ? Math.round(s.replied / s.contacted * 100) : 0;
+      return `<div class="sector-row">
+        <div class="sr-top">
+          <span class="sr-name">${s.sector}</span>
+          <div class="sr-stats">
+            <span>${s.total} prospect</span>
+            <span>${s.contacted} contattati</span>
+            <span style="color:${rr>5?'#00ff88':rr>2?'#fbbf24':'rgba(255,255,255,0.4)'}">${rr}% reply</span>
+          </div>
+        </div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+async function loadLog() {
+  try {
+    const data = await fetch('/api/logs').then(r=>r.json());
+    const el = document.getElementById('log-list');
+    if (!data.length) { el.innerHTML = '<div class="empty">In attesa del primo ciclo...</div>'; return; }
+    el.innerHTML = data.map(l => `
+      <div class="log-row">
+        <span class="log-time">${l.time||'--:--'}</span>
+        <span style="color:#00b4d8;font-weight:600;min-width:70px">${l.agent||'Sistema'}</span>
+        <span>${l.message||''}</span>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+// ── Discovery trigger ─────────────────────────────────────────────────────────
+async function triggerDiscovery() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Avviato...';
+  try {
+    await fetch('/api/trigger-discovery', {method:'POST'});
+    btn.textContent = '+ Avvia Discovery';
+    btn.disabled = false;
+    setTimeout(refreshAll, 3000);
+  } catch(e) {
+    btn.textContent = '+ Avvia Discovery';
+    btn.disabled = false;
+  }
+}
+
+// ── Refresh ───────────────────────────────────────────────────────────────────
+function refreshAll() {
+  loadKPI();
+  loadProspects();
+  loadOutreach();
+  loadClients();
+  loadSectors();
+  loadLog();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+refreshAll();
+setInterval(loadKPI, 10000);
+setInterval(loadProspects, 30000);
+setInterval(loadOutreach, 30000);
+setInterval(loadLog, 15000);
+</script>
+</body>
+</html>

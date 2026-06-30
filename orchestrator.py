@@ -229,6 +229,11 @@ def landing_redirect():
 
 @app.route("/dashboard")
 def dashboard():
+    return render_template("dashboard.html")
+
+
+@app.route("/dashboard_old")
+def dashboard_old():
     return """
 <!DOCTYPE html>
 <html lang="it">
@@ -868,6 +873,33 @@ def roi_report():
             "total_requests": 0, "total_value": 0, "converted_count": 0,
             "recovered_value": 0, "avg_response_min": 0, "hours_saved": 0,
         })
+
+
+@app.route("/api/prospects-list")
+def prospects_list():
+    try:
+        rows = db.table("prospects").select("*").order("created_at", desc=True).limit(200).execute()
+        return jsonify(rows.data or [])
+    except Exception as e:
+        return jsonify([])
+
+
+@app.route("/api/outreach-list")
+def outreach_list():
+    try:
+        rows = db.table("outreach").select("*").order("created_at", desc=True).limit(200).execute()
+        return jsonify(rows.data or [])
+    except Exception as e:
+        return jsonify([])
+
+
+@app.route("/api/clients-list")
+def clients_list():
+    try:
+        rows = db.table("clients").select("*").order("created_at", desc=True).execute()
+        return jsonify(rows.data or [])
+    except Exception as e:
+        return jsonify([])
 
 
 @app.route("/webhook/signup", methods=["POST"])
