@@ -648,18 +648,19 @@ def dashboard_old():
 
 @app.route("/api/trigger-discovery", methods=["POST"])
 def trigger_discovery():
-    """Manually trigger one discovery cycle across all sectors."""
+    """Manually trigger full pipeline: hunt + audit + send."""
     def _run():
-        total = 0
+        total_hunted = total_sent = 0
         for sector in DEFAULT_NICHES:
             try:
-                result = run_revenue_pipeline(db, sector=sector, hunt_count=8, audit_limit=0, send_limit=0)
-                total += result.get("hunted", 0)
+                result = run_revenue_pipeline(db, sector=sector, hunt_count=8, audit_limit=5, send_limit=3)
+                total_hunted += result.get("hunted", 0)
+                total_sent   += result.get("sent", 0)
             except Exception as e:
-                print(f"trigger-discovery {sector}: {e}")
-        send_telegram(f"Discovery manuale completata: {total} prospect trovati")
+                print(f"trigger-pipeline {sector}: {e}")
+        send_telegram(f"Pipeline manuale: {total_hunted} trovati, {total_sent} email inviate")
     threading.Thread(target=_run, daemon=True).start()
-    return jsonify({"status": "discovery avviata", "sectors": DEFAULT_NICHES})
+    return jsonify({"status": "pipeline avviata", "sectors": DEFAULT_NICHES})
 
 
 @app.route("/api/status")
@@ -873,6 +874,17 @@ def roi_report():
             "total_requests": 0, "total_value": 0, "converted_count": 0,
             "recovered_value": 0, "avg_response_min": 0, "hours_saved": 0,
         })
+
+
+@app.route("/api/clear-fake-prospects", methods=["POST"])
+def clear_fake_prospects():
+    """Remove demo/generated prospects that have no website."""
+    try:
+        db.table("prospects").delete().eq("source", "generated").execute()
+        db.table("prospects").delete().is_("website", "null").execute()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 @app.route("/api/prospects-list")
