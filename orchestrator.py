@@ -212,17 +212,22 @@ def pivot_loop():
                 print(f"Metrics report error: {e}")
         time.sleep(21600)  # 6h
 
-@app.route("/landing")
+@app.route("/")
 def landing():
     ref = request.args.get("ref", "")
     html = open("templates/landing.html", "r", encoding="utf-8").read()
-    # Inject ref into all CTA links
     if ref:
         html = html.replace('href="/onboarding"', f'href="/onboarding?ref={ref}"')
         html = html.replace('href="/checkout"', f'href="/checkout?ref={ref}"')
     return html
 
-@app.route("/")
+@app.route("/landing")
+def landing_redirect():
+    ref = request.args.get("ref", "")
+    url = f"/?ref={ref}" if ref else "/"
+    return redirect(url)
+
+@app.route("/dashboard")
 def dashboard():
     return """
 <!DOCTYPE html>
