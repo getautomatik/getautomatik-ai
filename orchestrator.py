@@ -1198,13 +1198,27 @@ def _handle_stripe_event(event):
     except Exception as e:
         print(f"Errore handler Stripe: {type(e).__name__}: {e}")
 
+@app.route("/chatbot-demo")
+def chatbot_demo():
+    return render_template("chatbot_demo.html")
+
+
 @app.route("/widget.js")
 def widget_js():
     cid = request.args.get("cid", "")
+    biz_name = "Assistente"
+    if cid:
+        try:
+            r = db.table("client_configs").select("nome_azienda").eq("chat_token", cid).execute()
+            if r.data:
+                biz_name = r.data[0].get("nome_azienda") or biz_name
+        except Exception:
+            pass
     js = f"""(function(){{
   var CID="{cid}";
   var API="https://getautomatik.com/api/chat";
   var history=[];
+  window.__GA_BIZNAME="{biz_name}";
   var style=document.createElement("style");
   style.textContent=`
     #ga-bubble{{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#00e87a;cursor:pointer;z-index:99999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,232,122,.4);transition:transform .2s}}
@@ -1224,7 +1238,8 @@ def widget_js():
   bubble.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>';
   document.body.appendChild(bubble);
   var win=document.createElement("div");win.id="ga-win";
-  win.innerHTML='<div id="ga-head">Ciao! Come possiamo aiutarti?</div><div id="ga-msgs"></div><div id="ga-input-row"><input id="ga-input" placeholder="Scrivi un messaggio..."/><button id="ga-send">Invia</button></div>';
+  var bizName=window.__GA_BIZNAME||"Assistente";
+  win.innerHTML='<div id="ga-head" style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:14px 16px;display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;background:rgba(0,232,122,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💬</div><div style="flex:1"><div style="font-family:sans-serif;font-size:13px;font-weight:700;color:#fff">'+bizName+'</div><div style="font-family:sans-serif;font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px">● Online · rispondo subito</div></div></div><div id="ga-msgs"></div><div id="ga-input-row"><input id="ga-input" placeholder="Scrivi un messaggio..."/><button id="ga-send">Invia</button></div><div style="text-align:center;padding:6px;font-size:10px;color:#666;border-top:1px solid #222;font-family:sans-serif">Powered by <a href="https://getautomatik.com" style="color:#00e87a;text-decoration:none" target="_blank">GetAutomatik</a></div>';
   document.body.appendChild(win);
   var msgs=document.getElementById("ga-msgs");
   var input=document.getElementById("ga-input");

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Chatbot — GetAutomatik</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+
+/* ── BANNER SOPRA ─────────────────────────────────────────── */
+.ga-banner{background:#080812;color:#fff;text-align:center;padding:12px 24px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:20px}
+.ga-banner strong{color:#00e87a}
+.ga-banner a{background:#00e87a;color:#000;padding:6px 16px;border-radius:6px;font-weight:700;font-size:12px;text-decoration:none}
+
+/* ── SITO FINTO: Idraulico Rossi ──────────────────────────── */
+.fake-nav{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px 40px;display:flex;align-items:center;justify-content:space-between}
+.fake-logo{font-weight:800;font-size:18px;color:#1e3a5f}
+.fake-logo span{color:#e85d04}
+.fake-nav-links{display:flex;gap:24px}
+.fake-nav-links a{color:#6b7280;font-size:14px;text-decoration:none;font-weight:500}
+.fake-cta-nav{background:#e85d04;color:#fff;padding:9px 20px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none}
+
+.fake-hero{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;padding:80px 40px;text-align:center}
+.fake-hero h1{font-size:42px;font-weight:900;letter-spacing:-1px;margin-bottom:16px}
+.fake-hero p{font-size:18px;opacity:.85;max-width:520px;margin:0 auto 32px}
+.fake-hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-hero{background:#e85d04;color:#fff;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none}
+.btn-hero-ghost{border:2px solid rgba(255,255,255,0.4);color:#fff;padding:13px 28px;border-radius:10px;font-weight:600;font-size:15px;text-decoration:none}
+
+.fake-trust{background:#f0f7ff;border-top:1px solid #dbeafe;border-bottom:1px solid #dbeafe;padding:20px 40px;display:flex;justify-content:center;gap:48px}
+.trust-item{display:flex;align-items:center;gap:10px;font-size:14px;color:#1e3a5f;font-weight:600}
+
+.fake-services{padding:60px 40px;max-width:900px;margin:0 auto}
+.fake-services h2{font-size:28px;font-weight:800;color:#1e3a5f;margin-bottom:32px;text-align:center}
+.services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.service-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;text-align:center}
+.service-icon{font-size:32px;margin-bottom:12px}
+.service-card h3{font-size:16px;font-weight:700;color:#1e3a5f;margin-bottom:8px}
+.service-card p{font-size:13px;color:#6b7280;line-height:1.6}
+
+.fake-contact{background:#1e3a5f;color:#fff;padding:50px 40px;text-align:center}
+.fake-contact h2{font-size:26px;font-weight:800;margin-bottom:10px}
+.fake-contact p{opacity:.75;margin-bottom:24px}
+.fake-phone{font-size:28px;font-weight:900;color:#e85d04;letter-spacing:-0.5px}
+
+.fake-footer{background:#111827;color:#9ca3af;padding:24px 40px;font-size:13px;display:flex;justify-content:space-between}
+
+/* ── CHAT WIDGET REALE ────────────────────────────────────── */
+#ga-bubble{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;background:#00e87a;cursor:pointer;z-index:99999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,232,122,.5);transition:transform .2s}
+#ga-bubble:hover{transform:scale(1.08)}
+#ga-bubble svg{width:28px;height:28px;fill:#0a0a0a}
+#ga-badge{position:absolute;top:-2px;right:-2px;width:18px;height:18px;background:#ef4444;border-radius:50%;border:2px solid #fff;font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center}
+#ga-win{position:fixed;bottom:96px;right:24px;width:360px;max-height:520px;background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.18);z-index:99998;display:none;flex-direction:column;overflow:hidden;border:1px solid #e5e7eb}
+#ga-head{background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:16px 18px;display:flex;align-items:center;gap:12px}
+#ga-head-avatar{width:38px;height:38px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+#ga-head-text{flex:1}
+#ga-head-name{font-family:sans-serif;font-size:14px;font-weight:700;color:#fff}
+#ga-head-sub{font-family:sans-serif;font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;display:flex;align-items:center;gap:5px}
+#ga-online{width:7px;height:7px;background:#00e87a;border-radius:50%;display:inline-block}
+#ga-close{width:28px;height:28px;background:rgba(255,255,255,0.15);border:none;border-radius:50%;cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#ga-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#f9fafb;min-height:220px;max-height:300px}
+.ga-msg-ai{align-self:flex-start;background:#fff;border:1px solid #e5e7eb;color:#1a1a1a;padding:10px 14px;border-radius:4px 12px 12px 12px;max-width:82%;font-family:sans-serif;font-size:13px;line-height:1.55;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ga-msg-user{align-self:flex-end;background:#1e3a5f;color:#fff;padding:10px 14px;border-radius:12px 4px 12px 12px;max-width:82%;font-family:sans-serif;font-size:13px;line-height:1.55}
+.ga-typing{display:flex;gap:4px;align-items:center;padding:10px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:4px 12px 12px 12px;width:fit-content;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ga-typing span{width:6px;height:6px;background:#9ca3af;border-radius:50%;animation:typing .9s infinite}
+.ga-typing span:nth-child(2){animation-delay:.2s}
+.ga-typing span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,60%,100%{opacity:.3}30%{opacity:1}}
+#ga-input-row{display:flex;padding:12px;gap:8px;border-top:1px solid #e5e7eb;background:#fff}
+#ga-input{flex:1;background:#f9fafb;border:1px solid #e5e7eb;color:#1a1a1a;border-radius:8px;padding:9px 13px;font-size:13px;font-family:sans-serif;outline:none}
+#ga-input:focus{border-color:#1e3a5f}
+#ga-send{background:#1e3a5f;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:13px;font-family:sans-serif}
+#ga-send:disabled{opacity:.5;cursor:not-allowed}
+#ga-powered{text-align:center;padding:8px;font-size:10px;color:#9ca3af;background:#fff;font-family:sans-serif}
+#ga-powered a{color:#00e87a;text-decoration:none;font-weight:600}
+
+/* PULSE sul bubble quando chiuso */
+@keyframes pulse-bubble{0%{box-shadow:0 4px 20px rgba(0,232,122,.5)}50%{box-shadow:0 4px 32px rgba(0,232,122,.8),0 0 0 8px rgba(0,232,122,.12)}100%{box-shadow:0 4px 20px rgba(0,232,122,.5)}}
+#ga-bubble.pulse-anim{animation:pulse-bubble 2s ease-in-out infinite}
+
+@media(max-width:600px){
+  .services-grid{grid-template-columns:1fr}
+  .fake-trust{flex-direction:column;gap:12px;align-items:center}
+  #ga-win{width:calc(100vw - 32px);right:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- Banner GetAutomatik sopra il sito demo -->
+<div class="ga-banner">
+  <span>Stai guardando una <strong>demo live</strong> del chatbot GetAutomatik — il widget verde in basso a destra è reale.</span>
+  <a href="/onboarding">Voglio questo sul mio sito →</a>
+</div>
+
+<!-- SITO FINTO: Idraulico Rossi Milano -->
+<nav class="fake-nav">
+  <div class="fake-logo">Idraulico <span>Rossi</span></div>
+  <div class="fake-nav-links">
+    <a href="#">Servizi</a>
+    <a href="#">Chi siamo</a>
+    <a href="#">Pronto intervento</a>
+  </div>
+  <a href="#" class="fake-cta-nav">Chiama ora</a>
+</nav>
+
+<div class="fake-hero">
+  <h1>Idraulico a Milano<br>Pronto intervento 24/7</h1>
+  <p>Perdite, intasamenti, caldaie e impianti. Interveniamo entro 2 ore in tutta la città.</p>
+  <div class="fake-hero-btns">
+    <a href="#" class="btn-hero">Chiama il 02 1234 5678</a>
+    <a href="#" class="btn-hero-ghost">Richiedi preventivo</a>
+  </div>
+</div>
+
+<div class="fake-trust">
+  <div class="trust-item">⭐ 4.9 su Google (312 recensioni)</div>
+  <div class="trust-item">⚡ Intervento entro 2 ore</div>
+  <div class="trust-item">✅ 15 anni di esperienza</div>
+</div>
+
+<div class="fake-services">
+  <h2>I nostri servizi</h2>
+  <div class="services-grid">
+    <div class="service-card">
+      <div class="service-icon">🚿</div>
+      <h3>Perdite e rotture</h3>
+      <p>Riparazione perdite da tubature, sifoni, raccordi e collegamenti idrici.</p>
+    </div>
+    <div class="service-card">
+      <div class="service-icon">🔥</div>
+      <h3>Caldaie e riscaldamento</h3>
+      <p>Manutenzione, riparazione e sostituzione caldaie a gas e pompe di calore.</p>
+    </div>
+    <div class="service-card">
+      <div class="service-icon">🪠</div>
+      <h3>Intasamenti</h3>
+      <p>Scarico bagno, cucina, colonne condominiali. Intervento rapido con idropulitura.</p>
+    </div>
+  </div>
+</div>
+
+<div class="fake-contact">
+  <h2>Hai bisogno di un idraulico adesso?</h2>
+  <p>Scrivi nel chat qui a destra — rispondiamo in pochi secondi anche di notte</p>
+  <div class="fake-phone">02 1234 5678</div>
+</div>
+
+<footer class="fake-footer">
+  <span>Idraulico Rossi Srl — Via Torino 42, Milano</span>
+  <span>P.IVA 01234567890</span>
+</footer>
+
+<!-- ── CHAT WIDGET REALE GETAUTOMATIK ──────────────────── -->
+<div id="ga-bubble" class="pulse-anim">
+  <svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>
+  <div id="ga-badge">1</div>
+</div>
+
+<div id="ga-win">
+  <div id="ga-head">
+    <div id="ga-head-avatar">🔧</div>
+    <div id="ga-head-text">
+      <div id="ga-head-name">Assistente Idraulico Rossi</div>
+      <div id="ga-head-sub"><span id="ga-online"></span> Online ora · risposta in pochi secondi</div>
+    </div>
+    <button id="ga-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div id="ga-msgs"></div>
+  <div id="ga-input-row">
+    <input id="ga-input" placeholder="Descrivi il problema..." onkeydown="if(event.key==='Enter')sendMsg()">
+    <button id="ga-send" onclick="sendMsg()">Invia</button>
+  </div>
+  <div id="ga-powered">Powered by <a href="https://getautomatik.com" target="_blank">GetAutomatik</a></div>
+</div>
+
+<script>
+const API = '/api/chat';
+const CID = 'demo-idraulico';
+let history = [];
+let open = false;
+let initialized = false;
+
+// Config simulata per la demo
+const CLIENT_CFG = {settore:'idraulico', nome_azienda:'Idraulico Rossi'};
+
+function toggleChat() {
+  open = !open;
+  const win = document.getElementById('ga-win');
+  win.style.display = open ? 'flex' : 'none';
+  document.getElementById('ga-bubble').classList.remove('pulse-anim');
+  document.getElementById('ga-badge').style.display = 'none';
+  if (open && !initialized) {
+    initialized = true;
+    callChat([]);
+  }
+}
+
+document.getElementById('ga-bubble').onclick = toggleChat;
+
+function addMsg(text, role) {
+  const msgs = document.getElementById('ga-msgs');
+  const d = document.createElement('div');
+  d.className = role === 'user' ? 'ga-msg-user' : 'ga-msg-ai';
+  d.textContent = text;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('ga-msgs');
+  const t = document.createElement('div');
+  t.id = 'ga-typing';
+  t.className = 'ga-typing';
+  t.innerHTML = '<span></span><span></span><span></span>';
+  msgs.appendChild(t);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  document.getElementById('ga-typing')?.remove();
+}
+
+async function callChat(msgs_to_send) {
+  document.getElementById('ga-send').disabled = true;
+  showTyping();
+  try {
+    const resp = await fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({cid: CID, history: msgs_to_send})
+    });
+    const data = await resp.json();
+    removeTyping();
+    const reply = data.reply || 'Come posso aiutarti?';
+    addMsg(reply, 'ai');
+    history.push({role: 'assistant', content: reply});
+
+    if (data.qualified) {
+      setTimeout(() => {
+        const msgs = document.getElementById('ga-msgs');
+        const notice = document.createElement('div');
+        notice.style.cssText = 'background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-family:sans-serif;font-size:12px;color:#166534;margin-top:4px;text-align:center;font-weight:600';
+        notice.textContent = '✓ Richiesta inviata! Ti contatteremo al più presto.';
+        msgs.appendChild(notice);
+        msgs.scrollTop = msgs.scrollHeight;
+      }, 800);
+    }
+  } catch(e) {
+    removeTyping();
+    addMsg('Errore di connessione. Riprova.', 'ai');
+  }
+  document.getElementById('ga-send').disabled = false;
+}
+
+function sendMsg() {
+  const input = document.getElementById('ga-input');
+  const text = input.value.trim();
+  if (!text) return;
+  addMsg(text, 'user');
+  input.value = '';
+  history.push({role: 'user', content: text});
+  callChat(history);
+}
+
+document.getElementById('ga-input').onkeydown = e => { if(e.key==='Enter') sendMsg(); };
+
+// Apri automaticamente dopo 4 secondi per creare engagement
+setTimeout(() => {
+  if (!open) {
+    document.getElementById('ga-bubble').classList.add('pulse-anim');
+  }
+}, 4000);
+</script>
+
+</body>
+</html>
