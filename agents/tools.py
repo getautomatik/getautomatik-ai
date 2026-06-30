@@ -95,22 +95,8 @@ def _check_converted(db, email):
         return False
 
 def _normalize_prospect(p):
-    """Map Italian DB column names (nome/email/sito/settore) to English pipeline keys."""
-    return {
-        "id": p.get("id"),
-        "company_name": p.get("nome") or p.get("company_name", ""),
-        "contact_email": p.get("email") or p.get("contact_email", ""),
-        "contact_phone": p.get("telefono") or p.get("contact_phone", ""),
-        "website": p.get("sito") or p.get("website", ""),
-        "sector": p.get("settore") or p.get("sector", ""),
-        "source": p.get("source", ""),
-        "score": p.get("score", 0),
-        "status": p.get("status", ""),
-        "agent_notes": p.get("agent_notes", ""),
-        "follow_up_at": p.get("follow_up_at"),
-        "contacted_at": p.get("contacted_at"),
-        "replied_at": p.get("replied_at"),
-    }
+    """Return prospect dict as-is (DB already uses English column names)."""
+    return p
 
 def _scrape_email_from_website(website, _apify_token=None):
     """Extract email from business website using HTTP requests + regex."""
@@ -174,11 +160,10 @@ def scrape_google_maps(db, params):
                         website = det.get("website", "")
                         phone = det.get("formatted_phone_number", "")
                     raw_results.append({
-                        "nome": name,
-                        "email": "",
-                        "telefono": phone,
-                        "sito": website,
-                        "settore": sector,
+                        "company_name": name,
+                        "contact_email": "",
+                        "sector": sector,
+                        "website": website,
                         "source": "google_places",
                         "score": 8,
                         "status": "new"
@@ -192,10 +177,10 @@ def scrape_google_maps(db, params):
     # Per ogni risultato con sito, estrai email
     prospects = []
     for p in raw_results:
-        if p["sito"]:
-            email = _scrape_email_from_website(p["sito"], None)
+        if p["website"]:
+            email = _scrape_email_from_website(p["website"], None)
             if email:
-                p["email"] = email
+                p["contact_email"] = email
                 prospects.append(p)
         # senza email saltiamo
 
@@ -204,7 +189,7 @@ def scrape_google_maps(db, params):
     added = 0
     for p in prospects:
         try:
-            existing = db.table("prospects").select("id").eq("email", p["email"]).execute()
+            existing = db.table("prospects").select("id").eq("contact_email", p["contact_email"]).execute()
             if not existing.data:
                 db.table("prospects").insert(p).execute()
                 added += 1
