@@ -94,92 +94,93 @@ def _check_converted(db, email):
     except Exception:
         return False
 
-def _scrape_email_from_website(website, apify_token):
+def _scrape_email_from_website(website, _apify_token=None):
+    """Extract email from business website using HTTP requests + regex."""
     import requests as r
-    import time
+    import re
     if not website:
         return None
-    try:
-        run_url = "https://api.apify.com/v2/acts/vdrmota~contact-info-scraper/runs"
-        resp = r.post(run_url,
-            params={"token": apify_token},
-            json={"startUrls": [{"url": website}], "maxDepth": 1, "maxPages": 3},
-            timeout=15)
-        if resp.status_code != 201:
-            print(f"vdrmota scraper start failed: {resp.status_code} {resp.text[:100]}")
-            return None
-        run_id = resp.json()["data"]["id"]
-        time.sleep(60)
-        results_url = f"https://api.apify.com/v2/acts/vdrmota~contact-info-scraper/runs/{run_id}/dataset/items"
-        results_resp = r.get(results_url, params={"token": apify_token}, timeout=15)
-        if results_resp.status_code != 200:
-            return None
-        for item in results_resp.json():
-            for email in item.get("emails", []):
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; GetAutomatik/1.0)"}
+    pages_to_try = [website.rstrip("/"), website.rstrip("/") + "/contatti",
+                    website.rstrip("/") + "/contact", website.rstrip("/") + "/chi-siamo"]
+    email_re = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
+    for url in pages_to_try:
+        try:
+            resp = r.get(url, headers=headers, timeout=8, allow_redirects=True)
+            if resp.status_code != 200:
+                continue
+            text = resp.text
+            # Decode obfuscated emails (e.g. "info [at] domain.it")
+            text = re.sub(r"\s*\[at\]\s*", "@", text, flags=re.IGNORECASE)
+            text = re.sub(r"\s*\(at\)\s*", "@", text, flags=re.IGNORECASE)
+            for email in email_re.findall(text):
                 if _is_real_email(email):
-                    return email
-    except Exception as e:
-        print(f"Contact scraper error: {e}")
+                    return email.lower()
+        except Exception:
+            continue
     return None
 
 def scrape_google_maps(db, params):
     import requests as r
     import os, time
-    sector = params.get("sector", "immobiliare")
+    sector = params.get("sector", "idraulici")
     location = params.get("location") or _rotation_city()
     count = min(params.get("count", 10), 20)
-    apify_token = os.getenv("APIFY_API_KEY", "")
+    api_key = os.getenv("GOOGLE_PLACES_API_KEY", "")
 
     raw_results = []
 
-    if apify_token and apify_token != "il-tuo-token":
+    if api_key:
         try:
-            run_url = "https://api.apify.com/v2/acts/compass~crawler-google-places/runs"
-            resp = r.post(run_url,
-                params={"token": apify_token},
-                json={
-                    "searchStrings": [f"{sector} {location}"],
-                    "maxCrawledPlaces": count,
-                    "language": "it"
-                })
-            if resp.status_code == 201:
-                run_id = resp.json()["data"]["id"]
-                time.sleep(90)
-                results_url = f"https://api.apify.com/v2/acts/compass~crawler-google-places/runs/{run_id}/dataset/items"
-                results_resp = r.get(results_url, params={"token": apify_token})
-                if results_resp.status_code == 200:
-                    for item in results_resp.json()[:count]:
-                        name = item.get("title", "")
-                        if not name:
-                            continue
-                        raw_results.append({
-                            "company_name": name,
-                            "contact_email": item.get("email", ""),
-                            "contact_phone": item.get("phone", ""),
-                            "website": item.get("website", ""),
-                            "sector": sector,
-                            "source": "apify_maps",
-                            "score": 8
-                        })
+            # Step 1: Text Search
+            query = f"{sector} {location} Italia"
+            search_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+            resp = r.get(search_url, params={"query": query, "key": api_key, "language": "it"}, timeout=15)
+            if resp.status_code == 200:
+                places = resp.json().get("results", [])[:count]
+                for place in places:
+                    place_id = place.get("place_id", "")
+                    name = place.get("name", "")
+                    if not name or not place_id:
+                        continue
+                    # Step 2: Place Details to get website + phone
+                    det_resp = r.get(
+                        "https://maps.googleapis.com/maps/api/place/details/json",
+                        params={"place_id": place_id, "fields": "name,website,formatted_phone_number", "key": api_key},
+                        timeout=10
+                    )
+                    website = ""
+                    phone = ""
+                    if det_resp.status_code == 200:
+                        det = det_resp.json().get("result", {})
+                        website = det.get("website", "")
+                        phone = det.get("formatted_phone_number", "")
+                    raw_results.append({
+                        "company_name": name,
+                        "contact_email": "",
+                        "contact_phone": phone,
+                        "website": website,
+                        "sector": sector,
+                        "source": "google_places",
+                        "score": 8
+                    })
+                    time.sleep(0.1)
         except Exception as e:
-            print(f"Apify error: {e}")
+            print(f"Google Places error: {e}")
+    else:
+        print("GOOGLE_PLACES_API_KEY mancante")
 
-    # Per ogni risultato senza email reale, prova a scrapare il sito
+    # Per ogni risultato con sito, estrai email
     prospects = []
     for p in raw_results:
-        if _is_real_email(p["contact_email"]):
-            prospects.append(p)
-        elif p["website"] and apify_token:
-            email = _scrape_email_from_website(p["website"], apify_token)
+        if p["website"]:
+            email = _scrape_email_from_website(p["website"], None)
             if email:
                 p["contact_email"] = email
                 prospects.append(p)
-        # Se non ha email reale e non ha sito, salta
+        # senza email saltiamo
 
-    # Track Apify costs (~€0.05/Maps run + €0.01/contact scrape)
-    maps_cost = 0.05 if raw_results else 0.0
-    scrape_cost = 0.01 * sum(1 for p in raw_results if not _is_real_email(p["contact_email"]) and p["website"])
-    _track_cost(db, maps_cost + scrape_cost, f"apify {sector} {location}")
+    _track_cost(db, 0.002 * len(raw_results), f"google_places {sector} {location}")
 
     added = 0
     for p in prospects:
