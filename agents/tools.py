@@ -94,6 +94,24 @@ def _check_converted(db, email):
     except Exception:
         return False
 
+def _normalize_prospect(p):
+    """Map Italian DB column names (nome/email/sito/settore) to English pipeline keys."""
+    return {
+        "id": p.get("id"),
+        "company_name": p.get("nome") or p.get("company_name", ""),
+        "contact_email": p.get("email") or p.get("contact_email", ""),
+        "contact_phone": p.get("telefono") or p.get("contact_phone", ""),
+        "website": p.get("sito") or p.get("website", ""),
+        "sector": p.get("settore") or p.get("sector", ""),
+        "source": p.get("source", ""),
+        "score": p.get("score", 0),
+        "status": p.get("status", ""),
+        "agent_notes": p.get("agent_notes", ""),
+        "follow_up_at": p.get("follow_up_at"),
+        "contacted_at": p.get("contacted_at"),
+        "replied_at": p.get("replied_at"),
+    }
+
 def _scrape_email_from_website(website, _apify_token=None):
     """Extract email from business website using HTTP requests + regex."""
     import requests as r
@@ -392,13 +410,13 @@ def check_email_replies(db):
             mail.logout()
             return 0
 
-        contacted = db.table("prospects").select("id,contact_email,company_name,sector").in_(
+        contacted = db.table("prospects").select("*").in_(
             "status", ["contacted", "followup_1"]
         ).execute()
         prospect_map = {
-            (p.get("contact_email") or "").lower().strip(): p
+            (_normalize_prospect(p).get("contact_email") or "").lower().strip(): _normalize_prospect(p)
             for p in (contacted.data or [])
-            if p.get("contact_email")
+            if (_normalize_prospect(p).get("contact_email"))
         }
 
         replied_count = 0
@@ -465,7 +483,7 @@ def send_followups(db):
     sent = 0
     claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-    for p in due.data:
+    for p in [_normalize_prospect(x) for x in due.data]:
         status = p.get("status", "contacted")
         company = p.get("company_name", "")
         email_to = p.get("contact_email", "")
@@ -1107,7 +1125,7 @@ def run_revenue_pipeline(db, sector=DENTIST_VERTICAL, location=None, hunt_count=
     except Exception:
         prospects = db.table("prospects").select("*").eq("sector", sector).not_.in_("status", ["contacted","followup_1","qualified","discarded","dead","warm_1","warm_2","warm_closed","converted"]).limit(audit_limit).execute()
 
-    for prospect in prospects.data or []:
+    for prospect in [_normalize_prospect(p) for p in (prospects.data or [])]:
         website = prospect.get("website")
         if not website:
             continue
