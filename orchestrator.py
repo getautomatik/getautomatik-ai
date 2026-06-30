@@ -646,6 +646,44 @@ def dashboard_old():
 </html>"""
 
 
+@app.route("/api/preview-email")
+def preview_email():
+    import anthropic
+    examples = [
+        {"company": "Termoidraulica Bianchi Srl", "sector": "idraulici",
+         "problem": "nessun modulo contatti, solo numero di telefono in footer", "lost": 8},
+        {"company": "Sole & Energia Fotovoltaico", "sector": "fotovoltaico",
+         "problem": "form contatti senza risposta automatica, nessun orario indicato", "lost": 12},
+        {"company": "Infissi Moderni Torino", "sector": "infissi",
+         "problem": "email generica in footer, nessuna conferma di ricezione richieste", "lost": 6},
+    ]
+    client_ai = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    results = []
+    for ex in examples:
+        for num in [1, 2, 3]:
+            if num == 1:
+                prompt = (f"Scrivi email cold B2B in italiano (max 110 parole) per {ex['company']} (settore {ex['sector']}).\n"
+                          f"Proponi GetAutomatik: sistema AI che risponde automaticamente alle email dei clienti.\n"
+                          f"Problema rilevato dal sito: {ex['problem']}\nStima richieste perse/mese: {ex['lost']}\n"
+                          f"CTA: scopri come funziona -> https://getautomatik.com\n"
+                          f"Tono: diretto, specifico, umano. Firma: Team GetAutomatik. NO template generico.")
+                subj = f"{ex['company']} — quante richieste perdi ogni settimana?"
+            elif num == 2:
+                prompt = (f"Scrivi follow-up brevissimo (max 60 parole) per {ex['company']} ({ex['sector']}).\n"
+                          f"Secondo contatto — breve e diretto. Menziona un artigiano {ex['sector']} che ora non perde richieste.\n"
+                          f"CTA: https://getautomatik.com\nFirma: Team GetAutomatik")
+                subj = f"Re: {ex['company']}"
+            else:
+                prompt = (f"Scrivi email finale (max 55 parole) per {ex['company']} ({ex['sector']}).\n"
+                          f"Ultima email — usa la scarcità. CTA: trial gratis 7 giorni -> https://getautomatik.com\nFirma: Team GetAutomatik")
+                subj = f"Ultima email — {ex['company']}"
+            resp = client_ai.messages.create(model="claude-haiku-4-5-20251001", max_tokens=240,
+                                             messages=[{"role": "user", "content": prompt}])
+            results.append({"email": num, "company": ex['company'], "sector": ex['sector'],
+                            "subject": subj, "body": resp.content[0].text.strip()})
+    return jsonify(results)
+
+
 @app.route("/api/trigger-discovery", methods=["POST"])
 def trigger_discovery():
     """Manually trigger full pipeline: hunt + audit + send."""
