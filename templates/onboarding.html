@@ -51,10 +51,18 @@
         .btn-back:hover { color:var(--text); }
 
         /* AHA MOMENT */
-        .aha-box { background:rgba(0,232,122,0.05); border:1px solid rgba(0,232,122,0.2); border-radius:14px; padding:22px 20px; margin-bottom:24px; min-height:100px; }
-        .aha-label { font-size:11px; font-weight:700; color:var(--green); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
-        .aha-text { font-size:14px; line-height:1.7; color:var(--text); }
-        .aha-cursor { display:inline-block; width:2px; height:16px; background:var(--green); margin-left:2px; animation:blink 1s infinite; vertical-align:middle; }
+        .email-thread { display:flex; flex-direction:column; gap:12px; margin-bottom:20px; }
+        .email-bubble { border-radius:14px; padding:16px 18px; font-size:13px; line-height:1.6; }
+        .email-bubble.incoming { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); }
+        .email-bubble.reply { background:rgba(0,232,122,0.06); border:1px solid rgba(0,232,122,0.2); }
+        .email-meta { font-size:11px; color:var(--muted); margin-bottom:8px; display:flex; justify-content:space-between; }
+        .email-meta strong { color:var(--text); }
+        .email-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; }
+        .badge-in { background:rgba(255,255,255,0.08); color:var(--muted); }
+        .badge-ai { background:rgba(0,232,122,0.15); color:var(--green); }
+        .arrow-divider { text-align:center; font-size:11px; font-weight:700; color:var(--green); text-transform:uppercase; letter-spacing:1px; padding:4px 0; }
+        .aha-text { font-size:13px; line-height:1.7; color:var(--text); }
+        .aha-cursor { display:inline-block; width:2px; height:14px; background:var(--green); margin-left:2px; animation:blink 1s infinite; vertical-align:middle; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
         /* FORWARDING */
@@ -90,7 +98,7 @@
     </style>
 </head>
 <body>
-<div class="top-logo">Flow<span>Ops</span></div>
+<div class="top-logo">Get<span>Automatik</span></div>
 
 <div class="progress-bar" id="progressBar">
     <div class="prog-step active" id="p1"></div>
@@ -148,17 +156,33 @@
 
     <!-- STEP 3: AHA moment -->
     <div class="step-section" id="step3">
-        <h2>Ecco come rispondo ai tuoi clienti</h2>
-        <p class="card-sub">Guarda come GetAutomatik gestisce una richiesta reale per <strong id="ahaAziendaName"></strong>.</p>
+        <h2>Guarda cosa succede adesso</h2>
+        <p class="card-sub">Un cliente scrive a <strong id="ahaAziendaName"></strong> fuori orario. Ecco cosa fa GetAutomatik.</p>
 
-        <div class="aha-box">
-            <div class="aha-label">GetAutomatik risponde automaticamente</div>
-            <div class="aha-text" id="ahaText">
-                <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="email-thread">
+            <div class="email-bubble incoming">
+                <div class="email-meta">
+                    <span><strong id="ahaSender">mario.bianchi@gmail.com</strong></span>
+                    <span class="email-badge badge-in">Email ricevuta · 22:47</span>
+                </div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Oggetto: <span id="ahaOggetto">Preventivo impianto</span></div>
+                <div id="ahaEmailBody" style="color:rgba(240,240,245,0.85);">—</div>
+            </div>
+
+            <div class="arrow-divider" id="ahaArrow" style="display:none;">↓ risposta automatica in 2 minuti ↓</div>
+
+            <div class="email-bubble reply" id="ahaReplyBox" style="display:none;">
+                <div class="email-meta">
+                    <span><strong id="ahaAziendaReply">—</strong></span>
+                    <span class="email-badge badge-ai">GetAutomatik · 22:49</span>
+                </div>
+                <div class="aha-text" id="ahaText"></div>
             </div>
         </div>
 
-        <button class="btn-main" id="btnStep3" onclick="goStep4()" disabled>Attiva il sistema per la mia azienda →</button>
+        <div class="loading-dots" id="ahaLoader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+
+        <button class="btn-main" id="btnStep3" onclick="goStep4()" disabled>Attiva per la mia azienda →</button>
         <button class="btn-back" onclick="goStep(2)">← Indietro</button>
     </div>
 
@@ -198,19 +222,31 @@
     <div class="step-section" id="step5">
         <div class="success-center">
             <span class="success-icon">✅</span>
-            <h2>GetAutomatik è attivo per <span id="successName" style="color:var(--green);"></span></h2>
-            <p style="margin-bottom:24px;">Da questo momento rispondo automaticamente a tutte le richieste via email. Ti avviso ogni volta che c'è un lead pronto.</p>
+            <h2>Sei attivo, <span id="successName" style="color:var(--green);"></span></h2>
+            <p style="margin-bottom:28px;font-size:15px;">Da adesso nessuna richiesta va persa. Ti avviso su email ogni volta che un cliente scrive.</p>
 
-            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:left;margin-bottom:24px;">
-                <p style="font-size:13px;color:var(--muted);margin-bottom:8px;">Aggiungi il chatbot sul tuo sito — incolla questo codice prima di <code style="color:#00e87a;">&lt;/body&gt;</code>:</p>
-                <div style="background:#0a0a0a;border-radius:8px;padding:12px;position:relative;">
-                    <code id="widgetSnippet" style="font-size:11px;color:#00e87a;word-break:break-all;"></code>
-                    <button onclick="copySnippet()" style="position:absolute;top:8px;right:8px;background:#222;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Copia</button>
+            <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:28px;">
+                <div style="background:#0f1a14;border:1px solid rgba(0,232,122,0.2);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:22px;">📧</span>
+                    <div><div style="font-size:13px;font-weight:700;">Email AI attiva</div><div style="font-size:12px;color:var(--muted);">Rispondo automaticamente entro 2 minuti</div></div>
+                    <span style="margin-left:auto;color:var(--green);font-weight:700;font-size:13px;">ON</span>
                 </div>
-                <p style="font-size:12px;color:var(--muted);margin-top:8px;">Il chatbot appare in basso a destra e qualifica automaticamente i visitatori del tuo sito.</p>
+                <div style="background:#0f1a14;border:1px solid rgba(0,232,122,0.2);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:22px;">💬</span>
+                    <div><div style="font-size:13px;font-weight:700;">Chatbot sul sito</div><div style="font-size:12px;color:var(--muted);">Incolla il codice qui sotto nel tuo sito</div></div>
+                    <span style="margin-left:auto;color:var(--muted);font-weight:700;font-size:13px;">DA ATTIVARE</span>
+                </div>
             </div>
 
-            <p style="font-size:13px; color:var(--muted);">Redirect alla dashboard tra pochi secondi... <span class="spinner"></span></p>
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:16px;text-align:left;margin-bottom:24px;">
+                <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Codice chatbot — incolla prima di <code style="color:#00e87a;">&lt;/body&gt;</code> nel tuo sito:</p>
+                <div style="background:#0a0a0a;border-radius:8px;padding:10px 12px;position:relative;">
+                    <code id="widgetSnippet" style="font-size:11px;color:#00e87a;word-break:break-all;display:block;padding-right:60px;"></code>
+                    <button onclick="copySnippet()" style="position:absolute;top:8px;right:8px;background:#222;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Copia</button>
+                </div>
+            </div>
+
+            <p style="font-size:12px;color:var(--muted);">Apertura dashboard... <span class="spinner"></span></p>
         </div>
     </div>
 
@@ -223,6 +259,34 @@ const state = {
     emailTitolare: '',
     forwardingAddress: '',
     currentStep: 1
+};
+
+const FAKE_EMAILS = {
+    'Fotovoltaico': {
+        da: 'mario.bianchi@gmail.com',
+        oggetto: 'Preventivo impianto fotovoltaico',
+        testo: 'Buonasera, siamo interessati a installare un impianto fotovoltaico da 6kW sulla nostra abitazione di 200mq a Torino. Potreste mandarci un preventivo con i tempi di installazione? Grazie mille, Mario Bianchi'
+    },
+    'Climatizzazione': {
+        da: 'lucia.ferrari@hotmail.it',
+        oggetto: 'Installazione climatizzatori appartamento',
+        testo: 'Salve, ho bisogno di installare 3 climatizzatori in un appartamento di 90mq a Milano. Quando potete venire a fare un sopralluogo per il preventivo? Lucia Ferrari'
+    },
+    'Idraulico': {
+        da: 'giuseppe.romano@gmail.com',
+        oggetto: 'URGENTE - perdita acqua bagno',
+        testo: 'Buongiorno, ho una perdita d\'acqua abbastanza seria nel bagno principale, sta bagnando anche il soffitto del piano di sotto. Potete venire oggi o domani mattina? Giuseppe Romano - Milano'
+    },
+    'Ristrutturazioni': {
+        da: 'anna.conti@libero.it',
+        oggetto: 'Ristrutturazione bagno e cucina - preventivo',
+        testo: 'Salve, vorremmo ristrutturare bagno (8mq) e cucina (12mq) del nostro appartamento a Roma. Budget orientativo 30-40k€. Potete farci un preventivo? Disponibili per sopralluogo questa settimana. Anna Conti'
+    },
+    'Infissi': {
+        da: 'roberto.villa@gmail.com',
+        oggetto: 'Sostituzione finestre - richiesta preventivo',
+        testo: 'Buongiorno, devo sostituire 6 finestre in un appartamento al 3° piano a Bergamo. Vorrei un preventivo per doppio vetro basso emissivo con telaio PVC bianco. Roberto Villa'
+    }
 };
 
 function updateProgress(step) {
@@ -257,6 +321,14 @@ function goStep3() {
     state.nomeAzienda = nome;
     state.emailTitolare = email;
     document.getElementById('ahaAziendaName').textContent = nome;
+    document.getElementById('ahaAziendaReply').textContent = nome;
+
+    // Show sector-specific fake incoming email immediately
+    const fake = FAKE_EMAILS[state.settore] || FAKE_EMAILS['Fotovoltaico'];
+    document.getElementById('ahaSender').textContent = fake.da;
+    document.getElementById('ahaOggetto').textContent = fake.oggetto;
+    document.getElementById('ahaEmailBody').textContent = fake.testo;
+
     goStep(3);
     triggerAha();
 }
@@ -264,6 +336,10 @@ function goStep3() {
 async function triggerAha() {
     const btn = document.getElementById('btnStep3');
     btn.disabled = true;
+    document.getElementById('ahaLoader').style.display = 'flex';
+    document.getElementById('ahaArrow').style.display = 'none';
+    document.getElementById('ahaReplyBox').style.display = 'none';
+
     try {
         const resp = await fetch('/api/onboarding/generate', {
             method: 'POST',
@@ -276,10 +352,17 @@ async function triggerAha() {
         });
         const data = await resp.json();
         state.forwardingAddress = data.forwarding_address || '';
-        const text = data.aha_response || 'GetAutomatik è pronto a rispondere per te.';
+        const text = data.aha_response || 'Gentile cliente, grazie per averci contattato. Abbiamo ricevuto la sua richiesta e la ricontatteremo entro domani mattina con un preventivo dettagliato.';
+
+        document.getElementById('ahaLoader').style.display = 'none';
+        document.getElementById('ahaArrow').style.display = 'block';
+        document.getElementById('ahaReplyBox').style.display = 'block';
         typewrite('ahaText', text, () => { btn.disabled = false; });
     } catch(e) {
-        document.getElementById('ahaText').textContent = 'Servizio temporaneamente non disponibile. Riprova tra un momento.';
+        document.getElementById('ahaLoader').style.display = 'none';
+        document.getElementById('ahaArrow').style.display = 'block';
+        document.getElementById('ahaReplyBox').style.display = 'block';
+        document.getElementById('ahaText').textContent = 'Gentile cliente, grazie per averci contattato. Abbiamo ricevuto la sua richiesta e la ricontatteremo al più presto con un preventivo.';
         btn.disabled = false;
     }
 }
@@ -291,7 +374,7 @@ function typewrite(elId, text, callback) {
     cursor.className = 'aha-cursor';
     el.appendChild(cursor);
     let i = 0;
-    const speed = 18;
+    const speed = 16;
     function tick() {
         if (i < text.length) {
             cursor.insertAdjacentText('beforebegin', text[i]);
