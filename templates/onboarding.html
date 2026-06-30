@@ -412,7 +412,7 @@ async function goStep5() {
             document.getElementById('widgetSnippet').textContent = d.widget_snippet;
         }
     } catch(e) { console.warn('save error', e); }
-    setTimeout(() => { window.location.href = '/dashboard'; }, 6000);
+    setTimeout(() => { window.location.href = '/'; }, 6000);
 }
 
 function copySnippet() {
