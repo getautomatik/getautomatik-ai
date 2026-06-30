@@ -641,6 +641,22 @@ def dashboard():
 </html>"""
 
 
+@app.route("/api/trigger-discovery", methods=["POST"])
+def trigger_discovery():
+    """Manually trigger one discovery cycle across all sectors."""
+    def _run():
+        total = 0
+        for sector in DEFAULT_NICHES:
+            try:
+                result = run_revenue_pipeline(db, sector=sector, hunt_count=8, audit_limit=0, send_limit=0)
+                total += result.get("hunted", 0)
+            except Exception as e:
+                print(f"trigger-discovery {sector}: {e}")
+        send_telegram(f"Discovery manuale completata: {total} prospect trovati")
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "discovery avviata", "sectors": DEFAULT_NICHES})
+
+
 @app.route("/api/status")
 def status():
     clients = db.table("clients").select("*").eq("status", "active").execute()
