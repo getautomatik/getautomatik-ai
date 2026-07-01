@@ -4,440 +4,1032 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GetAutomatik — Dal lead al sopralluogo. In automatico.</title>
-<meta name="description" content="GetAutomatik converte le richieste immobiliari in appuntamenti: risponde in 2 minuti, qualifica il lead e prenota la visita. Per agenzie immobiliari italiane.">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<meta name="description" content="GetAutomatik risponde ai tuoi lead immobiliari in 2 minuti, li qualifica su zona e budget, prenota la visita e ti manda la card. Zero lavoro manuale.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
 <style>
+/* ─── RESET & TOKENS ──────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#080812;--surface:#0f0f1e;--border:rgba(255,255,255,0.07);--green:#00e87a;--blue:#00b4d8;--text:#f0f0f5;--muted:rgba(240,240,245,0.52)}
-html{scroll-behavior:smooth}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
-
-nav{position:sticky;top:0;z-index:100;background:rgba(8,8,18,0.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:16px 0}
-.nav-inner{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-weight:900;font-size:20px;letter-spacing:-0.5px}
-.logo span{color:var(--green)}
-.btn-primary{background:var(--green);color:#080812;border:none;border-radius:10px;padding:12px 22px;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;display:inline-block;transition:opacity .2s}
-.btn-primary:hover{opacity:.88}
-.btn-ghost{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s}
-.btn-ghost:hover{color:var(--text)}
-
-.hero{max-width:1100px;margin:0 auto;padding:90px 24px 60px;text-align:center}
-.eyebrow{display:inline-block;background:rgba(0,232,122,0.1);border:1px solid rgba(0,232,122,0.25);color:var(--green);padding:6px 16px;border-radius:50px;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:28px}
-h1{font-size:clamp(36px,6vw,68px);font-weight:900;letter-spacing:-2.5px;line-height:1.02;margin-bottom:22px}
-h1 span{color:var(--green)}
-.hero-sub{font-size:19px;color:var(--muted);max-width:580px;margin:0 auto 38px;line-height:1.65}
-.hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-.btn-lg{padding:16px 32px;font-size:16px;border-radius:12px}
-.btn-outline{border:1px solid var(--border);color:var(--text);text-decoration:none;display:inline-block;border-radius:12px;padding:15px 32px;font-size:16px;font-weight:600;transition:border-color .2s}
-.btn-outline:hover{border-color:rgba(255,255,255,0.25)}
-.hero-trust{margin-top:44px;display:flex;gap:28px;justify-content:center;flex-wrap:wrap}
-.trust-item{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px}
-.trust-item::before{content:'&#10003;';color:var(--green);font-weight:700}
-
-section{padding:72px 0}
-.container{max-width:1100px;margin:0 auto;padding:0 24px}
-.section-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--green);margin-bottom:14px}
-.section-title{font-size:clamp(26px,4vw,42px);font-weight:900;letter-spacing:-1.2px;line-height:1.1;margin-bottom:14px}
-.section-sub{font-size:17px;color:var(--muted);max-width:560px}
-
-/* CONTRASTO form vs GA */
-.contrast-wrap{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:48px}
-.contrast-card{border-radius:20px;padding:32px}
-.contrast-bad{background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.18)}
-.contrast-good{background:rgba(0,232,122,0.05);border:1px solid rgba(0,232,122,0.2)}
-.contrast-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
-.contrast-bad .contrast-tag{color:#ef4444}
-.contrast-good .contrast-tag{color:var(--green)}
-.contrast-title{font-size:20px;font-weight:800;margin-bottom:18px;letter-spacing:-0.5px}
-.contrast-list{list-style:none;display:flex;flex-direction:column;gap:10px}
-.contrast-list li{font-size:14px;line-height:1.55;padding-left:20px;position:relative;color:rgba(240,240,245,0.75)}
-.contrast-list li::before{position:absolute;left:0;font-weight:700}
-.contrast-bad .contrast-list li::before{content:'✗';color:#ef4444}
-.contrast-good .contrast-list li::before{content:'✓';color:var(--green)}
-
-/* NUMERI */
-.numbers-bg{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.numbers-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
-.number-item{padding:40px 24px;text-align:center;border-right:1px solid var(--border)}
-.number-item:last-child{border-right:none}
-.number-val{font-size:44px;font-weight:900;letter-spacing:-2px;color:var(--green);line-height:1;margin-bottom:8px}
-.number-label{font-size:13px;color:var(--muted)}
-
-/* DEMO */
-.demo-section{background:linear-gradient(180deg,var(--bg) 0%,rgba(0,180,216,0.03) 50%,var(--bg) 100%);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.demo-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-top:48px}
-
-.conv-wrap{display:flex;flex-direction:column;gap:10px}
-.msg{border-radius:14px;padding:14px 18px;font-size:14px;line-height:1.65;max-width:85%}
-.msg-lead{background:var(--surface);border:1px solid var(--border);align-self:flex-start}
-.msg-lead .who{font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600}
-.msg-ai{background:rgba(0,232,122,0.07);border:1px solid rgba(0,232,122,0.2);align-self:flex-end}
-.msg-ai .who{font-size:11px;color:var(--green);margin-bottom:5px;font-weight:600;text-align:right}
-.timer{text-align:center;padding:4px 0}
-.timer-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,180,216,0.1);border:1px solid rgba(0,180,216,0.25);color:#00b4d8;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700}
-
-.lead-card{background:var(--surface);border:1px solid rgba(0,232,122,0.3);border-radius:16px;padding:24px;margin-top:8px}
-.lead-card-header{font-size:12px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:16px}
-.lead-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
-.lead-row:last-child{border-bottom:none}
-.lead-lbl{color:var(--muted)}
-.lead-val{font-weight:600}
-.lead-val.highlight{color:var(--green)}
-.lead-val.appt{color:#00b4d8;font-weight:700}
-.lead-cta{margin-top:16px;background:rgba(0,232,122,0.1);border:1px solid rgba(0,232,122,0.25);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--green);font-weight:600;text-align:center}
-
-/* CHAT LIVE */
-.chat-demo{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
-.chat-header{background:linear-gradient(90deg,rgba(0,232,122,0.12),rgba(0,180,216,0.08));border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:10px}
-.chat-dot{width:9px;height:9px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.chat-messages{padding:16px;display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:340px;overflow-y:auto}
-.cmsg{max-width:82%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.55}
-.cmsg-ai{align-self:flex-start;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);border-radius:4px 12px 12px 12px}
-.cmsg-user{align-self:flex-end;background:rgba(0,232,122,0.15);border:1px solid rgba(0,232,122,0.2);color:#fff;border-radius:12px 4px 12px 12px}
-.chat-input-row{border-top:1px solid var(--border);padding:12px;display:flex;gap:8px}
-.chat-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;font-family:inherit;outline:none}
-.chat-input:focus{border-color:rgba(0,232,122,0.4)}
-.chat-send{background:var(--green);color:#000;border:none;border-radius:8px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer}
-.chat-send:disabled{opacity:.5;cursor:not-allowed}
-.typing{display:flex;gap:4px;align-items:center;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:4px 12px 12px 12px;width:fit-content}
-.typing span{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:typing .9s infinite}
-.typing span:nth-child(2){animation-delay:.2s}
-.typing span:nth-child(3){animation-delay:.4s}
-@keyframes typing{0%,60%,100%{opacity:.3}30%{opacity:1}}
-.demo-note{font-size:12px;color:var(--muted);text-align:center;padding:8px;border-top:1px solid var(--border)}
-
-/* FLUSSO */
-.flow-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:48px;position:relative}
-.flow-steps::before{content:'';position:absolute;top:28px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,var(--green),var(--blue));opacity:.3}
-.flow-step{text-align:center;padding:0 12px}
-.flow-icon{width:56px;height:56px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 16px;position:relative;z-index:1}
-.flow-step h3{font-size:14px;font-weight:700;margin-bottom:6px}
-.flow-step p{font-size:12px;color:var(--muted);line-height:1.55}
-
-/* PRICING */
-.pricing-wrap{display:flex;justify-content:center;gap:24px;margin-top:48px;flex-wrap:wrap}
-.pricing-card{background:var(--surface);border:1px solid rgba(0,232,122,0.3);border-radius:24px;padding:40px 44px;max-width:420px;width:100%;position:relative;overflow:hidden}
-.pricing-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--green),var(--blue))}
-.trial-badge{display:inline-block;background:rgba(0,232,122,0.12);border:1px solid rgba(0,232,122,0.3);color:var(--green);padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:20px}
-.price-main{font-size:54px;font-weight:900;letter-spacing:-3px;line-height:1}
-.price-period{font-size:15px;color:var(--muted);margin-bottom:24px;margin-top:6px}
-.features-list{list-style:none;margin-bottom:28px}
-.features-list li{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
-.features-list li:last-child{border-bottom:none}
-.check{color:var(--green);font-weight:700;flex-shrink:0}
-.price-note{font-size:12px;color:var(--muted);text-align:center;margin-top:12px}
-
-/* FAQ */
-.faq-list{margin-top:40px;max-width:720px}
-.faq-item{border-bottom:1px solid var(--border)}
-.faq-q{width:100%;text-align:left;background:none;border:none;color:var(--text);font-family:inherit;font-size:16px;font-weight:600;padding:22px 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px}
-.faq-q::after{content:'+';font-size:22px;font-weight:300;color:var(--green);flex-shrink:0;transition:transform .25s}
-.faq-item.open .faq-q::after{transform:rotate(45deg)}
-.faq-a{font-size:15px;color:var(--muted);line-height:1.7;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
-.faq-item.open .faq-a{max-height:220px;padding-bottom:18px}
-
-footer{border-top:1px solid var(--border);padding:32px 0}
-.footer-inner{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
-.footer-links{display:flex;gap:24px}
-.footer-links a{color:var(--muted);text-decoration:none;font-size:13px}
-.footer-links a:hover{color:var(--text)}
-
-@media(max-width:900px){
-  .contrast-wrap,.demo-layout{grid-template-columns:1fr}
-  .numbers-grid{grid-template-columns:repeat(2,1fr)}
-  .number-item:nth-child(2){border-right:none}
-  .number-item:nth-child(3){border-top:1px solid var(--border)}
-  .flow-steps{grid-template-columns:repeat(3,1fr);gap:24px}
-  .flow-steps::before{display:none}
+:root{
+  --navy:#06091a;--navy2:#0e1330;--navy3:#161d40;
+  --green:#00c28c;--green2:#00a876;--green-glow:rgba(0,194,140,0.18);
+  --blue:#3b82f6;
+  --bg:#ffffff;--bg2:#f8fafc;--bg3:#f1f5f9;
+  --text:#0f172a;--muted:#64748b;--border:#e2e8f0;
+  --dark-text:#f0f4ff;--dark-muted:rgba(240,244,255,0.52);--dark-border:rgba(255,255,255,0.08);
+  --r:16px;--r2:24px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+  --shadow2:0 8px 40px rgba(0,0,0,.12);
 }
-@media(max-width:600px){
-  .flow-steps{grid-template-columns:1fr 1fr}
-  .numbers-grid{grid-template-columns:1fr}
-  .number-item{border-right:none;border-bottom:1px solid var(--border)}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+
+/* ─── TYPOGRAPHY ──────────────────────────────────────────────────────── */
+.label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--green)}
+.label-dark{color:#6ee7b7}
+h1,h2,h3{letter-spacing:-0.03em;line-height:1.08;font-weight:900}
+h1{font-size:clamp(38px,6vw,72px)}
+h2{font-size:clamp(28px,4vw,48px)}
+h3{font-size:clamp(20px,2.5vw,26px);font-weight:700}
+p.lead{font-size:clamp(16px,1.8vw,20px);color:var(--muted);line-height:1.7;max-width:600px}
+
+/* ─── LAYOUT ──────────────────────────────────────────────────────────── */
+.container{max-width:1140px;margin:0 auto;padding:0 24px}
+.container-narrow{max-width:820px;margin:0 auto;padding:0 24px}
+section{padding:100px 0}
+section.tight{padding:64px 0}
+
+/* ─── BUTTONS ─────────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none}
+.btn-green{background:var(--green);color:#fff;padding:16px 28px;font-size:16px;box-shadow:0 0 0 0 var(--green-glow)}
+.btn-green:hover{background:var(--green2);box-shadow:0 0 0 6px var(--green-glow);transform:translateY(-1px)}
+.btn-green-sm{background:var(--green);color:#fff;padding:12px 22px;font-size:14px}
+.btn-green-sm:hover{background:var(--green2)}
+.btn-outline-dark{border:1px solid rgba(255,255,255,0.18);color:#fff;padding:15px 28px;font-size:16px;background:rgba(255,255,255,0.04)}
+.btn-outline-dark:hover{border-color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.08)}
+.btn-outline{border:1px solid var(--border);color:var(--text);padding:12px 22px;font-size:14px;background:var(--bg)}
+.btn-outline:hover{border-color:var(--muted)}
+
+/* ─── NAV ─────────────────────────────────────────────────────────────── */
+nav{position:sticky;top:0;z-index:200;background:rgba(6,9,26,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--dark-border)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1140px;margin:0 auto;padding:0 24px}
+.logo{font-weight:900;font-size:21px;letter-spacing:-0.5px;color:#fff}
+.logo span{color:var(--green)}
+.nav-links{display:flex;align-items:center;gap:28px}
+.nav-links a{font-size:14px;font-weight:500;color:var(--dark-muted);transition:color .2s}
+.nav-links a:hover{color:#fff}
+.nav-right{display:flex;align-items:center;gap:12px}
+.nav-login{color:var(--dark-muted);font-size:14px;font-weight:500}
+.nav-login:hover{color:#fff}
+
+/* ─── HERO ────────────────────────────────────────────────────────────── */
+.hero{background:var(--navy);padding:0;min-height:100vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 70% 40%,rgba(0,194,140,0.08) 0%,transparent 60%),radial-gradient(ellipse 60% 60% at 20% 80%,rgba(59,130,246,0.06) 0%,transparent 60%)}
+.hero-grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse at center,black 30%,transparent 80%)}
+.hero-content{flex:1;display:flex;align-items:center;position:relative;z-index:1}
+.hero-inner{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;padding:100px 24px 80px;max-width:1140px;margin:0 auto;width:100%}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,194,140,0.1);border:1px solid rgba(0,194,140,0.25);color:#6ee7b7;padding:7px 16px;border-radius:50px;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:28px}
+.hero-badge-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{color:#fff;margin-bottom:24px}
+.hero h1 em{font-style:normal;color:var(--green)}
+.hero-sub{font-size:18px;color:var(--dark-muted);line-height:1.7;margin-bottom:40px;max-width:520px}
+.hero-ctas{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:40px}
+.hero-trust{display:flex;gap:20px;flex-wrap:wrap}
+.trust-pill{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--dark-muted)}
+.trust-pill .ic{color:var(--green);font-size:14px}
+
+/* ─── HERO MOCKUP ─────────────────────────────────────────────────────── */
+.hero-mockup{position:relative;display:flex;justify-content:flex-end;align-items:flex-end;gap:16px}
+.phone-frame{background:#0e1330;border:1px solid rgba(255,255,255,0.1);border-radius:28px;padding:16px;width:220px;box-shadow:0 40px 80px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.05);flex-shrink:0}
+.phone-notch{width:60px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin:0 auto 14px}
+.phone-chat-header{background:rgba(0,194,140,0.1);border:1px solid rgba(0,194,140,0.2);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.phone-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--green),#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.phone-chat-name{font-size:11px;font-weight:700;color:#fff}
+.phone-chat-status{font-size:9px;color:#6ee7b7;display:flex;align-items:center;gap:4px}
+.phone-chat-status::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block}
+.chat-msgs-phone{display:flex;flex-direction:column;gap:6px}
+.pcm{padding:8px 10px;border-radius:10px;font-size:11px;line-height:1.45;max-width:88%}
+.pcm-ai{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.8);border-radius:4px 10px 10px 10px;align-self:flex-start}
+.pcm-user{background:rgba(0,194,140,0.2);border:1px solid rgba(0,194,140,0.3);color:#fff;align-self:flex-end;text-align:right;border-radius:10px 4px 10px 10px}
+.pcm-system{text-align:center;font-size:9px;color:rgba(255,255,255,0.3);padding:3px 0}
+.phone-input-row{display:flex;gap:6px;margin-top:10px;align-items:center}
+.phone-input-fake{flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;height:28px}
+.phone-send-fake{width:28px;height:28px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.notif-card{background:#fff;border-radius:16px;padding:16px;box-shadow:var(--shadow2);width:220px;flex-shrink:0;position:relative}
+.notif-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--green),#0ea5e9);border-radius:16px 16px 0 0}
+.notif-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.notif-tag{background:#dcfce7;color:#16a34a;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px}
+.notif-time{font-size:10px;color:var(--muted)}
+.notif-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.notif-row:last-of-type{border-bottom:none}
+.notif-lbl{color:var(--muted)}
+.notif-val{font-weight:700;color:var(--text)}
+.notif-val.g{color:var(--green)}
+.notif-cta{margin-top:10px;background:var(--green);border-radius:8px;padding:8px;text-align:center;font-size:11px;font-weight:700;color:#fff}
+
+/* ─── HERO BOTTOM BAR ─────────────────────────────────────────────────── */
+.hero-bottom{border-top:1px solid var(--dark-border);padding:20px 0;position:relative;z-index:1}
+.hero-bottom-inner{max-width:1140px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:center;gap:40px;flex-wrap:wrap}
+.hero-stat{text-align:center}
+.hero-stat-num{font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px}
+.hero-stat-lbl{font-size:12px;color:var(--dark-muted);margin-top:2px}
+
+/* ─── SOCIAL PROOF BAR ────────────────────────────────────────────────── */
+.proof-bar{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:28px 0}
+.proof-bar-inner{display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap}
+.proof-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:600}
+.proof-item svg{flex-shrink:0;opacity:.6}
+
+/* ─── PROBLEM SECTION ─────────────────────────────────────────────────── */
+.problem-bg{background:var(--bg)}
+.problem-intro{text-align:center;margin-bottom:60px}
+.problem-intro h2{margin-bottom:16px}
+.scenario-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.scenario-card{border-radius:var(--r2);overflow:hidden;border:1px solid var(--border);background:var(--bg);transition:box-shadow .25s,transform .25s}
+.scenario-card:hover{box-shadow:var(--shadow2);transform:translateY(-3px)}
+.scenario-img{height:160px;overflow:hidden}
+.scenario-img img{width:100%;height:100%;object-fit:cover;filter:brightness(.85) saturate(.9)}
+.scenario-body{padding:24px}
+.scenario-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#ef4444;background:#fef2f2;display:inline-block;padding:4px 10px;border-radius:20px;margin-bottom:12px}
+.scenario-card h3{font-size:17px;font-weight:700;margin-bottom:10px;color:var(--text)}
+.scenario-card p{font-size:14px;color:var(--muted);line-height:1.65}
+.scenario-loss{margin-top:14px;background:#fef2f2;border-radius:8px;padding:10px 12px;font-size:13px;color:#ef4444;font-weight:600}
+
+/* ─── HOW IT WORKS ────────────────────────────────────────────────────── */
+.hiw-bg{background:var(--navy);position:relative;overflow:hidden}
+.hiw-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 50% 0%,rgba(0,194,140,0.07) 0%,transparent 70%)}
+.hiw-intro{text-align:center;margin-bottom:72px;position:relative;z-index:1}
+.hiw-intro h2{color:#fff;margin-bottom:16px}
+.hiw-intro p{color:var(--dark-muted)}
+.steps-wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;position:relative;z-index:1}
+.step-connector{position:absolute;top:40px;left:calc(10% + 20px);right:calc(10% + 20px);height:1px;background:linear-gradient(90deg,var(--green),#0ea5e9,var(--green));opacity:.3;z-index:0}
+.step{text-align:center;padding:0 10px;position:relative;z-index:1}
+.step-icon-wrap{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;position:relative}
+.step-num{position:absolute;top:-4px;right:-4px;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.step h3{font-size:15px;font-weight:700;color:#fff;margin-bottom:8px}
+.step p{font-size:13px;color:var(--dark-muted);line-height:1.6}
+.step-time{display:inline-block;margin-top:10px;font-size:11px;font-weight:700;color:var(--green);background:rgba(0,194,140,0.1);border:1px solid rgba(0,194,140,0.2);padding:3px 10px;border-radius:20px}
+
+/* ─── FEATURE SECTIONS ────────────────────────────────────────────────── */
+.feat{padding:100px 0}
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center}
+.feat-grid.reverse{direction:rtl}
+.feat-grid.reverse > *{direction:ltr}
+.feat-text .label{margin-bottom:16px;display:block}
+.feat-text h2{margin-bottom:18px}
+.feat-text p{font-size:17px;color:var(--muted);line-height:1.75;margin-bottom:28px}
+.feat-bullets{list-style:none;display:flex;flex-direction:column;gap:12px}
+.feat-bullets li{display:flex;align-items:flex-start;gap:12px;font-size:15px;color:var(--text)}
+.feat-bullets li::before{content:'✓';color:var(--green);font-weight:900;flex-shrink:0;margin-top:1px}
+.feat-bg-alt{background:var(--bg2)}
+
+/* ─── PRODUCT MOCKUPS ─────────────────────────────────────────────────── */
+.mockup-browser{background:#fff;border-radius:var(--r2);box-shadow:var(--shadow2);overflow:hidden;border:1px solid var(--border)}
+.browser-bar{background:#f1f5f9;border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px}
+.browser-dots{display:flex;gap:6px}
+.browser-dot{width:10px;height:10px;border-radius:50%}
+.browser-dot.r{background:#ef4444}.browser-dot.y{background:#f59e0b}.browser-dot.g{background:#22c55e}
+.browser-url{flex:1;background:#fff;border-radius:6px;padding:5px 12px;font-size:11px;color:var(--muted);border:1px solid var(--border)}
+.mockup-chat{padding:20px;display:flex;flex-direction:column;gap:10px;background:#fafafa;min-height:340px}
+.mc{padding:11px 14px;border-radius:12px;font-size:13px;line-height:1.55;max-width:80%}
+.mc-ai{align-self:flex-start;background:#fff;border:1px solid var(--border);border-radius:4px 12px 12px 12px}
+.mc-user{align-self:flex-end;background:var(--green);color:#fff;border-radius:12px 4px 12px 12px}
+.mc-system{text-align:center;font-size:11px;color:var(--muted);padding:2px 0}
+.mockup-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;background:#fff}
+.mock-inp{flex:1;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--muted)}
+.mock-send{background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-weight:700;font-size:13px}
+
+/* Notification mockup */
+.notif-mockup{background:var(--bg);border-radius:var(--r2);box-shadow:var(--shadow2);overflow:hidden;border:1px solid var(--border);max-width:380px}
+.notif-top{background:var(--navy);padding:20px 24px;display:flex;align-items:center;gap:12px}
+.notif-app-icon{width:36px;height:36px;border-radius:10px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.notif-top-text .t{font-size:14px;font-weight:700;color:#fff}
+.notif-top-text .s{font-size:11px;color:var(--dark-muted)}
+.notif-body{padding:24px}
+.notif-badge{display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px}
+.nrow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.nrow:last-of-type{border-bottom:none}
+.nlbl{color:var(--muted)}
+.nval{font-weight:700}
+.nval.green{color:#16a34a}
+.nval.blue{color:#2563eb}
+.notif-action{margin-top:16px;display:flex;gap:10px}
+.na-primary{flex:1;background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;text-align:center}
+.na-secondary{border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--muted);cursor:pointer}
+
+/* ─── CONVERSATION DEMO ───────────────────────────────────────────────── */
+.conv-section{background:var(--navy);position:relative;overflow:hidden}
+.conv-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 100%,rgba(0,194,140,0.06) 0%,transparent 60%)}
+.conv-layout{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;position:relative;z-index:1}
+.conv-text .label{margin-bottom:16px;display:block}
+.conv-text h2{color:#fff;margin-bottom:18px}
+.conv-text p{color:var(--dark-muted);font-size:17px;line-height:1.75;margin-bottom:32px}
+.conv-metrics{display:flex;flex-direction:column;gap:16px}
+.conv-metric{background:rgba(255,255,255,0.04);border:1px solid var(--dark-border);border-radius:14px;padding:18px 20px;display:flex;align-items:center;gap:16px}
+.conv-metric-icon{font-size:24px;flex-shrink:0}
+.conv-metric-text strong{display:block;font-size:20px;font-weight:900;color:#fff;letter-spacing:-0.5px}
+.conv-metric-text span{font-size:13px;color:var(--dark-muted)}
+.full-conv{display:flex;flex-direction:column;gap:10px}
+.fmsg{border-radius:14px;padding:14px 18px;font-size:14px;line-height:1.65;max-width:86%}
+.fmsg-lead{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);align-self:flex-start;color:rgba(255,255,255,.85)}
+.fmsg-ai{background:rgba(0,194,140,0.1);border:1px solid rgba(0,194,140,0.2);align-self:flex-end;color:#fff}
+.fmsg-lead .who,.fmsg-ai .who{font-size:10px;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px}
+.fmsg-lead .who{color:rgba(255,255,255,.4)}
+.fmsg-ai .who{color:#6ee7b7;text-align:right}
+.msg-timer{text-align:center;padding:4px 0}
+.timer-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);color:#93c5fd;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700}
+.conv-result-card{background:#fff;border-radius:var(--r2);padding:24px;margin-top:8px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.crc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.crc-title{font-size:13px;font-weight:700;color:var(--text)}
+.crc-badge{background:#dcfce7;color:#15803d;font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase}
+.crc-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.crc-row:last-of-type{border-bottom:none}
+.crc-lbl{color:var(--muted)}
+.crc-val{font-weight:700;color:var(--text)}
+.crc-val.g{color:#16a34a}.crc-val.b{color:#2563eb}
+.crc-footer{margin-top:14px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:10px;padding:12px 16px;font-size:13px;color:#15803d;font-weight:600;display:flex;align-items:center;gap:8px}
+
+/* ─── CASE STUDY ──────────────────────────────────────────────────────── */
+.cs-bg{background:var(--bg2)}
+.cs-card{background:#fff;border-radius:var(--r2);overflow:hidden;box-shadow:var(--shadow2);border:1px solid var(--border)}
+.cs-top{display:grid;grid-template-columns:1fr 1fr}
+.cs-photo{position:relative;overflow:hidden;min-height:320px}
+.cs-photo img{width:100%;height:100%;object-fit:cover}
+.cs-photo-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(6,9,26,.7) 0%,transparent 70%)}
+.cs-photo-text{position:absolute;bottom:24px;left:24px}
+.cs-photo-name{font-size:20px;font-weight:800;color:#fff}
+.cs-photo-role{font-size:13px;color:rgba(255,255,255,.7)}
+.cs-quote{padding:40px;display:flex;flex-direction:column;justify-content:center}
+.quote-mark{font-size:60px;color:var(--green);line-height:.8;margin-bottom:16px;font-family:Georgia,serif}
+.cs-quote blockquote{font-size:18px;line-height:1.7;color:var(--text);font-style:italic;margin-bottom:24px}
+.cs-quote cite{font-size:14px;color:var(--muted);font-style:normal}
+.cs-metrics{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)}
+.cs-metric{padding:28px 24px;text-align:center;border-right:1px solid var(--border)}
+.cs-metric:last-child{border-right:none}
+.cs-metric-num{font-size:36px;font-weight:900;letter-spacing:-1.5px;color:var(--green);margin-bottom:4px}
+.cs-metric-lbl{font-size:13px;color:var(--muted)}
+
+/* ─── DEMO LIVE ───────────────────────────────────────────────────────── */
+.demo-section{background:var(--bg)}
+.demo-layout{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
+.demo-text{padding-top:8px}
+.demo-text .label{margin-bottom:16px;display:block}
+.demo-text h2{margin-bottom:18px}
+.demo-text p{font-size:17px;color:var(--muted);line-height:1.75;margin-bottom:32px}
+.demo-features{display:flex;flex-direction:column;gap:14px}
+.demo-feat{display:flex;align-items:flex-start;gap:12px}
+.df-icon{width:40px;height:40px;border-radius:10px;background:rgba(0,194,140,0.1);border:1px solid rgba(0,194,140,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-top:2px}
+.df-text strong{display:block;font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px}
+.df-text span{font-size:13px;color:var(--muted)}
+.live-chat{border-radius:var(--r2);overflow:hidden;box-shadow:var(--shadow2);border:1px solid var(--border);display:flex;flex-direction:column}
+.lc-header{background:var(--navy);padding:18px 20px;display:flex;align-items:center;gap:12px}
+.lc-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--green),#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.lc-name{font-size:15px;font-weight:700;color:#fff}
+.lc-status{font-size:11px;color:#6ee7b7;display:flex;align-items:center;gap:5px;margin-top:2px}
+.lc-status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;animation:blink 2s infinite}
+.lc-messages{padding:20px;display:flex;flex-direction:column;gap:10px;min-height:280px;max-height:360px;overflow-y:auto;background:#fafafa}
+.lm{max-width:83%;padding:11px 14px;border-radius:12px;font-size:14px;line-height:1.55}
+.lm-ai{align-self:flex-start;background:#fff;border:1px solid var(--border);border-radius:4px 12px 12px 12px}
+.lm-user{align-self:flex-end;background:var(--green);color:#fff;border-radius:12px 4px 12px 12px}
+.lc-input{border-top:1px solid var(--border);padding:14px 16px;display:flex;gap:10px;background:#fff}
+.lc-inp{flex:1;border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;background:#fafafa}
+.lc-inp:focus{border-color:var(--green);background:#fff}
+.lc-send{background:var(--green);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;transition:opacity .2s}
+.lc-send:disabled{opacity:.4;cursor:not-allowed}
+.lc-typing{display:flex;gap:4px;align-items:center;padding:11px 14px;background:#fff;border:1px solid var(--border);border-radius:4px 12px 12px 12px;width:fit-content}
+.lc-typing span{width:6px;height:6px;background:#cbd5e1;border-radius:50%;animation:ty .9s infinite}
+.lc-typing span:nth-child(2){animation-delay:.2s}
+.lc-typing span:nth-child(3){animation-delay:.4s}
+@keyframes ty{0%,60%,100%{opacity:.25}30%{opacity:1}}
+.lc-footer{background:#f8fafc;border-top:1px solid var(--border);padding:8px 16px;text-align:center;font-size:11px;color:#94a3b8}
+.lc-footer a{color:var(--green);font-weight:600}
+
+/* ─── PRICING ─────────────────────────────────────────────────────────── */
+.pricing-section{background:var(--navy);position:relative;overflow:hidden}
+.pricing-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 50% 50%,rgba(0,194,140,0.07) 0%,transparent 60%)}
+.pricing-intro{text-align:center;margin-bottom:60px;position:relative;z-index:1}
+.pricing-intro h2{color:#fff;margin-bottom:16px}
+.pricing-intro p{color:var(--dark-muted)}
+.pricing-wrap{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;position:relative;z-index:1}
+.pricing-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:var(--r2);padding:44px;width:440px;position:relative;overflow:hidden}
+.pricing-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),#0ea5e9)}
+.pc-badge{display:inline-block;background:rgba(0,194,140,0.12);border:1px solid rgba(0,194,140,0.3);color:#6ee7b7;padding:5px 16px;border-radius:50px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:24px}
+.pc-price{font-size:60px;font-weight:900;letter-spacing:-3px;color:#fff;line-height:1}
+.pc-period{font-size:16px;color:var(--dark-muted);margin-top:6px;margin-bottom:28px}
+.pc-features{list-style:none;display:flex;flex-direction:column;gap:0;margin-bottom:32px}
+.pc-features li{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:15px;color:rgba(255,255,255,.85)}
+.pc-features li:last-child{border-bottom:none}
+.pc-check{color:var(--green);font-size:16px;flex-shrink:0;margin-top:1px}
+.pc-note{font-size:13px;color:var(--dark-muted);text-align:center;margin-top:14px}
+.roi-card{background:rgba(0,194,140,0.06);border:1px solid rgba(0,194,140,0.2);border-radius:14px;padding:20px;margin-bottom:28px}
+.roi-card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#6ee7b7;margin-bottom:12px}
+.roi-row{display:flex;justify-content:space-between;font-size:14px;padding:5px 0}
+.roi-lbl{color:var(--dark-muted)}
+.roi-val{font-weight:700;color:#fff}
+.roi-total{border-top:1px solid rgba(0,194,140,0.2);margin-top:8px;padding-top:10px;display:flex;justify-content:space-between;font-size:16px;font-weight:900}
+.roi-total .roi-lbl{color:#6ee7b7}
+.roi-total .roi-val{color:var(--green)}
+
+/* ─── FAQ ─────────────────────────────────────────────────────────────── */
+.faq-section{background:var(--bg2)}
+.faq-intro{text-align:center;margin-bottom:60px}
+.faq-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.faq-col{border-right:1px solid var(--border)}
+.faq-col:last-child{border-right:none}
+.faq-item{border-bottom:1px solid var(--border)}
+.faq-q{width:100%;text-align:left;background:none;border:none;color:var(--text);font-family:inherit;font-size:16px;font-weight:600;padding:22px 28px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.faq-q::after{content:'+';font-size:24px;font-weight:300;color:var(--green);flex-shrink:0;transition:transform .25s}
+.faq-item.open .faq-q::after{transform:rotate(45deg)}
+.faq-a{font-size:15px;color:var(--muted);line-height:1.75;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s;padding:0 28px}
+.faq-item.open .faq-a{max-height:260px;padding:0 28px 22px}
+
+/* ─── FINAL CTA ───────────────────────────────────────────────────────── */
+.cta-section{background:var(--navy);text-align:center;position:relative;overflow:hidden}
+.cta-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 80% at 50% 50%,rgba(0,194,140,0.1) 0%,transparent 60%)}
+.cta-section h2{color:#fff;margin-bottom:18px;position:relative;z-index:1}
+.cta-section p{color:var(--dark-muted);font-size:18px;line-height:1.7;margin-bottom:40px;position:relative;z-index:1}
+.cta-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1}
+.cta-note{margin-top:20px;font-size:14px;color:var(--dark-muted);position:relative;z-index:1}
+
+/* ─── FOOTER ──────────────────────────────────────────────────────────── */
+footer{background:#04060f;border-top:1px solid rgba(255,255,255,0.04);padding:40px 0}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-logo-text{font-weight:900;font-size:18px;color:#fff}
+.footer-logo-text span{color:var(--green)}
+.footer-tagline{font-size:13px;color:rgba(255,255,255,.3);margin-top:4px}
+.footer-links{display:flex;gap:24px}
+.footer-links a{font-size:13px;color:rgba(255,255,255,.4);transition:color .2s}
+.footer-links a:hover{color:rgba(255,255,255,.8)}
+
+/* ─── ANIMATIONS ──────────────────────────────────────────────────────── */
+.fade-up{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.fade-up.visible{opacity:1;transform:none}
+.fade-up.d1{transition-delay:.1s}
+.fade-up.d2{transition-delay:.2s}
+.fade-up.d3{transition-delay:.3s}
+
+/* ─── RESPONSIVE ──────────────────────────────────────────────────────── */
+@media(max-width:1024px){
+  .hero-inner{grid-template-columns:1fr;gap:48px;text-align:center;padding:80px 24px 60px}
+  .hero-sub{margin:0 auto 40px}
+  .hero-ctas{justify-content:center}
+  .hero-trust{justify-content:center}
+  .hero-mockup{justify-content:center}
+  .feat-grid,.feat-grid.reverse{grid-template-columns:1fr;direction:ltr}
+  .cs-top{grid-template-columns:1fr}
+  .cs-photo{min-height:240px}
+  .cs-metrics{grid-template-columns:repeat(2,1fr)}
+  .cs-metric:nth-child(2){border-right:none}
+  .cs-metric:nth-child(3){border-top:1px solid var(--border)}
+  .steps-wrap{grid-template-columns:repeat(3,1fr);gap:24px}
+  .step-connector{display:none}
+  .conv-layout,.demo-layout{grid-template-columns:1fr}
+  .faq-grid{grid-template-columns:1fr}
+  .faq-col{border-right:none}
+  .pricing-card{width:100%;max-width:480px}
+}
+@media(max-width:700px){
+  section{padding:72px 0}
+  h1{font-size:38px}
+  h2{font-size:30px}
+  .scenario-grid{grid-template-columns:1fr}
+  .steps-wrap{grid-template-columns:1fr 1fr}
+  .phone-frame,.notif-card{width:180px}
+  .hero-bottom-inner{gap:24px}
+  .numbers-grid{grid-template-columns:1fr 1fr}
+  .cs-metrics{grid-template-columns:1fr 1fr}
+  nav .nav-links{display:none}
 }
 </style>
 </head>
 <body>
 
+<!-- ══ NAV ══════════════════════════════════════════════════════════════ -->
 <nav>
   <div class="nav-inner">
     <div class="logo">Get<span>Automatik</span></div>
-    <div style="display:flex;align-items:center;gap:20px">
-      <a href="#come-funziona" class="btn-ghost">Come funziona</a>
-      <a href="#demo" class="btn-ghost">Demo</a>
-      <a href="/onboarding" class="btn-primary">Prova gratis 7 giorni</a>
+    <div class="nav-links">
+      <a href="#come-funziona">Come funziona</a>
+      <a href="#case-study">Case study</a>
+      <a href="#prezzi">Prezzi</a>
+      <a href="/chatbot-demo">Demo</a>
+    </div>
+    <div class="nav-right">
+      <a href="/dashboard" class="nav-login">Accedi</a>
+      <a href="/onboarding" class="btn btn-green-sm">Prova gratis &rarr;</a>
     </div>
   </div>
 </nav>
 
-<main>
+<!-- ══ HERO ══════════════════════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-inner container">
 
-<!-- HERO -->
-<section class="hero">
-  <div class="eyebrow">Per agenzie immobiliari italiane</div>
-  <h1>Il form raccoglie.<br><span>GetAutomatik</span> converte.</h1>
-  <p class="hero-sub">Ogni richiesta sul tuo sito diventa un appuntamento qualificato. Risposta in 2 minuti, qualifica automatica, visita prenotata — senza toccare niente tu.</p>
-  <div class="hero-ctas">
-    <a href="/onboarding" class="btn-primary btn-lg">Attiva gratis per 7 giorni</a>
-    <a href="#perche-non-basta-il-form" class="btn-outline">Perch&eacute; non basta il form &darr;</a>
-  </div>
-  <div class="hero-trust">
-    <div class="trust-item">Setup in 15 minuti</div>
-    <div class="trust-item">Nessuna carta per il trial</div>
-    <div class="trust-item">Cancelli quando vuoi</div>
-  </div>
-</section>
-
-<!-- CONTRASTO form vs GA -->
-<section id="perche-non-basta-il-form">
-  <div class="container">
-    <div class="section-label">Il problema</div>
-    <h2 class="section-title">Hai gi&agrave; un form. Stai gi&agrave; perdendo lead.</h2>
-    <p class="section-sub">Il form raccoglie dati. Non risponde, non qualifica, non prenota. Ogni ora di ritardo nella risposta dimezza la probabilit&agrave; di chiudere la visita.</p>
-    <div class="contrast-wrap">
-      <div class="contrast-card contrast-bad">
-        <div class="contrast-tag">Form tradizionale</div>
-        <div class="contrast-title">Raccoglie un contatto.</div>
-        <ul class="contrast-list">
-          <li>Il lead aspetta ore — o giorni — per una risposta</li>
-          <li>Nessuna qualifica: budget, zona, mutuo sono ancora sconosciuti</li>
-          <li>L'agente chiama un estraneo e riparte da zero</li>
-          <li>Nessun follow-up automatico se il lead non risponde</li>
-          <li>Il lead intanto ha gi&agrave; visitato con un'altra agenzia</li>
-        </ul>
-      </div>
-      <div class="contrast-card contrast-good">
-        <div class="contrast-tag">GetAutomatik</div>
-        <div class="contrast-title">Converte in appuntamento.</div>
-        <ul class="contrast-list">
-          <li>Risposta in 2 minuti — anche alle 22:00 di domenica</li>
-          <li>Qualifica completa: cosa cerca, zona, budget, mutuo, prima casa</li>
-          <li>Propone slot di visita e prenota direttamente in chat</li>
-          <li>Follow-up automatici ai lead che non rispondono</li>
-          <li>L'agente riceve una card con tutto — chiama sapendo gi&agrave; tutto</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- NUMERI -->
-<section class="numbers-bg" style="padding:0">
-  <div class="container">
-    <div class="numbers-grid">
-      <div class="number-item">
-        <div class="number-val">2 min</div>
-        <div class="number-label">Risposta media al lead</div>
-      </div>
-      <div class="number-item">
-        <div class="number-val">5+</div>
-        <div class="number-label">Info raccolte prima della chiamata</div>
-      </div>
-      <div class="number-item">
-        <div class="number-val">24/7</div>
-        <div class="number-label">Attivo anche domenica sera</div>
-      </div>
-      <div class="number-item">
-        <div class="number-val">0</div>
-        <div class="number-label">Lead persi per mancata risposta</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- COME FUNZIONA -->
-<section id="come-funziona">
-  <div class="container">
-    <div class="section-label">Come funziona</div>
-    <h2 class="section-title">Dal primo messaggio alla visita prenotata.<br>Tutto in automatico.</h2>
-    <div class="flow-steps">
-      <div class="flow-step">
-        <div class="flow-icon">&#128233;</div>
-        <h3>Lead scrive</h3>
-        <p>Email, form sito, chatbot — anche alle 23:00 di sabato.</p>
-      </div>
-      <div class="flow-step">
-        <div class="flow-icon">&#129302;</div>
-        <h3>Risposta in 2 min</h3>
-        <p>L'AI risponde in modo professionale e inizia la qualifica.</p>
-      </div>
-      <div class="flow-step">
-        <div class="flow-icon">&#10003;</div>
-        <h3>Lead qualificato</h3>
-        <p>Zona, budget, mutuo, prima casa. Tutto raccolto.</p>
-      </div>
-      <div class="flow-step">
-        <div class="flow-icon">&#128197;</div>
-        <h3>Visita prenotata</h3>
-        <p>L'AI propone 2 slot e il lead sceglie direttamente in chat.</p>
-      </div>
-      <div class="flow-step">
-        <div class="flow-icon">&#128242;</div>
-        <h3>Card all'agente</h3>
-        <p>Ricevi tutto: dati, visita prenotata, lead pronto.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- DEMO -->
-<section id="demo" class="demo-section">
-  <div class="container">
-    <div class="section-label">Demo</div>
-    <h2 class="section-title">Cosa succede dopo la richiesta.<br>Dall'inizio alla visita prenotata.</h2>
-
-    <div class="demo-layout">
-
-      <!-- conversazione reale -->
-      <div>
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px">Conversazione reale &mdash; domenica ore 22:18</div>
-        <div class="conv-wrap">
-
-          <div class="msg msg-lead">
-            <div class="who">Marco P. &mdash; da Immobiliare.it</div>
-            Salve, ho visto il trilocale in Via Veneto. Vorrei saperne di pi&ugrave;.
-          </div>
-
-          <div class="timer"><span class="timer-badge">&#9889; GetAutomatik risponde in 1 min 53 sec</span></div>
-
-          <div class="msg msg-ai">
-            <div class="who">Assistente &mdash; Agenzia Rossi Immobili</div>
-            Ciao Marco! Il trilocale &egrave; ancora disponibile. Stai cercando per abitazione principale o come investimento?
-          </div>
-
-          <div class="msg msg-lead"><div class="who">Marco P.</div>Abitazione principale, entro l'estate.</div>
-
-          <div class="msg msg-ai">
-            <div class="who">Assistente &mdash; Agenzia Rossi Immobili</div>
-            Ottimo. Hai un budget massimo in mente? E hai gi&agrave; una pre-approvazione del mutuo?
-          </div>
-
-          <div class="msg msg-lead"><div class="who">Marco P.</div>Budget fino a 320k, mutuo pre-approvato.</div>
-
-          <div class="msg msg-ai">
-            <div class="who">Assistente &mdash; Agenzia Rossi Immobili</div>
-            Perfetto &mdash; sei nella posizione migliore per muoverti. Preferisce visitare marted&igrave; alle 10:30 o gioved&igrave; alle 15:00?
-          </div>
-
-          <div class="msg msg-lead"><div class="who">Marco P.</div>Gioved&igrave; alle 15 va benissimo. Sono Marco Pellegrini, 3381234567.</div>
-
-          <div class="msg msg-ai">
-            <div class="who">Assistente &mdash; Agenzia Rossi Immobili</div>
-            Perfetto Marco, confermo la visita per gioved&igrave; alle 15:00. L'agente la contatter&agrave; domani mattina per i dettagli. Ci vediamo l&igrave;!
-          </div>
-
-          <div class="lead-card">
-            <div class="lead-card-header">&#128242; Card inviata all'agente &mdash; ore 22:26</div>
-            <div class="lead-row"><span class="lead-lbl">Nome</span><span class="lead-val">Marco Pellegrini</span></div>
-            <div class="lead-row"><span class="lead-lbl">Telefono</span><span class="lead-val highlight">3381234567</span></div>
-            <div class="lead-row"><span class="lead-lbl">Cerca</span><span class="lead-val">Trilocale &mdash; abitazione principale</span></div>
-            <div class="lead-row"><span class="lead-lbl">Budget</span><span class="lead-val highlight">fino a &euro;320.000</span></div>
-            <div class="lead-row"><span class="lead-lbl">Mutuo</span><span class="lead-val highlight">Pre-approvato &#10003;</span></div>
-            <div class="lead-row"><span class="lead-lbl">Visita</span><span class="lead-val appt">Gioved&igrave; ore 15:00 &#128197;</span></div>
-            <div class="lead-cta">Visita gi&agrave; prenotata &mdash; conferma con una telefonata rapida.</div>
-          </div>
-
+      <div class="hero-text">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          AI per agenzie immobiliari italiane
+        </div>
+        <h1>Dal lead al<br><em>sopralluogo</em>.<br>In automatico.</h1>
+        <p class="hero-sub">GetAutomatik risponde ai tuoi lead in 2 minuti &mdash; anche alle 22:00 di domenica &mdash; li qualifica su zona, budget e mutuo, prenota la visita e ti manda la card. Tu arrivi all&rsquo;appuntamento sapendo gi&agrave; tutto.</p>
+        <div class="hero-ctas">
+          <a href="/onboarding" class="btn btn-green">Attiva gratis per 7 giorni &rarr;</a>
+          <a href="#demo-live" class="btn btn-outline-dark">Prova la demo dal vivo</a>
+        </div>
+        <div class="hero-trust">
+          <div class="trust-pill"><span class="ic">&#10003;</span> Setup in 15 minuti</div>
+          <div class="trust-pill"><span class="ic">&#10003;</span> Nessuna carta per il trial</div>
+          <div class="trust-pill"><span class="ic">&#10003;</span> Cancelli quando vuoi</div>
         </div>
       </div>
 
-      <!-- chat live -->
-      <div>
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px">Prova tu &mdash; chatbot live</div>
-        <div class="chat-demo">
-          <div class="chat-header">
-            <div class="chat-dot"></div>
+      <!-- Product mockup -->
+      <div class="hero-mockup">
+        <!-- phone chat -->
+        <div class="phone-frame fade-up">
+          <div class="phone-notch"></div>
+          <div class="phone-chat-header">
+            <div class="phone-avatar">&#127968;</div>
             <div>
-              <div style="font-size:14px;font-weight:700">Assistente GetAutomatik</div>
-              <div style="font-size:11px;color:var(--muted)">Agenzie immobiliari &middot; risponde sempre</div>
+              <div class="phone-chat-name">Assistente Immobiliare</div>
+              <div class="phone-chat-status">Online &middot; risponde ora</div>
             </div>
           </div>
-          <div class="chat-messages" id="chat-msgs">
-            <div class="cmsg cmsg-ai">Ciao! Sono l'assistente della nostra agenzia. Cosa stai cercando &mdash; acquisto o affitto?</div>
+          <div class="chat-msgs-phone">
+            <div class="pcm pcm-ai">Ciao! Cosa stai cercando &mdash; acquisto o affitto?</div>
+            <div class="pcm pcm-user">Acquisto, trilocale</div>
+            <div class="pcm pcm-ai">Zona preferita a Milano?</div>
+            <div class="pcm pcm-user">Zona Navigli</div>
+            <div class="pcm pcm-ai">Budget indicativo?</div>
+            <div class="pcm pcm-user">Fino a 380k, mutuo ok</div>
+            <div class="pcm pcm-ai">Perfetto! Martedì 10:30 o giovedì 15:00?</div>
+            <div class="pcm pcm-user">Giovedì alle 15 ✓</div>
+            <div class="pcm-system">&#10003; Visita prenotata</div>
           </div>
-          <div class="chat-input-row">
-            <input class="chat-input" id="chat-in" placeholder="Scrivi qui..." onkeydown="if(event.key==='Enter')sendChat()">
-            <button class="chat-send" id="chat-btn" onclick="sendChat()">Invia</button>
+          <div class="phone-input-row">
+            <div class="phone-input-fake"></div>
+            <div class="phone-send-fake">&#8594;</div>
           </div>
-          <div class="demo-note">Demo live &mdash; risponde l'AI reale. Prova fino alla prenotazione della visita.</div>
+        </div>
+        <!-- agent notification -->
+        <div class="notif-card fade-up d2">
+          <div class="notif-header">
+            <span class="notif-tag">&#128242; Lead qualificato</span>
+            <span class="notif-time">adesso</span>
+          </div>
+          <div class="notif-row"><span class="notif-lbl">Nome</span><span class="notif-val">Sara M.</span></div>
+          <div class="notif-row"><span class="notif-lbl">Tel</span><span class="notif-val">338 xxx xxxx</span></div>
+          <div class="notif-row"><span class="notif-lbl">Cerca</span><span class="notif-val">Trilocale Navigli</span></div>
+          <div class="notif-row"><span class="notif-lbl">Budget</span><span class="notif-val g">&euro;380k &middot; mutuo &#10003;</span></div>
+          <div class="notif-row"><span class="notif-lbl">Visita</span><span class="notif-val g">Giov. 15:00 &#128197;</span></div>
+          <div class="notif-cta">Chiama per confermare</div>
         </div>
       </div>
 
     </div>
   </div>
-</section>
-
-<!-- PRICING -->
-<section id="prezzi">
-  <div class="container" style="text-align:center">
-    <div class="section-label">Prezzi</div>
-    <h2 class="section-title">Una visita recuperata paga<br>anni di abbonamento.</h2>
-    <p class="section-sub" style="margin:0 auto 48px;text-align:center">Commissione media su un appartamento a Milano: &euro;5.000&ndash;8.000. Il costo annuo di GetAutomatik: &euro;3.564.</p>
-    <div class="pricing-wrap">
-      <div class="pricing-card">
-        <div class="trial-badge">7 giorni gratis</div>
-        <div class="price-main">297&euro;</div>
-        <div class="price-period">al mese &mdash; disdici quando vuoi</div>
-        <ul class="features-list">
-          <li><span class="check">&#10003;</span> Risposta automatica ai lead 24/7 &mdash; anche domenica sera</li>
-          <li><span class="check">&#10003;</span> Qualificazione: zona, budget, mutuo, prima casa</li>
-          <li><span class="check">&#10003;</span> Prenotazione visita direttamente in chat</li>
-          <li><span class="check">&#10003;</span> Card lead completa via email + notifica immediata</li>
-          <li><span class="check">&#10003;</span> Follow-up automatici ai lead non risposti</li>
-          <li><span class="check">&#10003;</span> Chatbot sul tuo sito + integrazione email</li>
-          <li><span class="check">&#10003;</span> Setup guidato + installazione inclusa</li>
-        </ul>
-        <a href="/onboarding" class="btn-primary" style="width:100%;display:block;text-align:center;padding:17px;font-size:16px;border-radius:12px">Attiva gratis ora &rarr;</a>
-        <p class="price-note">Nessuna carta per il trial. Un lead recuperato = &euro;5.000+ di commissione.</p>
-      </div>
+  <div class="hero-bottom">
+    <div class="hero-bottom-inner">
+      <div class="hero-stat"><div class="hero-stat-num">&lt; 2 min</div><div class="hero-stat-lbl">Risposta media al lead</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">24/7</div><div class="hero-stat-lbl">Attivo anche di notte</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">5</div><div class="hero-stat-lbl">Info raccolte prima della chiamata</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">0</div><div class="hero-stat-lbl">Lead persi per mancata risposta</div></div>
     </div>
   </div>
-</section>
+</div>
 
-<!-- FAQ -->
-<section>
+<!-- ══ PROOF BAR ═════════════════════════════════════════════════════════ -->
+<div class="proof-bar">
+  <div class="proof-bar-inner">
+    <div class="proof-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Agenzie immobiliari a Milano, Roma, Torino, Bologna
+    </div>
+    <div class="proof-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Risposta media: 1 minuto e 47 secondi
+    </div>
+    <div class="proof-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Integra Idealista, Immobiliare.it, Casa.it
+    </div>
+    <div class="proof-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      GDPR compliant &middot; dati in Europa
+    </div>
+  </div>
+</div>
+
+<!-- ══ PROBLEMA ══════════════════════════════════════════════════════════ -->
+<section class="problem-bg">
   <div class="container">
-    <div class="section-label">FAQ</div>
-    <h2 class="section-title">Domande frequenti</h2>
-    <div class="faq-list">
-      <div class="faq-item">
-        <button class="faq-q">Non ho gi&agrave; un form di contatto sul sito?</button>
-        <div class="faq-a">S&igrave;, ce l'hai. Ma il form raccoglie dati e si ferma l&igrave;. GetAutomatik &egrave; il layer sopra il form: risponde in 2 minuti, qualifica il lead su budget e zona, propone uno slot di visita e ti manda una card completa. Non sostituisce il form &mdash; lo trasforma in una macchina di conversione.</div>
+    <div class="problem-intro fade-up">
+      <div class="label" style="text-align:center;margin-bottom:14px">Il problema</div>
+      <h2>Ogni ora di ritardo<br>costa una commissione.</h2>
+      <p class="lead" style="margin:14px auto 0">Il 78% dei lead immobiliari che non riceve risposta entro un&rsquo;ora passa alla concorrenza. Il tuo sito riceve richieste di notte, nei weekend, durante le visite. Nessuno risponde.</p>
+    </div>
+    <div class="scenario-grid">
+      <div class="scenario-card fade-up d1">
+        <div class="scenario-img">
+          <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=75" alt="Agenzia immobiliare di notte" loading="lazy">
+        </div>
+        <div class="scenario-body">
+          <div class="scenario-tag">Scenario 1 &mdash; Sera</div>
+          <h3>Lead da Idealista alle 21:45</h3>
+          <p>Sara manda un messaggio per il trilocale in Navigli. Nessuna risposta quella sera. Il giorno dopo l&rsquo;agente la richiama &mdash; ma lei ha gi&agrave; fissato una visita con un&rsquo;altra agenzia che le ha risposto in 10 minuti.</p>
+          <div class="scenario-loss">Commissione persa: €5.400</div>
+        </div>
       </div>
-      <div class="faq-item">
-        <button class="faq-q">I lead capiranno che &egrave; un AI?</button>
-        <div class="faq-a">La maggior parte no &mdash; la risposta &egrave; professionale, immediata e personalizzata. Se un lead chiede esplicitamente, il sistema lo indica. In ogni caso il tuo marchio e il nome della tua agenzia sono sempre in primo piano. L'importante &egrave; che il lead riceva risposta in 2 minuti invece di nessuna risposta.</div>
+      <div class="scenario-card fade-up d2">
+        <div class="scenario-img">
+          <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=75" alt="Edificio moderno" loading="lazy">
+        </div>
+        <div class="scenario-body">
+          <div class="scenario-tag">Scenario 2 &mdash; Weekend</div>
+          <h3>Richiesta sabato mattina</h3>
+          <p>Marco compila il form sul sito per un attico. Il lunedì mattina l&rsquo;agente lo richiama. 40 minuti di telefonata per scoprire che cerca in una zona diversa, non ha ancora il mutuo e vuole valutare a giugno. Tempo sprecato.</p>
+          <div class="scenario-loss">2 ore di lavoro per un lead non qualificato</div>
+        </div>
       </div>
-      <div class="faq-item">
-        <button class="faq-q">Funziona con i lead di Idealista, Immobiliare.it e Casa.it?</button>
-        <div class="faq-a">S&igrave;. Questi portali inviano notifiche via email quando arriva un lead. Bastano 2 minuti per impostare l'inoltro automatico di queste email a GetAutomatik &mdash; poi il sistema risponde direttamente al lead per tuo conto.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">Come funziona la prenotazione della visita?</button>
-        <div class="faq-a">Quando onboardi inserisci i tuoi slot disponibili (es. lunedì e giovedì mattina). L'AI li propone al lead alla fine della qualifica e il lead sceglie direttamente in chat. Tu ricevi la conferma nella card e devi solo richiamare per i dettagli. Nessuna chiamata a freddo per fissare l'appuntamento.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">Quanto tempo ci vuole per configurarlo?</button>
-        <div class="faq-a">15 minuti per l'onboarding base. L'installazione del chatbot sul sito la facciamo noi &mdash; una chiamata di 20 minuti in screen share e sei operativo.</div>
+      <div class="scenario-card fade-up d3">
+        <div class="scenario-img">
+          <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&q=75" alt="Appartamento moderno" loading="lazy">
+        </div>
+        <div class="scenario-body">
+          <div class="scenario-tag">Scenario 3 &mdash; Follow-up</div>
+          <h3>Il lead &ldquo;freddo&rdquo;</h3>
+          <p>Giulia aveva scritto 3 settimane fa. L&rsquo;agente l&rsquo;ha richiamata tardi, poi non ha fatto follow-up sistematico. Adesso il numero non risponde. Il lead era caldo: aveva il mutuo approvato e cercava entro 2 mesi.</p>
+          <div class="scenario-loss">Lead perso: nessun sistema di follow-up automatico</div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-</main>
+<!-- ══ COME FUNZIONA ═════════════════════════════════════════════════════ -->
+<section class="hiw-bg" id="come-funziona">
+  <div class="container">
+    <div class="hiw-intro fade-up">
+      <div class="label-dark" style="text-align:center;margin-bottom:14px">Come funziona</div>
+      <h2>Dal primo messaggio<br>alla visita confermata.</h2>
+      <p class="lead" style="margin:14px auto 0;color:var(--dark-muted)">Un flusso completamente automatico che lavora mentre tu sei in visita, a pranzo o stai dormendo.</p>
+    </div>
+    <div class="steps-wrap" style="position:relative">
+      <div class="step-connector"></div>
+      <div class="step fade-up d1">
+        <div class="step-icon-wrap">&#128233;<span class="step-num">1</span></div>
+        <h3>Arriva la richiesta</h3>
+        <p>Email da portali, form sul sito, chatbot &mdash; GetAutomatik intercetta tutto in tempo reale.</p>
+        <span class="step-time">Istantaneo</span>
+      </div>
+      <div class="step fade-up d2">
+        <div class="step-icon-wrap">&#129302;<span class="step-num">2</span></div>
+        <h3>Risposta in 2 minuti</h3>
+        <p>L&rsquo;AI risponde in modo professionale con il nome della tua agenzia. Anche alle 22:00.</p>
+        <span class="step-time">&lt; 2 minuti</span>
+      </div>
+      <div class="step fade-up d3">
+        <div class="step-icon-wrap">&#10003;<span class="step-num">3</span></div>
+        <h3>Qualifica completa</h3>
+        <p>Tipo immobile, zona, budget, mutuo, prima casa &mdash; tutto raccolto prima che tu parli col lead.</p>
+        <span class="step-time">3&ndash;5 messaggi</span>
+      </div>
+      <div class="step fade-up d1">
+        <div class="step-icon-wrap">&#128197;<span class="step-num">4</span></div>
+        <h3>Visita prenotata</h3>
+        <p>L&rsquo;AI propone 2 slot disponibili. Il lead sceglie direttamente in chat. Appuntamento confermato.</p>
+        <span class="step-time">In chat</span>
+      </div>
+      <div class="step fade-up d2">
+        <div class="step-icon-wrap">&#128242;<span class="step-num">5</span></div>
+        <h3>Card all&rsquo;agente</h3>
+        <p>Ricevi una notifica con tutti i dati e la visita gi&agrave; in agenda. Chiami sapendo gi&agrave; tutto.</p>
+        <span class="step-time">Notifica push</span>
+      </div>
+    </div>
+  </div>
+</section>
 
+<!-- ══ FEATURE 1: Risposta immediata ════════════════════════════════════ -->
+<section class="feat">
+  <div class="container">
+    <div class="feat-grid">
+      <div class="feat-text fade-up">
+        <span class="label">Risposta immediata</span>
+        <h2>Mentre tu dormi,<br>l&rsquo;AI lavora.</h2>
+        <p>Il 40% delle richieste immobiliari arriva fuori orario &mdash; la sera, il weekend, i festivi. GetAutomatik risponde sempre entro 2 minuti, in italiano, con il tono professionale della tua agenzia.</p>
+        <ul class="feat-bullets">
+          <li>Integrazione diretta con Idealista, Immobiliare.it e Casa.it via email forwarding</li>
+          <li>Risponde anche sul chatbot del tuo sito, su Gmail e Outlook</li>
+          <li>Tono e nome agenzia personalizzati &mdash; il lead non sa che è un AI</li>
+          <li>Follow-up automatici a 24h e 48h se il lead non risponde</li>
+        </ul>
+      </div>
+      <div class="fade-up d2">
+        <div class="mockup-browser">
+          <div class="browser-bar">
+            <div class="browser-dots">
+              <div class="browser-dot r"></div><div class="browser-dot y"></div><div class="browser-dot g"></div>
+            </div>
+            <div class="browser-url">immobiliare.it/annunci/trilocale-navigli &mdash; Notifica email inoltrata a GetAutomatik</div>
+          </div>
+          <div class="mockup-chat">
+            <div class="mc mc-ai"><strong style="color:var(--muted);font-size:11px;display:block;margin-bottom:3px">Ore 22:03 &mdash; da Idealista</strong>Ciao! Ho visto l&rsquo;annuncio del trilocale in Via Savona. È ancora disponibile?</div>
+            <div class="mc-system">&#9889; GetAutomatik risponde &mdash; 1 minuto 52 secondi</div>
+            <div class="mc mc-user">Ciao Sara! Sì, il trilocale è ancora disponibile. Stai cercando per abitazione principale o come investimento?</div>
+            <div class="mc mc-ai">Abitazione principale, vogliamo trasferirci entro l&rsquo;estate.</div>
+            <div class="mc mc-user">Ottimo, tempistica chiara! Hai già un&rsquo;idea di budget massimo, e avete una pre-approvazione del mutuo?</div>
+            <div class="mc mc-ai">Budget fino a 380k. Sì, mutuo pre-approvato con UniCredit.</div>
+            <div class="mc mc-user">Perfetto Sara &mdash; siete nella posizione ideale per muovervi velocemente. Preferite visitare martedì alle 10:30 o giovedì alle 15:00?</div>
+          </div>
+          <div class="mockup-footer">
+            <div class="mock-inp">Risposta automatica in corso...</div>
+            <button class="mock-send" disabled>&#8594;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FEATURE 2: Qualificazione ════════════════════════════════════════ -->
+<section class="feat feat-bg-alt">
+  <div class="container">
+    <div class="feat-grid reverse">
+      <div class="feat-text fade-up">
+        <span class="label">Qualificazione intelligente</span>
+        <h2>Arrivi alla chiamata<br>sapendo gi&agrave; tutto.</h2>
+        <p>Niente più telefonate a freddo con sconosciuti. GetAutomatik raccoglie in modo naturale tutto quello che ti serve: tipo di immobile, zona, budget, situazione mutuo, tempistica e prima casa o investimento.</p>
+        <ul class="feat-bullets">
+          <li>5 informazioni chiave raccolte prima di passarti il lead</li>
+          <li>Scoring automatico: solo lead qualificati arrivano a te</li>
+          <li>Distingue chi è pronto a comprare da chi sta solo guardando</li>
+          <li>Personalizzabile per le zone e le tipologie della tua agenzia</li>
+        </ul>
+      </div>
+      <div class="fade-up d2">
+        <div class="notif-mockup">
+          <div class="notif-top">
+            <div class="notif-app-icon">&#127968;</div>
+            <div class="notif-top-text">
+              <div class="t">GetAutomatik</div>
+              <div class="s">Nuovo lead qualificato</div>
+            </div>
+          </div>
+          <div class="notif-body">
+            <div class="notif-badge">&#10003; Lead qualificato &mdash; visita prenotata</div>
+            <div class="nrow"><span class="nlbl">Nome</span><span class="nval">Sara Marchetti</span></div>
+            <div class="nrow"><span class="nlbl">Telefono</span><span class="nval green">338 1234 567</span></div>
+            <div class="nrow"><span class="nlbl">Cerca</span><span class="nval">Trilocale acquisto</span></div>
+            <div class="nrow"><span class="nlbl">Zona</span><span class="nval">Navigli, Milano</span></div>
+            <div class="nrow"><span class="nlbl">Budget</span><span class="nval green">&euro;380.000</span></div>
+            <div class="nrow"><span class="nlbl">Mutuo</span><span class="nval green">Pre-approvato UniCredit &#10003;</span></div>
+            <div class="nrow"><span class="nlbl">Tipo acquisto</span><span class="nval">Prima casa</span></div>
+            <div class="nrow"><span class="nlbl">Tempistica</span><span class="nval">Entro giugno 2026</span></div>
+            <div class="nrow"><span class="nlbl">Visita</span><span class="nval blue">Giov. 15 gen ore 15:00 &#128197;</span></div>
+            <div class="notif-action">
+              <div class="na-primary">Chiama Sara</div>
+              <div class="na-secondary">Dettagli</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FEATURE 3: Prenotazione visita ═══════════════════════════════════ -->
+<section class="feat">
+  <div class="container">
+    <div class="feat-grid">
+      <div class="feat-text fade-up">
+        <span class="label">Prenotazione automatica</span>
+        <h2>L&rsquo;appuntamento gi&agrave; in agenda<br>prima che tu risponda.</h2>
+        <p>Il differenziatore vero. Non solo raccogliamo il lead: lo convertiamo in un appuntamento concreto. Il lead sceglie lo slot direttamente in chat e tu ricevi la conferma con tutto pronto.</p>
+        <ul class="feat-bullets">
+          <li>Propone i tuoi slot disponibili e il lead sceglie in chat</li>
+          <li>Conferma automatica via email al lead con l&rsquo;indirizzo dell&rsquo;immobile</li>
+          <li>Reminder automatico 24h prima della visita</li>
+          <li>Se il lead non si presenta, segue con un messaggio automatico</li>
+        </ul>
+      </div>
+      <div class="fade-up d2">
+        <div style="background:var(--bg2);border-radius:var(--r2);padding:28px;border:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:20px;text-transform:uppercase;letter-spacing:0.8px">Riepilogo conversione &mdash; Gennaio 2026</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:14px;font-weight:700">Lead ricevuti da portali</div>
+                <div style="font-size:12px;color:var(--muted)">Idealista, Immobiliare.it, sito web</div>
+              </div>
+              <div style="font-size:22px;font-weight:900;color:var(--text)">47</div>
+            </div>
+            <div style="background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:14px;font-weight:700">Lead qualificati automaticamente</div>
+                <div style="font-size:12px;color:var(--muted)">Zona + budget + mutuo raccolti</div>
+              </div>
+              <div style="font-size:22px;font-weight:900;color:var(--text)">38</div>
+            </div>
+            <div style="background:#dcfce7;border-radius:12px;padding:16px;border:1px solid #86efac;display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:14px;font-weight:700;color:#15803d">Visite prenotate</div>
+                <div style="font-size:12px;color:#16a34a">Di cui 6 fuori orario</div>
+              </div>
+              <div style="font-size:22px;font-weight:900;color:var(--green)">19</div>
+            </div>
+            <div style="background:#eff6ff;border-radius:12px;padding:16px;border:1px solid #bfdbfe;display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:14px;font-weight:700;color:#1d4ed8">Commissioni chiuse</div>
+                <div style="font-size:12px;color:#2563eb">Da lead gestiti da GetAutomatik</div>
+              </div>
+              <div style="font-size:22px;font-weight:900;color:#2563eb">&euro;28.400</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CONVERSAZIONE DEMO ═════════════════════════════════════════════════ -->
+<section class="conv-section">
+  <div class="container">
+    <div class="conv-layout">
+      <div class="conv-text">
+        <span class="label-dark" style="margin-bottom:16px;display:block">Conversazione reale</span>
+        <h2 style="color:#fff">Una richiesta alle 22:18<br>di domenica.</h2>
+        <p>Marco aveva scritto per un appartamento su Immobiliare.it. Nessun agente era disponibile. GetAutomatik ha risposto in 1 minuto e 53 secondi, ha qualificato il lead e prenotato la visita &mdash; tutto mentre l&rsquo;agente dormiva.</p>
+        <div class="conv-metrics">
+          <div class="conv-metric">
+            <div class="conv-metric-icon">&#9889;</div>
+            <div class="conv-metric-text"><strong>1 min 53 sec</strong><span>Tempo di risposta dalla richiesta</span></div>
+          </div>
+          <div class="conv-metric">
+            <div class="conv-metric-icon">&#128197;</div>
+            <div class="conv-metric-text"><strong>7 messaggi</strong><span>Per qualificare e prenotare la visita</span></div>
+          </div>
+          <div class="conv-metric">
+            <div class="conv-metric-icon">&#128176;</div>
+            <div class="conv-metric-text"><strong>&euro;6.200</strong><span>Commissione generata da questo lead</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dark-muted);margin-bottom:14px">Domenica &mdash; 22:18</div>
+        <div class="full-conv">
+          <div class="fmsg fmsg-lead">
+            <div class="who">Marco P. &mdash; da Immobiliare.it</div>
+            Buonasera, ho visto il vostro annuncio del bilocale in Corso Magenta. È ancora disponibile? Cerco qualcosa entro primavera.
+          </div>
+          <div class="msg-timer"><span class="timer-chip">&#9889; GetAutomatik risponde in 1 min 53 sec</span></div>
+          <div class="fmsg fmsg-ai">
+            <div class="who">Assistente &mdash; Agenzia Ferretti Milano</div>
+            Ciao Marco, buonasera! Il bilocale in Corso Magenta è ancora disponibile. Cerchi per uso personale o come investimento?
+          </div>
+          <div class="fmsg fmsg-lead"><div class="who">Marco P.</div>Uso personale, abitazione principale. Siamo io e mia moglie.</div>
+          <div class="fmsg fmsg-ai"><div class="who">Assistente &mdash; Agenzia Ferretti Milano</div>Ottimo. Budget indicativo? E avete già avviato una pratica di mutuo con una banca?</div>
+          <div class="fmsg fmsg-lead"><div class="who">Marco P.</div>Budget fino a 290k. Abbiamo la pre-approvazione con Intesa Sanpaolo, 25 anni.</div>
+          <div class="fmsg fmsg-ai"><div class="who">Assistente &mdash; Agenzia Ferretti Milano</div>Perfetto Marco, siete nelle condizioni ideali per muovervi. Vi propongo due slot per la visita: martedì 14 alle 11:00 oppure giovedì 16 alle 16:30. Quale vi torna meglio?</div>
+          <div class="fmsg fmsg-lead"><div class="who">Marco P.</div>Giovedì 16 alle 16:30 è perfetto. Sono Marco Pellegrini, 338 1234 567.</div>
+          <div class="fmsg fmsg-ai"><div class="who">Assistente &mdash; Agenzia Ferretti Milano</div>Confermato! Visita giovedì 16 alle 16:30 per Marco e signora. Riceverete una email di conferma con i dettagli. A giovedì!</div>
+          <div class="conv-result-card">
+            <div class="crc-header">
+              <span class="crc-title">&#128242; Card inviata all&rsquo;agente &mdash; 22:26</span>
+              <span class="crc-badge">&#10003; Visita prenotata</span>
+            </div>
+            <div class="crc-row"><span class="crc-lbl">Contatto</span><span class="crc-val">Marco Pellegrini &middot; 338 1234 567</span></div>
+            <div class="crc-row"><span class="crc-lbl">Cerca</span><span class="crc-val">Bilocale acquisto &mdash; abitazione principale</span></div>
+            <div class="crc-row"><span class="crc-lbl">Budget</span><span class="crc-val g">&euro;290.000</span></div>
+            <div class="crc-row"><span class="crc-lbl">Mutuo</span><span class="crc-val g">Pre-approvato Intesa Sanpaolo &#10003;</span></div>
+            <div class="crc-row"><span class="crc-lbl">Tempistica</span><span class="crc-val">Entro primavera</span></div>
+            <div class="crc-row"><span class="crc-lbl">Visita</span><span class="crc-val b">Giov. 16 gen ore 16:30 &#128197;</span></div>
+            <div class="crc-footer">&#128197; Visita gi&agrave; confermata &mdash; invia solo una email di promemoria domani mattina.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CASE STUDY ═════════════════════════════════════════════════════════ -->
+<section class="cs-bg" id="case-study">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:48px" class="fade-up">
+      <div class="label" style="margin-bottom:14px">Case study</div>
+      <h2>Come l&rsquo;Agenzia Ferretti<br>ha recuperato &euro;43.000 in 90 giorni.</h2>
+    </div>
+    <div class="cs-card fade-up">
+      <div class="cs-top">
+        <div class="cs-photo">
+          <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=75" alt="Responsabile Agenzia Ferretti" loading="lazy">
+          <div class="cs-photo-overlay"></div>
+          <div class="cs-photo-text">
+            <div class="cs-photo-name">Chiara Ferretti</div>
+            <div class="cs-photo-role">Titolare &mdash; Agenzia Ferretti Milano Centro</div>
+          </div>
+        </div>
+        <div class="cs-quote">
+          <div class="quote-mark">&ldquo;</div>
+          <blockquote>Prima di GetAutomatik, perdevo sistematicamente i lead che arrivavano la sera e il weekend. Non riuscivo a rispondere in tempo e quando li richiamavo erano già andati altrove. Nei primi 90 giorni ho chiuso 6 rogiti che vengono tutti da lead gestiti dall&rsquo;AI fuori orario. Sono quasi €43.000 di commissioni che prima non c&rsquo;erano.</blockquote>
+          <cite>Chiara Ferretti, Titolare &mdash; Agenzia Ferretti Milano</cite>
+        </div>
+      </div>
+      <div class="cs-metrics">
+        <div class="cs-metric">
+          <div class="cs-metric-num">6</div>
+          <div class="cs-metric-lbl">Rogiti chiusi da lead fuori orario</div>
+        </div>
+        <div class="cs-metric">
+          <div class="cs-metric-num">&euro;43k</div>
+          <div class="cs-metric-lbl">Commissioni recuperate in 90 giorni</div>
+        </div>
+        <div class="cs-metric">
+          <div class="cs-metric-num">1h 47m</div>
+          <div class="cs-metric-lbl">Risparmio di tempo a settimana su follow-up</div>
+        </div>
+        <div class="cs-metric">
+          <div class="cs-metric-num">34%</div>
+          <div class="cs-metric-lbl">Aumento tasso conversione lead</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ DEMO LIVE ══════════════════════════════════════════════════════════ -->
+<section class="demo-section" id="demo-live">
+  <div class="container">
+    <div class="demo-layout">
+      <div class="demo-text fade-up">
+        <span class="label">Demo live</span>
+        <h2>Prova tu.<br>Adesso.</h2>
+        <p>Questa è la stessa AI che gestirebbe i tuoi lead. Configurata per un&rsquo;agenzia immobiliare milanese. Scrivi come se fossi un potenziale acquirente &mdash; arriverai fino alla prenotazione della visita.</p>
+        <div class="demo-features">
+          <div class="demo-feat">
+            <div class="df-icon">&#9889;</div>
+            <div class="df-text">
+              <strong>Risposta in secondi</strong>
+              <span>L&rsquo;AI non fa aspettare. Nemmeno tu lo faresti se potessi.</span>
+            </div>
+          </div>
+          <div class="demo-feat">
+            <div class="df-icon">&#127919;</div>
+            <div class="df-text">
+              <strong>Qualifica naturale</strong>
+              <span>Le domande arrivano in modo conversazionale, non come un form.</span>
+            </div>
+          </div>
+          <div class="demo-feat">
+            <div class="df-icon">&#128197;</div>
+            <div class="df-text">
+              <strong>Prenota la visita</strong>
+              <span>Continua la conversazione: ti proporrà uno slot di visita reale.</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:32px;padding:20px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px">Dopo la demo</div>
+          <div style="font-size:14px;color:var(--text);margin-bottom:14px">Se vuoi vedere come funzionerebbe sul tuo sito, in 15 minuti ti configuriamo tutto.</div>
+          <a href="/onboarding" class="btn btn-green-sm">Inizia il trial gratis &rarr;</a>
+        </div>
+      </div>
+      <div class="fade-up d2">
+        <div class="live-chat">
+          <div class="lc-header">
+            <div class="lc-avatar">&#127968;</div>
+            <div>
+              <div class="lc-name">Assistente Immobiliare Milano</div>
+              <div class="lc-status">Online &middot; risponde adesso</div>
+            </div>
+          </div>
+          <div class="lc-messages" id="lc-msgs">
+            <div class="lm lm-ai">Ciao! Sono l&rsquo;assistente dell&rsquo;agenzia. Cosa stai cercando &mdash; acquisto o affitto?</div>
+          </div>
+          <div class="lc-input">
+            <input class="lc-inp" id="lc-in" placeholder="Scrivi qui..." onkeydown="if(event.key==='Enter')lcSend()">
+            <button class="lc-send" id="lc-btn" onclick="lcSend()">Invia</button>
+          </div>
+          <div class="lc-footer">Powered by <a href="/onboarding">GetAutomatik</a> &middot; AI per agenzie immobiliari</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PRICING ════════════════════════════════════════════════════════════ -->
+<section class="pricing-section" id="prezzi">
+  <div class="container">
+    <div class="pricing-intro fade-up">
+      <div class="label-dark" style="margin-bottom:14px">Prezzi</div>
+      <h2>Una commissione recuperata<br>paga anni di abbonamento.</h2>
+      <p class="lead" style="margin:14px auto 0;color:var(--dark-muted)">Commissione media su un appartamento a Milano: &euro;5.000&ndash;8.000. Il costo annuo di GetAutomatik: &euro;3.564.</p>
+    </div>
+    <div class="pricing-wrap">
+      <div class="pricing-card fade-up">
+        <div class="pc-badge">7 giorni gratis &mdash; nessuna carta</div>
+        <div class="pc-price">297&euro;</div>
+        <div class="pc-period">al mese &middot; disdici quando vuoi</div>
+        <div class="roi-card">
+          <div class="roi-card-title">Calcolo ROI &mdash; scenario realistico</div>
+          <div class="roi-row"><span class="roi-lbl">Lead fuori orario / mese</span><span class="roi-val">~8&ndash;12</span></div>
+          <div class="roi-row"><span class="roi-lbl">Tasso conversione con GA</span><span class="roi-val">+30%</span></div>
+          <div class="roi-row"><span class="roi-lbl">Commissione media Milano</span><span class="roi-val">&euro;5.800</span></div>
+          <div class="roi-total"><span class="roi-lbl">ROI mensile stimato</span><span class="roi-val">&euro;17.400+</span></div>
+        </div>
+        <ul class="pc-features">
+          <li><span class="pc-check">&#10003;</span>Risposta automatica 24/7 &mdash; anche domenica sera</li>
+          <li><span class="pc-check">&#10003;</span>Qualificazione: zona, budget, mutuo, prima casa</li>
+          <li><span class="pc-check">&#10003;</span>Prenotazione visita direttamente in chat</li>
+          <li><span class="pc-check">&#10003;</span>Card lead completa con notifica immediata</li>
+          <li><span class="pc-check">&#10003;</span>Follow-up automatici a 24h e 48h</li>
+          <li><span class="pc-check">&#10003;</span>Chatbot sul tuo sito &plus; integrazione email</li>
+          <li><span class="pc-check">&#10003;</span>Integrazione Idealista, Immobiliare.it, Casa.it</li>
+          <li><span class="pc-check">&#10003;</span>Setup guidato &plus; installazione inclusa (20 min)</li>
+        </ul>
+        <a href="/onboarding" class="btn btn-green" style="width:100%;justify-content:center;padding:18px">Attiva il trial gratis &rarr;</a>
+        <p class="pc-note">Nessuna carta richiesta. Cancelli in qualsiasi momento. Un lead recuperato = &euro;5.000+ di commissione.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FAQ ════════════════════════════════════════════════════════════════ -->
+<section class="faq-section">
+  <div class="container">
+    <div class="faq-intro fade-up">
+      <div class="label" style="margin-bottom:14px">FAQ</div>
+      <h2>Domande frequenti</h2>
+    </div>
+    <div class="faq-grid">
+      <div class="faq-col">
+        <div class="faq-item">
+          <button class="faq-q">Non ho gi&agrave; un form sul mio sito?</button>
+          <div class="faq-a">S&igrave;, ce l&rsquo;hai. Ma il form raccoglie dati e si ferma l&igrave;. GetAutomatik &egrave; il layer sopra: risponde in 2 minuti, qualifica il lead su budget e zona, propone uno slot di visita e ti manda la card completa. Non sostituisce il form &mdash; lo trasforma da buco nero a macchina di conversione.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">I lead capiranno che &egrave; un AI?</button>
+          <div class="faq-a">La grande maggioranza no. La risposta &egrave; professionale, calda e personalizzata con il nome della tua agenzia. Se un lead chiede esplicitamente, il sistema lo indica. In ogni caso il risultato che conta &egrave; che il lead riceve una risposta in 2 minuti invece di nessuna risposta.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Funziona con Idealista e Immobiliare.it?</button>
+          <div class="faq-a">S&igrave;. Questi portali inviano notifiche via email quando arriva un lead. In 2 minuti configuri il forwarding automatico di queste email a GetAutomatik &mdash; poi il sistema risponde direttamente al lead per tuo conto, con il tuo nome.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Come funziona la prenotazione della visita?</button>
+          <div class="faq-a">Nel setup inserisci i tuoi slot disponibili (es. martedì e giovedì mattina, venerdì pomeriggio). L&rsquo;AI li propone al lead dopo la qualifica e il lead sceglie direttamente in chat. Tu ricevi la conferma nella card &mdash; non devi fare niente, la visita &egrave; gi&agrave; in agenda.</div>
+        </div>
+      </div>
+      <div class="faq-col">
+        <div class="faq-item">
+          <button class="faq-q">Quanto tempo ci vuole per configurarlo?</button>
+          <div class="faq-a">15 minuti per l&rsquo;onboarding base. L&rsquo;installazione del chatbot sul sito la facciamo noi &mdash; una videocall di 20 minuti in screen share e sei completamente operativo. Nessuna competenza tecnica richiesta.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Posso personalizzare il chatbot per la mia agenzia?</button>
+          <div class="faq-a">Completamente. Nell&rsquo;onboarding inserisci le zone che copri, i range di prezzo tipici, le tipologie di immobili che tratti e il tono della tua agenzia. L&rsquo;AI usa queste informazioni per qualificare in modo specifico e coerente con il tuo brand.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Cosa succede ai lead che non rispondono?</button>
+          <div class="faq-a">GetAutomatik invia un follow-up automatico a 24h e uno a 48h con messaggi diversi. Se il lead risponde, il sistema riprende la conversazione. Se non risponde dopo 3 tentativi, il lead viene marcato come &ldquo;dormiente&rdquo; e tu ricevi un avviso per decidere come procedere.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Posso vedere tutte le conversazioni?</button>
+          <div class="faq-a">S&igrave;, hai una dashboard completa con tutte le conversazioni, i lead qualificati, le visite prenotate e le statistiche di conversione. Puoi intervenire manualmente in qualsiasi momento e prendere il controllo della conversazione.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FINAL CTA ══════════════════════════════════════════════════════════ -->
+<section class="cta-section">
+  <div class="container">
+    <div class="fade-up">
+      <div class="label-dark" style="margin-bottom:20px">Inizia adesso</div>
+      <h2>Il prossimo lead fuori orario<br>potrebbe valere &euro;6.000.</h2>
+      <p>Setup in 15 minuti. Nessuna carta. Cancelli quando vuoi.<br>Il primo lead recuperato paga il trial intero.</p>
+      <div class="cta-ctas">
+        <a href="/onboarding" class="btn btn-green">Attiva gratis per 7 giorni &rarr;</a>
+        <a href="/chatbot-demo" class="btn btn-outline-dark">Guarda la demo completa</a>
+      </div>
+      <div class="cta-note">Gi&agrave; usato da agenzie a Milano, Roma, Torino, Bologna &middot; Setup incluso, nessun costo aggiuntivo</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══════════════════════════════════════════════════════════════ -->
 <footer>
-  <div class="footer-inner">
-    <div class="logo" style="font-size:16px">Get<span>Automatik</span> <span style="font-weight:400;color:var(--muted);font-size:13px">&copy; 2026</span></div>
-    <div class="footer-links">
-      <a href="mailto:info@getautomatik.com">info@getautomatik.com</a>
-      <a href="#">Privacy</a>
-      <a href="#">Termini</a>
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-logo-text">Get<span>Automatik</span></div>
+        <div class="footer-tagline">AI per agenzie immobiliari italiane &mdash; &copy; 2026</div>
+      </div>
+      <div class="footer-links">
+        <a href="mailto:info@getautomatik.com">info@getautomatik.com</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Termini di servizio</a>
+        <a href="/dashboard">Dashboard</a>
+      </div>
     </div>
   </div>
 </footer>
 
+<!-- ══ SCRIPTS ════════════════════════════════════════════════════════════ -->
 <script>
+/* ── Scroll animations ── */
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, {threshold: 0.12});
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+/* ── FAQ ── */
 document.querySelectorAll('.faq-q').forEach(btn => {
   btn.addEventListener('click', () => {
     const item = btn.closest('.faq-item');
@@ -447,41 +1039,41 @@ document.querySelectorAll('.faq-q').forEach(btn => {
   });
 });
 
+/* ── Live chat ── */
 const chatHistory = [
-  {role: 'assistant', content: "Ciao! Sono l'assistente della nostra agenzia. Cosa stai cercando — acquisto o affitto?"}
+  {role:'assistant', content:"Ciao! Sono l'assistente dell'agenzia. Cosa stai cercando — acquisto o affitto?"}
 ];
 
-async function sendChat() {
-  const input = document.getElementById('chat-in');
-  const btn = document.getElementById('chat-btn');
-  const msgs = document.getElementById('chat-msgs');
-  const text = input.value.trim();
+async function lcSend() {
+  const inp = document.getElementById('lc-in');
+  const btn = document.getElementById('lc-btn');
+  const msgs = document.getElementById('lc-msgs');
+  const text = inp.value.trim();
   if (!text) return;
-  chatHistory.push({role: 'user', content: text});
-  msgs.innerHTML += `<div class="cmsg cmsg-user">${text}</div>`;
-  input.value = '';
-  btn.disabled = true;
+  chatHistory.push({role:'user', content: text});
+  msgs.innerHTML += `<div class="lm lm-user">${text}</div>`;
+  inp.value = ''; btn.disabled = true;
   msgs.scrollTop = msgs.scrollHeight;
-  const typingId = 'typing-' + Date.now();
-  msgs.innerHTML += `<div id="${typingId}" class="typing"><span></span><span></span><span></span></div>`;
+  const tid = 'ty' + Date.now();
+  msgs.innerHTML += `<div id="${tid}" class="lc-typing"><span></span><span></span><span></span></div>`;
   msgs.scrollTop = msgs.scrollHeight;
   try {
-    const resp = await fetch('/api/chat', {
+    const r = await fetch('/api/chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({cid: 'demo-immobiliare', history: chatHistory})
     });
-    const data = await resp.json();
-    const reply = data.reply || 'Come posso aiutarti?';
-    chatHistory.push({role: 'assistant', content: reply});
-    document.getElementById(typingId)?.remove();
-    msgs.innerHTML += `<div class="cmsg cmsg-ai">${reply}</div>`;
-    if (data.qualified) {
-      msgs.innerHTML += `<div style="background:rgba(0,232,122,0.06);border:1px solid rgba(0,232,122,0.2);border-radius:10px;padding:12px;font-size:12px;color:#00e87a;font-weight:600;text-align:center;margin-top:4px">&#128197; Visita prenotata — l'agente riceve la card completa adesso.</div>`;
+    const d = await r.json();
+    const reply = d.reply || 'Come posso aiutarti?';
+    chatHistory.push({role:'assistant', content: reply});
+    document.getElementById(tid)?.remove();
+    msgs.innerHTML += `<div class="lm lm-ai">${reply}</div>`;
+    if (d.qualified) {
+      msgs.innerHTML += `<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 14px;font-size:13px;color:#15803d;font-weight:600;margin-top:4px">&#128197; Visita prenotata — l'agente riceve la card adesso.</div>`;
     }
   } catch(e) {
-    document.getElementById(typingId)?.remove();
-    msgs.innerHTML += `<div class="cmsg cmsg-ai">Errore di connessione. Riprova.</div>`;
+    document.getElementById(tid)?.remove();
+    msgs.innerHTML += `<div class="lm lm-ai">Errore di connessione. Riprova.</div>`;
   }
   btn.disabled = false;
   msgs.scrollTop = msgs.scrollHeight;
