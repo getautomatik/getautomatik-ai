@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GetAutomatik — Nessun lead immobiliare perso. Mai più.</title>
-<meta name="description" content="GetAutomatik risponde ai lead immobiliari in 2 minuti, li qualifica e ti consegna solo chi è pronto a visitare. Per agenzie immobiliari italiane.">
+<title>GetAutomatik — Dal lead al sopralluogo. In automatico.</title>
+<meta name="description" content="GetAutomatik converte le richieste immobiliari in appuntamenti: risponde in 2 minuti, qualifica il lead e prenota la visita. Per agenzie immobiliari italiane.">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -23,16 +23,16 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,8,18,0.88);backdrop-filt
 
 .hero{max-width:1100px;margin:0 auto;padding:90px 24px 60px;text-align:center}
 .eyebrow{display:inline-block;background:rgba(0,232,122,0.1);border:1px solid rgba(0,232,122,0.25);color:var(--green);padding:6px 16px;border-radius:50px;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:28px}
-h1{font-size:clamp(36px,6vw,70px);font-weight:900;letter-spacing:-2.5px;line-height:1.02;margin-bottom:22px}
+h1{font-size:clamp(36px,6vw,68px);font-weight:900;letter-spacing:-2.5px;line-height:1.02;margin-bottom:22px}
 h1 span{color:var(--green)}
-.hero-sub{font-size:19px;color:var(--muted);max-width:600px;margin:0 auto 38px;line-height:1.65}
+.hero-sub{font-size:19px;color:var(--muted);max-width:580px;margin:0 auto 38px;line-height:1.65}
 .hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
 .btn-lg{padding:16px 32px;font-size:16px;border-radius:12px}
 .btn-outline{border:1px solid var(--border);color:var(--text);text-decoration:none;display:inline-block;border-radius:12px;padding:15px 32px;font-size:16px;font-weight:600;transition:border-color .2s}
 .btn-outline:hover{border-color:rgba(255,255,255,0.25)}
 .hero-trust{margin-top:44px;display:flex;gap:28px;justify-content:center;flex-wrap:wrap}
 .trust-item{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px}
-.trust-item::before{content:'✓';color:var(--green);font-weight:700}
+.trust-item::before{content:'&#10003;';color:var(--green);font-weight:700}
 
 section{padding:72px 0}
 .container{max-width:1100px;margin:0 auto;padding:0 24px}
@@ -40,11 +40,20 @@ section{padding:72px 0}
 .section-title{font-size:clamp(26px,4vw,42px);font-weight:900;letter-spacing:-1.2px;line-height:1.1;margin-bottom:14px}
 .section-sub{font-size:17px;color:var(--muted);max-width:560px}
 
-/* PROBLEMA */
-.problem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
-.problem-card{background:rgba(220,38,38,0.06);border:1px solid rgba(220,38,38,0.18);border-radius:16px;padding:28px 24px}
-.problem-card .label{font-size:12px;color:#ef4444;font-weight:700;letter-spacing:0.5px;margin-bottom:14px;text-transform:uppercase}
-.problem-card p{font-size:15px;line-height:1.65;color:rgba(240,240,245,0.75)}
+/* CONTRASTO form vs GA */
+.contrast-wrap{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:48px}
+.contrast-card{border-radius:20px;padding:32px}
+.contrast-bad{background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.18)}
+.contrast-good{background:rgba(0,232,122,0.05);border:1px solid rgba(0,232,122,0.2)}
+.contrast-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+.contrast-bad .contrast-tag{color:#ef4444}
+.contrast-good .contrast-tag{color:var(--green)}
+.contrast-title{font-size:20px;font-weight:800;margin-bottom:18px;letter-spacing:-0.5px}
+.contrast-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.contrast-list li{font-size:14px;line-height:1.55;padding-left:20px;position:relative;color:rgba(240,240,245,0.75)}
+.contrast-list li::before{position:absolute;left:0;font-weight:700}
+.contrast-bad .contrast-list li::before{content:'✗';color:#ef4444}
+.contrast-good .contrast-list li::before{content:'✓';color:var(--green)}
 
 /* NUMERI */
 .numbers-bg{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
@@ -54,11 +63,10 @@ section{padding:72px 0}
 .number-val{font-size:44px;font-weight:900;letter-spacing:-2px;color:var(--green);line-height:1;margin-bottom:8px}
 .number-label{font-size:13px;color:var(--muted)}
 
-/* DEMO — lead card */
+/* DEMO */
 .demo-section{background:linear-gradient(180deg,var(--bg) 0%,rgba(0,180,216,0.03) 50%,var(--bg) 100%);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .demo-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-top:48px}
 
-/* thread conversazione */
 .conv-wrap{display:flex;flex-direction:column;gap:10px}
 .msg{border-radius:14px;padding:14px 18px;font-size:14px;line-height:1.65;max-width:85%}
 .msg-lead{background:var(--surface);border:1px solid var(--border);align-self:flex-start}
@@ -68,22 +76,22 @@ section{padding:72px 0}
 .timer{text-align:center;padding:4px 0}
 .timer-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,180,216,0.1);border:1px solid rgba(0,180,216,0.25);color:#00b4d8;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700}
 
-/* lead card */
 .lead-card{background:var(--surface);border:1px solid rgba(0,232,122,0.3);border-radius:16px;padding:24px;margin-top:8px}
-.lead-card-header{font-size:12px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.lead-card-header{font-size:12px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:16px}
 .lead-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
 .lead-row:last-child{border-bottom:none}
 .lead-lbl{color:var(--muted)}
 .lead-val{font-weight:600}
 .lead-val.highlight{color:var(--green)}
+.lead-val.appt{color:#00b4d8;font-weight:700}
 .lead-cta{margin-top:16px;background:rgba(0,232,122,0.1);border:1px solid rgba(0,232,122,0.25);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--green);font-weight:600;text-align:center}
 
-/* chat demo */
+/* CHAT LIVE */
 .chat-demo{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
 .chat-header{background:linear-gradient(90deg,rgba(0,232,122,0.12),rgba(0,180,216,0.08));border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:10px}
 .chat-dot{width:9px;height:9px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.chat-messages{padding:16px;display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:320px;overflow-y:auto}
+.chat-messages{padding:16px;display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:340px;overflow-y:auto}
 .cmsg{max-width:82%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.55}
 .cmsg-ai{align-self:flex-start;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);border-radius:4px 12px 12px 12px}
 .cmsg-user{align-self:flex-end;background:rgba(0,232,122,0.15);border:1px solid rgba(0,232,122,0.2);color:#fff;border-radius:12px 4px 12px 12px}
@@ -100,12 +108,12 @@ section{padding:72px 0}
 .demo-note{font-size:12px;color:var(--muted);text-align:center;padding:8px;border-top:1px solid var(--border)}
 
 /* FLUSSO */
-.flow-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:48px;position:relative}
-.flow-steps::before{content:'';position:absolute;top:28px;left:12.5%;right:12.5%;height:1px;background:linear-gradient(90deg,var(--green),var(--blue));opacity:.3}
-.flow-step{text-align:center;padding:0 16px}
-.flow-icon{width:56px;height:56px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px;position:relative;z-index:1}
-.flow-step h3{font-size:15px;font-weight:700;margin-bottom:6px}
-.flow-step p{font-size:13px;color:var(--muted);line-height:1.55}
+.flow-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:48px;position:relative}
+.flow-steps::before{content:'';position:absolute;top:28px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,var(--green),var(--blue));opacity:.3}
+.flow-step{text-align:center;padding:0 12px}
+.flow-icon{width:56px;height:56px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 16px;position:relative;z-index:1}
+.flow-step h3{font-size:14px;font-weight:700;margin-bottom:6px}
+.flow-step p{font-size:12px;color:var(--muted);line-height:1.55}
 
 /* PRICING */
 .pricing-wrap{display:flex;justify-content:center;gap:24px;margin-top:48px;flex-wrap:wrap}
@@ -135,13 +143,18 @@ footer{border-top:1px solid var(--border);padding:32px 0}
 .footer-links a{color:var(--muted);text-decoration:none;font-size:13px}
 .footer-links a:hover{color:var(--text)}
 
-@media(max-width:860px){
-  .problem-grid,.numbers-grid{grid-template-columns:1fr}
-  .number-item{border-right:none;border-bottom:1px solid var(--border)}
-  .number-item:last-child{border-bottom:none}
-  .demo-layout{grid-template-columns:1fr}
-  .flow-steps{grid-template-columns:repeat(2,1fr);gap:24px}
+@media(max-width:900px){
+  .contrast-wrap,.demo-layout{grid-template-columns:1fr}
+  .numbers-grid{grid-template-columns:repeat(2,1fr)}
+  .number-item:nth-child(2){border-right:none}
+  .number-item:nth-child(3){border-top:1px solid var(--border)}
+  .flow-steps{grid-template-columns:repeat(3,1fr);gap:24px}
   .flow-steps::before{display:none}
+}
+@media(max-width:600px){
+  .flow-steps{grid-template-columns:1fr 1fr}
+  .numbers-grid{grid-template-columns:1fr}
+  .number-item{border-right:none;border-bottom:1px solid var(--border)}
 }
 </style>
 </head>
@@ -163,11 +176,11 @@ footer{border-top:1px solid var(--border);padding:32px 0}
 <!-- HERO -->
 <section class="hero">
   <div class="eyebrow">Per agenzie immobiliari italiane</div>
-  <h1>I tuoi lead rispondono<br>alle <span>22:00.</span> Tu no.</h1>
-  <p class="hero-sub">GetAutomatik risponde ai lead immobiliari in 2 minuti, li qualifica — zona, budget, tempistica, mutuo — e ti consegna solo chi è davvero pronto a visitare.</p>
+  <h1>Il form raccoglie.<br><span>GetAutomatik</span> converte.</h1>
+  <p class="hero-sub">Ogni richiesta sul tuo sito diventa un appuntamento qualificato. Risposta in 2 minuti, qualifica automatica, visita prenotata — senza toccare niente tu.</p>
   <div class="hero-ctas">
     <a href="/onboarding" class="btn-primary btn-lg">Attiva gratis per 7 giorni</a>
-    <a href="#demo" class="btn-outline">Guarda come funziona ↓</a>
+    <a href="#perche-non-basta-il-form" class="btn-outline">Perch&eacute; non basta il form &darr;</a>
   </div>
   <div class="hero-trust">
     <div class="trust-item">Setup in 15 minuti</div>
@@ -176,24 +189,34 @@ footer{border-top:1px solid var(--border);padding:32px 0}
   </div>
 </section>
 
-<!-- PROBLEMA -->
-<section>
+<!-- CONTRASTO form vs GA -->
+<section id="perche-non-basta-il-form">
   <div class="container">
     <div class="section-label">Il problema</div>
-    <h2 class="section-title">Ogni lead perso fuori orario<br>è una commissione regalata.</h2>
-    <p class="section-sub">Un appartamento da €250.000 vale €5.000-8.000 di commissione. Quante ne perdi ogni mese perché nessuno risponde la sera?</p>
-    <div class="problem-grid">
-      <div class="problem-card">
-        <div class="label">Scenario 1</div>
-        <p><strong>Lead da Idealista alle 21:45.</strong> Manda un'email. Nessuna risposta. Alle 8:00 del giorno dopo ha già visitato con un'altra agenzia che aveva il chatbot attivo.</p>
+    <h2 class="section-title">Hai gi&agrave; un form. Stai gi&agrave; perdendo lead.</h2>
+    <p class="section-sub">Il form raccoglie dati. Non risponde, non qualifica, non prenota. Ogni ora di ritardo nella risposta dimezza la probabilit&agrave; di chiudere la visita.</p>
+    <div class="contrast-wrap">
+      <div class="contrast-card contrast-bad">
+        <div class="contrast-tag">Form tradizionale</div>
+        <div class="contrast-title">Raccoglie un contatto.</div>
+        <ul class="contrast-list">
+          <li>Il lead aspetta ore — o giorni — per una risposta</li>
+          <li>Nessuna qualifica: budget, zona, mutuo sono ancora sconosciuti</li>
+          <li>L'agente chiama un estraneo e riparte da zero</li>
+          <li>Nessun follow-up automatico se il lead non risponde</li>
+          <li>Il lead intanto ha gi&agrave; visitato con un'altra agenzia</li>
+        </ul>
       </div>
-      <div class="problem-card">
-        <div class="label">Scenario 2</div>
-        <p><strong>Risponde il giorno dopo.</strong> Il lead era curioso ma non qualificato. 40 minuti al telefono per scoprire che non ha il mutuo e cerca in un'altra zona. Tempo sprecato.</p>
-      </div>
-      <div class="problem-card">
-        <div class="label">Scenario 3</div>
-        <p><strong>Lead "freddo".</strong> Ha scritto 3 settimane fa. L'hai richiamato tardi. Adesso non risponde più. Il follow-up manuale non è mai sistematico.</p>
+      <div class="contrast-card contrast-good">
+        <div class="contrast-tag">GetAutomatik</div>
+        <div class="contrast-title">Converte in appuntamento.</div>
+        <ul class="contrast-list">
+          <li>Risposta in 2 minuti — anche alle 22:00 di domenica</li>
+          <li>Qualifica completa: cosa cerca, zona, budget, mutuo, prima casa</li>
+          <li>Propone slot di visita e prenota direttamente in chat</li>
+          <li>Follow-up automatici ai lead che non rispondono</li>
+          <li>L'agente riceve una card con tutto — chiama sapendo gi&agrave; tutto</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -208,12 +231,12 @@ footer{border-top:1px solid var(--border);padding:32px 0}
         <div class="number-label">Risposta media al lead</div>
       </div>
       <div class="number-item">
-        <div class="number-val">5</div>
-        <div class="number-label">Domande di qualifica prima della chiamata</div>
+        <div class="number-val">5+</div>
+        <div class="number-label">Info raccolte prima della chiamata</div>
       </div>
       <div class="number-item">
         <div class="number-val">24/7</div>
-        <div class="number-label">Attivo anche la domenica alle 22</div>
+        <div class="number-label">Attivo anche domenica sera</div>
       </div>
       <div class="number-item">
         <div class="number-val">0</div>
@@ -227,27 +250,32 @@ footer{border-top:1px solid var(--border);padding:32px 0}
 <section id="come-funziona">
   <div class="container">
     <div class="section-label">Come funziona</div>
-    <h2 class="section-title">Dal lead freddo al contatto qualificato.<br>In automatico.</h2>
+    <h2 class="section-title">Dal primo messaggio alla visita prenotata.<br>Tutto in automatico.</h2>
     <div class="flow-steps">
       <div class="flow-step">
-        <div class="flow-icon">📩</div>
-        <h3>Il lead scrive</h3>
-        <p>Email, form sito, chatbot — GetAutomatik intercetta tutto, anche alle 23:00 di sabato.</p>
+        <div class="flow-icon">&#128233;</div>
+        <h3>Lead scrive</h3>
+        <p>Email, form sito, chatbot — anche alle 23:00 di sabato.</p>
       </div>
       <div class="flow-step">
-        <div class="flow-icon">🤖</div>
+        <div class="flow-icon">&#129302;</div>
         <h3>Risposta in 2 min</h3>
-        <p>L'AI risponde in modo professionale e inizia a qualificare: cosa cerca, dove, con quale budget.</p>
+        <p>L'AI risponde in modo professionale e inizia la qualifica.</p>
       </div>
       <div class="flow-step">
-        <div class="flow-icon">✅</div>
+        <div class="flow-icon">&#10003;</div>
         <h3>Lead qualificato</h3>
-        <p>Zona, budget, tempistica, prima casa o investimento, situazione mutuo. Tutto raccolto prima che tu dica una parola.</p>
+        <p>Zona, budget, mutuo, prima casa. Tutto raccolto.</p>
       </div>
       <div class="flow-step">
-        <div class="flow-icon">📲</div>
-        <h3>Ti arriva la card</h3>
-        <p>Ricevi una notifica con tutti i dati. Tu chiami sapendo già se vale il tempo di una visita.</p>
+        <div class="flow-icon">&#128197;</div>
+        <h3>Visita prenotata</h3>
+        <p>L'AI propone 2 slot e il lead sceglie direttamente in chat.</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-icon">&#128242;</div>
+        <h3>Card all'agente</h3>
+        <p>Ricevi tutto: dati, visita prenotata, lead pronto.</p>
       </div>
     </div>
   </div>
@@ -257,61 +285,57 @@ footer{border-top:1px solid var(--border);padding:32px 0}
 <section id="demo" class="demo-section">
   <div class="container">
     <div class="section-label">Demo</div>
-    <h2 class="section-title">Cosa vede il tuo lead.<br>Cosa ricevi tu.</h2>
+    <h2 class="section-title">Cosa succede dopo la richiesta.<br>Dall'inizio alla visita prenotata.</h2>
 
     <div class="demo-layout">
 
       <!-- conversazione reale -->
       <div>
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px">Conversazione reale — domenica ore 22:18</div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px">Conversazione reale &mdash; domenica ore 22:18</div>
         <div class="conv-wrap">
 
           <div class="msg msg-lead">
-            <div class="who">Marco P. — da Immobiliare.it</div>
-            Salve, ho visto l'annuncio del trilocale in Via Veneto. Avrei interesse a saperne di più.
+            <div class="who">Marco P. &mdash; da Immobiliare.it</div>
+            Salve, ho visto il trilocale in Via Veneto. Vorrei saperne di pi&ugrave;.
           </div>
 
-          <div class="timer"><span class="timer-badge">⚡ GetAutomatik risponde in 1 min 53 sec</span></div>
+          <div class="timer"><span class="timer-badge">&#9889; GetAutomatik risponde in 1 min 53 sec</span></div>
 
           <div class="msg msg-ai">
-            <div class="who">Assistente — Agenzia Rossi Immobili</div>
-            Ciao Marco! Il trilocale di Via Veneto è ancora disponibile. Per capire se fa al caso tuo: stai cercando per abitazione principale o come investimento?
+            <div class="who">Assistente &mdash; Agenzia Rossi Immobili</div>
+            Ciao Marco! Il trilocale &egrave; ancora disponibile. Stai cercando per abitazione principale o come investimento?
           </div>
 
-          <div class="msg msg-lead">
-            <div class="who">Marco P.</div>
-            Abitazione principale, vorremmo trasferirci entro l'estate.
-          </div>
+          <div class="msg msg-lead"><div class="who">Marco P.</div>Abitazione principale, entro l'estate.</div>
 
           <div class="msg msg-ai">
-            <div class="who">Assistente — Agenzia Rossi Immobili</div>
-            Perfetto, tempistica chiara. Avete già un'idea di budget massimo? E avete già parlato con una banca o avete il mutuo da definire?
+            <div class="who">Assistente &mdash; Agenzia Rossi Immobili</div>
+            Ottimo. Hai un budget massimo in mente? E hai gi&agrave; una pre-approvazione del mutuo?
           </div>
 
-          <div class="msg msg-lead">
-            <div class="who">Marco P.</div>
-            Budget fino a 320k, abbiamo già la pre-approvazione del mutuo. Siamo pronti.
-          </div>
+          <div class="msg msg-lead"><div class="who">Marco P.</div>Budget fino a 320k, mutuo pre-approvato.</div>
 
           <div class="msg msg-ai">
-            <div class="who">Assistente — Agenzia Rossi Immobili</div>
-            Ottimo — budget e mutuo a posto, siete nella posizione migliore per muovervi velocemente. Mi lasci il suo numero così l'agente la chiama domani mattina per fissare la visita?
+            <div class="who">Assistente &mdash; Agenzia Rossi Immobili</div>
+            Perfetto &mdash; sei nella posizione migliore per muoverti. Preferisce visitare marted&igrave; alle 10:30 o gioved&igrave; alle 15:00?
           </div>
 
-          <div class="msg msg-lead">
-            <div class="who">Marco P.</div>
-            Certo, 3381234567
+          <div class="msg msg-lead"><div class="who">Marco P.</div>Gioved&igrave; alle 15 va benissimo. Sono Marco Pellegrini, 3381234567.</div>
+
+          <div class="msg msg-ai">
+            <div class="who">Assistente &mdash; Agenzia Rossi Immobili</div>
+            Perfetto Marco, confermo la visita per gioved&igrave; alle 15:00. L'agente la contatter&agrave; domani mattina per i dettagli. Ci vediamo l&igrave;!
           </div>
 
           <div class="lead-card">
-            <div class="lead-card-header">📲 Card inviata all'agente — ore 22:24</div>
-            <div class="lead-row"><span class="lead-lbl">Nome</span><span class="lead-val">Marco P.</span></div>
+            <div class="lead-card-header">&#128242; Card inviata all'agente &mdash; ore 22:26</div>
+            <div class="lead-row"><span class="lead-lbl">Nome</span><span class="lead-val">Marco Pellegrini</span></div>
             <div class="lead-row"><span class="lead-lbl">Telefono</span><span class="lead-val highlight">3381234567</span></div>
-            <div class="lead-row"><span class="lead-lbl">Cerca</span><span class="lead-val">Trilocale — abitazione principale</span></div>
-            <div class="lead-row"><span class="lead-lbl">Budget</span><span class="lead-val highlight">fino a €320.000</span></div>
-            <div class="lead-row"><span class="lead-lbl">Mutuo</span><span class="lead-val highlight">Pre-approvato ✓</span></div>
-            <div class="lead-row"><span class="lead-lbl">Tempistica</span><span class="lead-val">Entro l'estate</span></div>
-            <div class="lead-cta">Lead caldo — chiama domani mattina. È pronto a visitare.</div>
+            <div class="lead-row"><span class="lead-lbl">Cerca</span><span class="lead-val">Trilocale &mdash; abitazione principale</span></div>
+            <div class="lead-row"><span class="lead-lbl">Budget</span><span class="lead-val highlight">fino a &euro;320.000</span></div>
+            <div class="lead-row"><span class="lead-lbl">Mutuo</span><span class="lead-val highlight">Pre-approvato &#10003;</span></div>
+            <div class="lead-row"><span class="lead-lbl">Visita</span><span class="lead-val appt">Gioved&igrave; ore 15:00 &#128197;</span></div>
+            <div class="lead-cta">Visita gi&agrave; prenotata &mdash; conferma con una telefonata rapida.</div>
           </div>
 
         </div>
@@ -319,23 +343,23 @@ footer{border-top:1px solid var(--border);padding:32px 0}
 
       <!-- chat live -->
       <div>
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px">Prova tu — chatbot live</div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px">Prova tu &mdash; chatbot live</div>
         <div class="chat-demo">
           <div class="chat-header">
             <div class="chat-dot"></div>
             <div>
               <div style="font-size:14px;font-weight:700">Assistente GetAutomatik</div>
-              <div style="font-size:11px;color:var(--muted)">Agenzie immobiliari · risponde sempre</div>
+              <div style="font-size:11px;color:var(--muted)">Agenzie immobiliari &middot; risponde sempre</div>
             </div>
           </div>
           <div class="chat-messages" id="chat-msgs">
-            <div class="cmsg cmsg-ai">Ciao! Sono l'assistente della nostra agenzia. Cosa stai cercando — acquisto o affitto?</div>
+            <div class="cmsg cmsg-ai">Ciao! Sono l'assistente della nostra agenzia. Cosa stai cercando &mdash; acquisto o affitto?</div>
           </div>
           <div class="chat-input-row">
             <input class="chat-input" id="chat-in" placeholder="Scrivi qui..." onkeydown="if(event.key==='Enter')sendChat()">
             <button class="chat-send" id="chat-btn" onclick="sendChat()">Invia</button>
           </div>
-          <div class="demo-note">Demo live — risponde l'AI reale configurata per agenzie immobiliari</div>
+          <div class="demo-note">Demo live &mdash; risponde l'AI reale. Prova fino alla prenotazione della visita.</div>
         </div>
       </div>
 
@@ -347,23 +371,24 @@ footer{border-top:1px solid var(--border);padding:32px 0}
 <section id="prezzi">
   <div class="container" style="text-align:center">
     <div class="section-label">Prezzi</div>
-    <h2 class="section-title">Un lead recuperato paga<br>6 mesi di abbonamento.</h2>
+    <h2 class="section-title">Una visita recuperata paga<br>anni di abbonamento.</h2>
+    <p class="section-sub" style="margin:0 auto 48px;text-align:center">Commissione media su un appartamento a Milano: &euro;5.000&ndash;8.000. Il costo annuo di GetAutomatik: &euro;3.564.</p>
     <div class="pricing-wrap">
       <div class="pricing-card">
         <div class="trial-badge">7 giorni gratis</div>
-        <div class="price-main">297€</div>
-        <div class="price-period">al mese — disdici quando vuoi</div>
+        <div class="price-main">297&euro;</div>
+        <div class="price-period">al mese &mdash; disdici quando vuoi</div>
         <ul class="features-list">
-          <li><span class="check">✓</span> Risposta automatica ai lead 24/7 — anche domenica sera</li>
-          <li><span class="check">✓</span> Qualificazione: zona, budget, mutuo, tempistica</li>
-          <li><span class="check">✓</span> Card lead completa via email e notifica immediata</li>
-          <li><span class="check">✓</span> Follow-up automatici ai lead non risposti</li>
-          <li><span class="check">✓</span> Chatbot sul tuo sito web</li>
-          <li><span class="check">✓</span> Integrazione email (Gmail, Outlook, PEC)</li>
-          <li><span class="check">✓</span> Setup guidato + installazione inclusa</li>
+          <li><span class="check">&#10003;</span> Risposta automatica ai lead 24/7 &mdash; anche domenica sera</li>
+          <li><span class="check">&#10003;</span> Qualificazione: zona, budget, mutuo, prima casa</li>
+          <li><span class="check">&#10003;</span> Prenotazione visita direttamente in chat</li>
+          <li><span class="check">&#10003;</span> Card lead completa via email + notifica immediata</li>
+          <li><span class="check">&#10003;</span> Follow-up automatici ai lead non risposti</li>
+          <li><span class="check">&#10003;</span> Chatbot sul tuo sito + integrazione email</li>
+          <li><span class="check">&#10003;</span> Setup guidato + installazione inclusa</li>
         </ul>
-        <a href="/onboarding" class="btn-primary" style="width:100%;display:block;text-align:center;padding:17px;font-size:16px;border-radius:12px">Attiva gratis ora →</a>
-        <p class="price-note">Nessuna carta per il trial. 1 lead recuperato = €5.000+ di commissione. Il costo annuo è €3.564.</p>
+        <a href="/onboarding" class="btn-primary" style="width:100%;display:block;text-align:center;padding:17px;font-size:16px;border-radius:12px">Attiva gratis ora &rarr;</a>
+        <p class="price-note">Nessuna carta per il trial. Un lead recuperato = &euro;5.000+ di commissione.</p>
       </div>
     </div>
   </div>
@@ -376,24 +401,24 @@ footer{border-top:1px solid var(--border);padding:32px 0}
     <h2 class="section-title">Domande frequenti</h2>
     <div class="faq-list">
       <div class="faq-item">
-        <button class="faq-q">I lead capiranno che è un AI?</button>
-        <div class="faq-a">La maggior parte no — la risposta è professionale, immediata e personalizzata. Se un lead chiede esplicitamente, il sistema lo indica. In ogni caso il tuo marchio e il nome della tua agenzia sono sempre in primo piano. L'importante è che il lead riceva risposta in 2 minuti invece di nessuna risposta.</div>
+        <button class="faq-q">Non ho gi&agrave; un form di contatto sul sito?</button>
+        <div class="faq-a">S&igrave;, ce l'hai. Ma il form raccoglie dati e si ferma l&igrave;. GetAutomatik &egrave; il layer sopra il form: risponde in 2 minuti, qualifica il lead su budget e zona, propone uno slot di visita e ti manda una card completa. Non sostituisce il form &mdash; lo trasforma in una macchina di conversione.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">I lead capiranno che &egrave; un AI?</button>
+        <div class="faq-a">La maggior parte no &mdash; la risposta &egrave; professionale, immediata e personalizzata. Se un lead chiede esplicitamente, il sistema lo indica. In ogni caso il tuo marchio e il nome della tua agenzia sono sempre in primo piano. L'importante &egrave; che il lead riceva risposta in 2 minuti invece di nessuna risposta.</div>
       </div>
       <div class="faq-item">
         <button class="faq-q">Funziona con i lead di Idealista, Immobiliare.it e Casa.it?</button>
-        <div class="faq-a">Sì. Questi portali inviano notifiche via email quando arriva un lead. Bastano 2 minuti per impostare l'inoltro automatico di queste email a GetAutomatik — poi il sistema risponde direttamente al lead per tuo conto.</div>
+        <div class="faq-a">S&igrave;. Questi portali inviano notifiche via email quando arriva un lead. Bastano 2 minuti per impostare l'inoltro automatico di queste email a GetAutomatik &mdash; poi il sistema risponde direttamente al lead per tuo conto.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Come funziona la prenotazione della visita?</button>
+        <div class="faq-a">Quando onboardi inserisci i tuoi slot disponibili (es. lunedì e giovedì mattina). L'AI li propone al lead alla fine della qualifica e il lead sceglie direttamente in chat. Tu ricevi la conferma nella card e devi solo richiamare per i dettagli. Nessuna chiamata a freddo per fissare l'appuntamento.</div>
       </div>
       <div class="faq-item">
         <button class="faq-q">Quanto tempo ci vuole per configurarlo?</button>
-        <div class="faq-a">15 minuti per l'onboarding base. L'installazione del chatbot sul sito la facciamo noi — una chiamata di 20 minuti in screen share e sei operativo.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">Posso personalizzare le domande che fa l'AI?</button>
-        <div class="faq-a">Sì. Nell'onboarding inserisci le zone che copri, i tuoi range di prezzo, il tipo di immobili che tratti. L'AI usa queste informazioni per qualificare in modo specifico per la tua agenzia.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q">Cosa succede se un lead è già nella mia area?</button>
-        <div class="faq-a">Ricevi la card completa con tutti i dati raccolti. Puoi rispondere tu manualmente o lasciare che l'AI continui la conversazione fino alla prenotazione della visita. Il controllo è sempre tuo.</div>
+        <div class="faq-a">15 minuti per l'onboarding base. L'installazione del chatbot sul sito la facciamo noi &mdash; una chiamata di 20 minuti in screen share e sei operativo.</div>
       </div>
     </div>
   </div>
@@ -403,7 +428,7 @@ footer{border-top:1px solid var(--border);padding:32px 0}
 
 <footer>
   <div class="footer-inner">
-    <div class="logo" style="font-size:16px">Get<span>Automatik</span> <span style="font-weight:400;color:var(--muted);font-size:13px">© 2026</span></div>
+    <div class="logo" style="font-size:16px">Get<span>Automatik</span> <span style="font-weight:400;color:var(--muted);font-size:13px">&copy; 2026</span></div>
     <div class="footer-links">
       <a href="mailto:info@getautomatik.com">info@getautomatik.com</a>
       <a href="#">Privacy</a>
@@ -423,7 +448,7 @@ document.querySelectorAll('.faq-q').forEach(btn => {
 });
 
 const chatHistory = [
-  {role: 'assistant', content: 'Ciao! Sono l\'assistente della nostra agenzia. Cosa stai cercando — acquisto o affitto?'}
+  {role: 'assistant', content: "Ciao! Sono l'assistente della nostra agenzia. Cosa stai cercando — acquisto o affitto?"}
 ];
 
 async function sendChat() {
@@ -452,7 +477,7 @@ async function sendChat() {
     document.getElementById(typingId)?.remove();
     msgs.innerHTML += `<div class="cmsg cmsg-ai">${reply}</div>`;
     if (data.qualified) {
-      msgs.innerHTML += `<div style="background:rgba(0,232,122,0.08);border:1px solid rgba(0,232,122,0.2);border-radius:10px;padding:12px;font-size:13px;color:#00e87a;font-weight:600;text-align:center;margin-top:4px">✓ Lead qualificato — l'agente riceve ora la card completa.</div>`;
+      msgs.innerHTML += `<div style="background:rgba(0,232,122,0.06);border:1px solid rgba(0,232,122,0.2);border-radius:10px;padding:12px;font-size:12px;color:#00e87a;font-weight:600;text-align:center;margin-top:4px">&#128197; Visita prenotata — l'agente riceve la card completa adesso.</div>`;
     }
   } catch(e) {
     document.getElementById(typingId)?.remove();

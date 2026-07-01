@@ -1346,7 +1346,8 @@ def api_chat():
         except Exception as e:
             print(f"chat_sessions save error: {e}")
         notify_chat_lead(client_config, result.get("lead_name"), result.get("lead_phone"),
-                         result.get("lead_type"), result.get("lead_budget"), result.get("lead_zone"))
+                         result.get("lead_type"), result.get("lead_budget"), result.get("lead_zone"),
+                         result.get("lead_appointment"))
 
     resp = jsonify({"reply": reply, "qualified": result.get("qualified", False)})
     resp.headers["Access-Control-Allow-Origin"] = "*"

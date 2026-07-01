@@ -936,26 +936,25 @@ class OutreachGenerator:
                 client = anthropic.Anthropic(api_key=self.api_key)
                 if email_number == 1:
                     prompt = (
-                        f"Scrivi una cold email B2B in italiano (max 110 parole) per {company}, agenzia immobiliare.\n"
-                        f"Proponi GetAutomatik: AI che risponde ai lead immobiliari in 2 minuti, anche alle 22:00, li qualifica (zona, budget, mutuo) e invia all'agente una card con i dati completi.\n"
-                        f"Problema rilevato: {first_problem}\n"
-                        f"Stima lead persi/mese: {lost} — ogni lead mancato = €3.000-8.000 di commissione.\n"
+                        f"Scrivi una cold email B2B in italiano (max 100 parole) per {company}, agenzia immobiliare.\n"
+                        f"Frame: il form sul sito raccoglie contatti ma non risponde, non qualifica e non prenota visite. GetAutomatik fa tutto questo in automatico: risponde in 2 minuti, raccoglie zona/budget/mutuo e prenota la visita direttamente in chat. L'agente riceve una card completa.\n"
+                        f"Problema rilevato sul loro sito: {first_problem}\n"
+                        f"Ogni lead non risposto entro 1 ora ha il 50% di probabilita' in meno di convertire. Stima lead persi/mese: {lost}.\n"
                         f"CTA: guarda la demo -> {landing_url}\n"
-                        f"Tono: diretto, concreto, no hype. Parla da collega del settore. Firma: Marco, Team GetAutomatik."
+                        f"Tono: diretto, da collega del settore. No hype. Firma: Marco, GetAutomatik."
                     )
                 elif email_number == 2:
                     prompt = (
-                        f"Scrivi un follow-up molto breve (max 55 parole) per {company}, agenzia immobiliare.\n"
-                        f"E' il secondo contatto — sii ancora piu' diretto.\n"
-                        f"Angolo: 'hai mai perso un lead perche' hai risposto il giorno dopo?' — fai una domanda secca.\n"
+                        f"Scrivi un follow-up breve (max 55 parole) per {company}, agenzia immobiliare.\n"
+                        f"E' il secondo contatto. Angolo: domanda diretta — 'quante richieste ti arrivano dopo le 18 senza nessuno che risponde?' Poi proponi la demo in 5 minuti.\n"
                         f"CTA: link demo -> {landing_url}\n"
                         f"Firma: Marco, GetAutomatik"
                     )
                 else:
                     prompt = (
                         f"Scrivi l'ultima email (max 50 parole) per {company}, agenzia immobiliare.\n"
-                        f"E' l'ultimo contatto — sii diretto e usa la scarsita' (trial 7 giorni, poi sparisco).\n"
-                        f"CTA: trial gratis -> {landing_url}\n"
+                        f"E' l'ultimo contatto — sii diretto. Trial gratis 7 giorni, nessuna carta, setup in 15 minuti.\n"
+                        f"CTA: -> {landing_url}\n"
                         f"Firma: Marco, GetAutomatik"
                     )
                 response = client.messages.create(
@@ -973,10 +972,11 @@ class OutreachGenerator:
         if not body:
             body = (
                 f"Buongiorno,\n\nHo visto il sito di {company}: {first_problem}.\n\n"
-                f"GetAutomatik risponde ai lead immobiliari in 2 minuti — anche la domenica sera — "
-                f"li qualifica su zona, budget e mutuo, e ti manda una card completa.\n"
-                f"Un lead perso = €3.000-8.000 di commissione. Il sistema si paga con il primo recupero.\n\n"
-                f"Guarda la demo: {landing_url}\n\nMarco, Team GetAutomatik"
+                f"Il form raccoglie il contatto. Ma risponde? Qualifica? Prenota la visita?\n\n"
+                f"GetAutomatik agisce nel momento in cui arriva la richiesta — 2 minuti, anche alle 22:00 — "
+                f"raccoglie zona, budget e mutuo, propone uno slot di visita e ti manda la card completa.\n"
+                f"L'agente non chiama un estraneo: chiama qualcuno con visita già prenotata.\n\n"
+                f"Guarda la demo: {landing_url}\n\nMarco, GetAutomatik"
             )
         return {
             "subject": subject,
@@ -1623,17 +1623,19 @@ def chat_qualify_lead(client_config, messages):
         system = (
             f"Sei l'assistente AI di {nome_azienda}, agenzia immobiliare.\n"
             f"Stai chattando con un potenziale cliente sul sito.\n"
-            f"OBIETTIVO: qualificare il lead raccogliendo queste info IN ORDINE:\n"
-            f"1. Cosa cerca (acquisto o affitto? Tipo immobile: app/villa/commerciale?)\n"
+            f"OBIETTIVO: qualificare il lead e prenotare una visita, raccogliendo in ORDINE:\n"
+            f"1. Cosa cerca (acquisto o affitto? tipo: appartamento/villa/commerciale?)\n"
             f"2. Zona preferita\n"
             f"3. Budget indicativo\n"
-            f"4. Prima casa o investimento?\n"
+            f"4. Prima casa o investimento? Ha già il mutuo o deve ancora valutarlo?\n"
             f"5. Nome e numero di telefono\n"
-            f"REGOLE: una domanda alla volta, max 2 frasi, italiano colloquiale e professionale.\n"
-            f"Non chiedere tutto insieme. Sii caldo e competente come un agente esperto.\n"
+            f"6. Quando è disponibile per una visita? Proponi 2 slot specifici (es. martedì alle 10 o giovedì alle 15).\n"
+            f"REGOLE: una domanda alla volta, max 2 frasi, italiano colloquiale ma professionale.\n"
+            f"Non chiedere tutto insieme. Sii caldo e diretto come un agente esperto.\n"
+            f"Quando proponi i slot di visita, sii specifico con giorno e ora.\n"
             f"Rispondi SOLO con JSON valido:\n"
-            f'{{"reply":"...","qualified":false,"lead_name":null,"lead_phone":null,"lead_type":null,"lead_budget":null,"lead_zone":null}}\n'
-            f"qualified=true solo quando hai nome + telefono + tipo ricerca. Compila tutti i campi disponibili."
+            f'{{"reply":"...","qualified":false,"lead_name":null,"lead_phone":null,"lead_type":null,"lead_budget":null,"lead_zone":null,"lead_appointment":null}}\n'
+            f"qualified=true solo quando hai nome + telefono + tipo ricerca. lead_appointment=slot confermato quando il cliente sceglie. Compila tutti i campi disponibili."
         )
     else:
         system = (
@@ -1664,7 +1666,7 @@ def chat_qualify_lead(client_config, messages):
     return fallback
 
 
-def notify_chat_lead(client_config, lead_name, lead_phone, lead_type, lead_budget=None, lead_zone=None):
+def notify_chat_lead(client_config, lead_name, lead_phone, lead_type, lead_budget=None, lead_zone=None, lead_appointment=None):
     """Email owner when a chat lead is qualified."""
     owner_email = client_config.get("email_titolare")
     nome_azienda = client_config.get("nome_azienda", "")
@@ -1675,6 +1677,8 @@ def notify_chat_lead(client_config, lead_name, lead_phone, lead_type, lead_budge
     is_real_estate = any(w in settore.lower() for w in ["immobil", "agenzia", "mediatore", "casa"])
 
     if is_real_estate:
+        appt_line = f"Visita:   {lead_appointment}\n" if lead_appointment else ""
+        appt_action = f"Visita prenotata: {lead_appointment}. Conferma con una telefonata rapida." if lead_appointment else "Chiamalo adesso — è ancora caldo."
         body = (
             f"Nuovo lead qualificato dal chatbot del tuo sito!\n\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
@@ -1684,15 +1688,16 @@ def notify_chat_lead(client_config, lead_name, lead_phone, lead_type, lead_budge
             f"Cerca:    {lead_type or 'Non specificato'}\n"
             f"Zona:     {lead_zone or 'Non specificata'}\n"
             f"Budget:   {lead_budget or 'Non specificato'}\n"
+            f"{appt_line}"
             f"━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"Lead già qualificato — chiamalo adesso mentre è ancora caldo."
+            f"{appt_action}"
         )
         telegram_msg = (
-            f"🏠 Nuovo lead immobiliare!\n"
+            f"Nuovo lead immobiliare!\n"
             f"Agenzia: {nome_azienda}\n"
             f"Nome: {lead_name} — {lead_phone}\n"
-            f"Cerca: {lead_type}\n"
-            f"Zona: {lead_zone} | Budget: {lead_budget}"
+            f"Cerca: {lead_type} | Zona: {lead_zone} | Budget: {lead_budget}"
+            + (f"\nVisita: {lead_appointment}" if lead_appointment else "")
         )
     else:
         body = (
