@@ -3,277 +3,323 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Demo Chatbot — GetAutomatik</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<title>Immobiliare Milano Centro — Appartamenti e Ville in vendita</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+body{font-family:'Inter',sans-serif;background:#fff;color:#1a1a2e;line-height:1.6}
 
-/* ── BANNER SOPRA ─────────────────────────────────────────── */
-.ga-banner{background:#080812;color:#fff;text-align:center;padding:12px 24px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:20px}
+/* GA demo banner */
+.ga-banner{background:linear-gradient(90deg,#080812 0%,#0f0f2d 100%);color:#fff;text-align:center;padding:10px 20px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:12px}
 .ga-banner strong{color:#00e87a}
-.ga-banner a{background:#00e87a;color:#000;padding:6px 16px;border-radius:6px;font-weight:700;font-size:12px;text-decoration:none}
+.ga-banner a{color:#00e87a;font-weight:700;text-decoration:none;border:1px solid rgba(0,232,122,0.4);border-radius:6px;padding:4px 12px;font-size:12px;transition:background .2s}
+.ga-banner a:hover{background:rgba(0,232,122,0.12)}
 
-/* ── SITO FINTO: Idraulico Rossi ──────────────────────────── */
-.fake-nav{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px 40px;display:flex;align-items:center;justify-content:space-between}
-.fake-logo{font-weight:800;font-size:18px;color:#1e3a5f}
-.fake-logo span{color:#e85d04}
-.fake-nav-links{display:flex;gap:24px}
-.fake-nav-links a{color:#6b7280;font-size:14px;text-decoration:none;font-weight:500}
-.fake-cta-nav{background:#e85d04;color:#fff;padding:9px 20px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none}
+nav{background:#fff;border-bottom:1px solid #e8e8e8;padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:70px;position:sticky;top:0;z-index:50}
+.nav-logo{font-weight:700;font-size:20px;color:#1a1a2e;letter-spacing:-0.5px}
+.nav-logo span{color:#c8975b}
+.nav-links{display:flex;gap:28px}
+.nav-links a{text-decoration:none;color:#555;font-size:15px;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:#c8975b}
+.nav-cta{background:#c8975b;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;text-decoration:none}
 
-.fake-hero{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;padding:80px 40px;text-align:center}
-.fake-hero h1{font-size:42px;font-weight:900;letter-spacing:-1px;margin-bottom:16px}
-.fake-hero p{font-size:18px;opacity:.85;max-width:520px;margin:0 auto 32px}
-.fake-hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.btn-hero{background:#e85d04;color:#fff;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none}
-.btn-hero-ghost{border:2px solid rgba(255,255,255,0.4);color:#fff;padding:13px 28px;border-radius:10px;font-weight:600;font-size:15px;text-decoration:none}
+.hero{background:linear-gradient(135deg,#1a1a2e 0%,#2d2d4e 60%,#3d3d5e 100%);color:#fff;padding:100px 40px 80px;text-align:center;position:relative;overflow:hidden}
+.hero-inner{position:relative;z-index:1;max-width:700px;margin:0 auto}
+.hero h1{font-size:clamp(28px,5vw,50px);font-weight:700;letter-spacing:-1.5px;margin-bottom:16px;line-height:1.1}
+.hero h1 em{color:#c8975b;font-style:normal}
+.hero p{font-size:17px;opacity:.8;max-width:500px;margin:0 auto 32px}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn-gold{background:#c8975b;color:#fff;border:none;padding:14px 30px;border-radius:10px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;display:inline-block;transition:opacity .2s}
+.btn-gold:hover{opacity:.88}
+.btn-outline-w{border:1px solid rgba(255,255,255,0.3);color:#fff;padding:13px 28px;border-radius:10px;font-size:15px;font-weight:500;text-decoration:none;display:inline-block;transition:border-color .2s}
+.btn-outline-w:hover{border-color:rgba(255,255,255,0.6)}
 
-.fake-trust{background:#f0f7ff;border-top:1px solid #dbeafe;border-bottom:1px solid #dbeafe;padding:20px 40px;display:flex;justify-content:center;gap:48px}
-.trust-item{display:flex;align-items:center;gap:10px;font-size:14px;color:#1e3a5f;font-weight:600}
+.stats-bar{background:#f8f6f0;border-bottom:1px solid #e8e3d8;display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:22px 20px;text-align:center;border-right:1px solid #e8e3d8}
+.stat:last-child{border-right:none}
+.stat-num{font-size:24px;font-weight:700;color:#c8975b}
+.stat-lbl{font-size:13px;color:#888;margin-top:3px}
 
-.fake-services{padding:60px 40px;max-width:900px;margin:0 auto}
-.fake-services h2{font-size:28px;font-weight:800;color:#1e3a5f;margin-bottom:32px;text-align:center}
-.services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.service-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;text-align:center}
-.service-icon{font-size:32px;margin-bottom:12px}
-.service-card h3{font-size:16px;font-weight:700;color:#1e3a5f;margin-bottom:8px}
-.service-card p{font-size:13px;color:#6b7280;line-height:1.6}
+section{padding:64px 40px;max-width:1100px;margin:0 auto}
+.section-badge{display:inline-block;background:#f8f0e5;color:#c8975b;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:14px}
+h2{font-size:clamp(22px,3.5vw,34px);font-weight:700;letter-spacing:-1px;margin-bottom:10px}
+.section-sub{font-size:16px;color:#666;margin-bottom:36px}
 
-.fake-contact{background:#1e3a5f;color:#fff;padding:50px 40px;text-align:center}
-.fake-contact h2{font-size:26px;font-weight:800;margin-bottom:10px}
-.fake-contact p{opacity:.75;margin-bottom:24px}
-.fake-phone{font-size:28px;font-weight:900;color:#e85d04;letter-spacing:-0.5px}
+.listings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.listing-card{border-radius:14px;overflow:hidden;border:1px solid #e8e8e8;transition:box-shadow .2s;cursor:pointer}
+.listing-card:hover{box-shadow:0 8px 30px rgba(0,0,0,0.1)}
+.listing-img{height:190px;background:#e8e3d8;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:40px}
+.listing-badge{position:absolute;top:12px;left:12px;background:#c8975b;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase}
+.listing-body{padding:18px}
+.listing-price{font-size:20px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
+.listing-address{font-size:14px;color:#888;margin-bottom:10px}
+.listing-tags{display:flex;gap:8px;flex-wrap:wrap}
+.listing-tag{background:#f5f5f5;color:#555;font-size:12px;padding:4px 10px;border-radius:6px}
 
-.fake-footer{background:#111827;color:#9ca3af;padding:24px 40px;font-size:13px;display:flex;justify-content:space-between}
+.contact-section{background:#1a1a2e;color:#fff;padding:72px 40px;text-align:center}
+.contact-section h2{font-size:30px;margin-bottom:12px}
+.contact-section p{opacity:.7;margin-bottom:32px;font-size:16px}
+.contact-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:700px;margin:0 auto 32px}
+.contact-item{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:22px 16px}
+.contact-item .icon{font-size:22px;margin-bottom:8px}
+.contact-item .label{font-size:12px;opacity:.6;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.contact-item .val{font-size:14px;font-weight:600}
 
-/* ── CHAT WIDGET REALE ────────────────────────────────────── */
-#ga-bubble{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;background:#00e87a;cursor:pointer;z-index:99999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,232,122,.5);transition:transform .2s}
+footer{background:#f8f6f0;border-top:1px solid #e8e3d8;padding:28px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.footer-logo{font-weight:700;font-size:16px;color:#1a1a2e}
+.footer-logo span{color:#c8975b}
+footer p{font-size:13px;color:#999}
+
+/* CHATBOT WIDGET */
+#ga-widget{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+#ga-bubble{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#c8975b,#a0754a);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 6px 24px rgba(200,151,91,0.45);transition:transform .2s;position:relative}
 #ga-bubble:hover{transform:scale(1.08)}
-#ga-bubble svg{width:28px;height:28px;fill:#0a0a0a}
-#ga-badge{position:absolute;top:-2px;right:-2px;width:18px;height:18px;background:#ef4444;border-radius:50%;border:2px solid #fff;font-size:10px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center}
-#ga-win{position:fixed;bottom:96px;right:24px;width:360px;max-height:520px;background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.18);z-index:99998;display:none;flex-direction:column;overflow:hidden;border:1px solid #e5e7eb}
-#ga-head{background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:16px 18px;display:flex;align-items:center;gap:12px}
-#ga-head-avatar{width:38px;height:38px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-#ga-head-text{flex:1}
-#ga-head-name{font-family:sans-serif;font-size:14px;font-weight:700;color:#fff}
-#ga-head-sub{font-family:sans-serif;font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;display:flex;align-items:center;gap:5px}
-#ga-online{width:7px;height:7px;background:#00e87a;border-radius:50%;display:inline-block}
-#ga-close{width:28px;height:28px;background:rgba(255,255,255,0.15);border:none;border-radius:50%;cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-#ga-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#f9fafb;min-height:220px;max-height:300px}
-.ga-msg-ai{align-self:flex-start;background:#fff;border:1px solid #e5e7eb;color:#1a1a1a;padding:10px 14px;border-radius:4px 12px 12px 12px;max-width:82%;font-family:sans-serif;font-size:13px;line-height:1.55;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.ga-msg-user{align-self:flex-end;background:#1e3a5f;color:#fff;padding:10px 14px;border-radius:12px 4px 12px 12px;max-width:82%;font-family:sans-serif;font-size:13px;line-height:1.55}
-.ga-typing{display:flex;gap:4px;align-items:center;padding:10px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:4px 12px 12px 12px;width:fit-content;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.ga-typing span{width:6px;height:6px;background:#9ca3af;border-radius:50%;animation:typing .9s infinite}
+.ga-pulse{position:absolute;inset:-3px;border-radius:50%;border:2px solid rgba(200,151,91,0.45);animation:gawave 2s ease-out infinite}
+@keyframes gawave{0%{transform:scale(1);opacity:1}100%{transform:scale(1.5);opacity:0}}
+#ga-window{background:#fff;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.18);width:340px;display:none;flex-direction:column;overflow:hidden;border:1px solid #e8e8e8;animation:slideUp .3s ease}
+#ga-window.open{display:flex}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.ga-header{background:linear-gradient(135deg,#1a1a2e,#2d2d4e);color:#fff;padding:16px 18px;display:flex;align-items:center;gap:10px}
+.ga-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#c8975b,#a0754a);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ga-header-text .name{font-size:14px;font-weight:700}
+.ga-header-text .status{font-size:11px;opacity:.7;display:flex;align-items:center;gap:5px}
+.ga-header-text .status::before{content:'';width:7px;height:7px;border-radius:50%;background:#00e87a;display:inline-block}
+.ga-header-close{margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.5);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px}
+.ga-header-close:hover{color:#fff;background:rgba(255,255,255,0.1)}
+.ga-msgs{flex:1;padding:16px;display:flex;flex-direction:column;gap:9px;min-height:220px;max-height:300px;overflow-y:auto;background:#fafafa}
+.ga-msg{max-width:85%;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.55}
+.ga-msg-bot{align-self:flex-start;background:#fff;border:1px solid #e8e8e8;color:#333;border-radius:4px 12px 12px 12px}
+.ga-msg-user{align-self:flex-end;background:#c8975b;color:#fff;border-radius:12px 4px 12px 12px}
+.ga-typing{display:flex;gap:4px;align-items:center;padding:10px 13px;background:#fff;border:1px solid #e8e8e8;border-radius:4px 12px 12px 12px;width:fit-content}
+.ga-typing span{width:6px;height:6px;background:#ccc;border-radius:50%;animation:typing .9s infinite}
 .ga-typing span:nth-child(2){animation-delay:.2s}
 .ga-typing span:nth-child(3){animation-delay:.4s}
 @keyframes typing{0%,60%,100%{opacity:.3}30%{opacity:1}}
-#ga-input-row{display:flex;padding:12px;gap:8px;border-top:1px solid #e5e7eb;background:#fff}
-#ga-input{flex:1;background:#f9fafb;border:1px solid #e5e7eb;color:#1a1a1a;border-radius:8px;padding:9px 13px;font-size:13px;font-family:sans-serif;outline:none}
-#ga-input:focus{border-color:#1e3a5f}
-#ga-send{background:#1e3a5f;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:13px;font-family:sans-serif}
-#ga-send:disabled{opacity:.5;cursor:not-allowed}
-#ga-powered{text-align:center;padding:8px;font-size:10px;color:#9ca3af;background:#fff;font-family:sans-serif}
-#ga-powered a{color:#00e87a;text-decoration:none;font-weight:600}
+.ga-input-row{border-top:1px solid #eee;padding:10px;display:flex;gap:8px;background:#fff}
+.ga-input{flex:1;border:1px solid #e0e0e0;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;font-family:inherit;background:#fafafa}
+.ga-input:focus{border-color:#c8975b;background:#fff}
+.ga-send{background:#c8975b;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;transition:opacity .2s}
+.ga-send:disabled{opacity:.4}
+.ga-footer{background:#f5f5f5;border-top:1px solid #eee;padding:7px 12px;text-align:center;font-size:10px;color:#bbb}
+.ga-footer a{color:#bbb;text-decoration:none;font-weight:500}
+.ga-footer a:hover{color:#888}
 
-/* PULSE sul bubble quando chiuso */
-@keyframes pulse-bubble{0%{box-shadow:0 4px 20px rgba(0,232,122,.5)}50%{box-shadow:0 4px 32px rgba(0,232,122,.8),0 0 0 8px rgba(0,232,122,.12)}100%{box-shadow:0 4px 20px rgba(0,232,122,.5)}}
-#ga-bubble.pulse-anim{animation:pulse-bubble 2s ease-in-out infinite}
-
-@media(max-width:600px){
-  .services-grid{grid-template-columns:1fr}
-  .fake-trust{flex-direction:column;gap:12px;align-items:center}
-  #ga-win{width:calc(100vw - 32px);right:16px}
+@media(max-width:700px){
+  .listings-grid{grid-template-columns:1fr}
+  .contact-grid{grid-template-columns:1fr}
+  nav .nav-links{display:none}
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
 <body>
 
-<!-- Banner GetAutomatik sopra il sito demo -->
+<!-- GA BANNER -->
 <div class="ga-banner">
-  <span>Stai guardando una <strong>demo live</strong> del chatbot GetAutomatik — il widget verde in basso a destra è reale.</span>
-  <a href="/onboarding">Voglio questo sul mio sito →</a>
+  <span>&#128065; <strong>Demo GetAutomatik</strong> — questo è un sito immobiliare di esempio. Il chatbot in basso a destra è reale.</span>
+  <a href="/onboarding">Installa sulla tua agenzia &rarr;</a>
 </div>
 
-<!-- SITO FINTO: Idraulico Rossi Milano -->
-<nav class="fake-nav">
-  <div class="fake-logo">Idraulico <span>Rossi</span></div>
-  <div class="fake-nav-links">
-    <a href="#">Servizi</a>
-    <a href="#">Chi siamo</a>
-    <a href="#">Pronto intervento</a>
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Immobiliare<span>Milano</span></div>
+  <div class="nav-links">
+    <a href="#">Vendita</a>
+    <a href="#">Affitto</a>
+    <a href="#">Nuove Costruzioni</a>
+    <a href="#">Chi Siamo</a>
+    <a href="#">Valuta Casa</a>
   </div>
-  <a href="#" class="fake-cta-nav">Chiama ora</a>
+  <a href="#contatti" class="nav-cta">Contattaci</a>
 </nav>
 
-<div class="fake-hero">
-  <h1>Idraulico a Milano<br>Pronto intervento 24/7</h1>
-  <p>Perdite, intasamenti, caldaie e impianti. Interveniamo entro 2 ore in tutta la città.</p>
-  <div class="fake-hero-btns">
-    <a href="#" class="btn-hero">Chiama il 02 1234 5678</a>
-    <a href="#" class="btn-hero-ghost">Richiedi preventivo</a>
-  </div>
-</div>
-
-<div class="fake-trust">
-  <div class="trust-item">⭐ 4.9 su Google (312 recensioni)</div>
-  <div class="trust-item">⚡ Intervento entro 2 ore</div>
-  <div class="trust-item">✅ 15 anni di esperienza</div>
-</div>
-
-<div class="fake-services">
-  <h2>I nostri servizi</h2>
-  <div class="services-grid">
-    <div class="service-card">
-      <div class="service-icon">🚿</div>
-      <h3>Perdite e rotture</h3>
-      <p>Riparazione perdite da tubature, sifoni, raccordi e collegamenti idrici.</p>
-    </div>
-    <div class="service-card">
-      <div class="service-icon">🔥</div>
-      <h3>Caldaie e riscaldamento</h3>
-      <p>Manutenzione, riparazione e sostituzione caldaie a gas e pompe di calore.</p>
-    </div>
-    <div class="service-card">
-      <div class="service-icon">🪠</div>
-      <h3>Intasamenti</h3>
-      <p>Scarico bagno, cucina, colonne condominiali. Intervento rapido con idropulitura.</p>
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <h1>Le migliori proprietà<br>a <em>Milano e hinterland</em></h1>
+    <p>Appartamenti, ville e uffici in vendita e affitto. Consulenza personalizzata da professionisti con 20 anni di esperienza.</p>
+    <div class="hero-btns">
+      <a href="#annunci" class="btn-gold">Vedi annunci</a>
+      <a href="#contatti" class="btn-outline-w">Valuta il tuo immobile</a>
     </div>
   </div>
 </div>
 
-<div class="fake-contact">
-  <h2>Hai bisogno di un idraulico adesso?</h2>
-  <p>Scrivi nel chat qui a destra — rispondiamo in pochi secondi anche di notte</p>
-  <div class="fake-phone">02 1234 5678</div>
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num">847</div><div class="stat-lbl">Immobili venduti</div></div>
+  <div class="stat"><div class="stat-num">20+</div><div class="stat-lbl">Anni di esperienza</div></div>
+  <div class="stat"><div class="stat-num">98%</div><div class="stat-lbl">Clienti soddisfatti</div></div>
+  <div class="stat"><div class="stat-num">48h</div><div class="stat-lbl">Tempo medio risposta</div></div>
 </div>
 
-<footer class="fake-footer">
-  <span>Idraulico Rossi Srl — Via Torino 42, Milano</span>
-  <span>P.IVA 01234567890</span>
+<!-- ANNUNCI -->
+<section id="annunci">
+  <div class="section-badge">In evidenza</div>
+  <h2>Ultimi annunci disponibili</h2>
+  <p class="section-sub">Selezione aggiornata settimanalmente dalla nostra rete di proprietà</p>
+  <div class="listings-grid">
+
+    <div class="listing-card">
+      <div class="listing-img" style="background:#f0ebe0">
+        <span>&#127968;</span>
+        <span class="listing-badge">Nuovo</span>
+      </div>
+      <div class="listing-body">
+        <div class="listing-price">&euro; 385.000</div>
+        <div class="listing-address">Via Montenapoleone, 14 &middot; Zona Centro</div>
+        <div class="listing-tags">
+          <span class="listing-tag">3 locali</span>
+          <span class="listing-tag">95 m&sup2;</span>
+          <span class="listing-tag">2&deg; piano</span>
+          <span class="listing-tag">Box</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="listing-card">
+      <div class="listing-img" style="background:#e8e0f0">
+        <span>&#127970;</span>
+        <span class="listing-badge">Esclusiva</span>
+      </div>
+      <div class="listing-body">
+        <div class="listing-price">&euro; 520.000</div>
+        <div class="listing-address">Corso Buenos Aires, 78 &middot; Porta Venezia</div>
+        <div class="listing-tags">
+          <span class="listing-tag">4 locali</span>
+          <span class="listing-tag">130 m&sup2;</span>
+          <span class="listing-tag">Ristrutturato</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="listing-card">
+      <div class="listing-img" style="background:#e0f0e8">
+        <span>&#127969;</span>
+        <span class="listing-badge" style="background:#2d2d4e">Affitto</span>
+      </div>
+      <div class="listing-body">
+        <div class="listing-price">&euro; 1.650 / mese</div>
+        <div class="listing-address">Via Tortona, 30 &middot; Navigli</div>
+        <div class="listing-tags">
+          <span class="listing-tag">2 locali</span>
+          <span class="listing-tag">68 m&sup2;</span>
+          <span class="listing-tag">Arredato</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CONTACT -->
+<div class="contact-section" id="contatti">
+  <h2>Parla con un nostro agente</h2>
+  <p>Siamo disponibili dal lunedì al sabato, 9:00&ndash;19:00.<br>Oppure scrivici sul chatbot &mdash; rispondiamo in 2 minuti, anche la sera.</p>
+  <div class="contact-grid">
+    <div class="contact-item">
+      <div class="icon">&#128222;</div>
+      <div class="label">Telefono</div>
+      <div class="val">02 3456 7890</div>
+    </div>
+    <div class="contact-item">
+      <div class="icon">&#9993;&#65039;</div>
+      <div class="label">Email</div>
+      <div class="val">info@immobiliaremilano.it</div>
+    </div>
+    <div class="contact-item">
+      <div class="icon">&#128205;</div>
+      <div class="label">Sede</div>
+      <div class="val">Corso Vittorio Emanuele, 20 Milano 20122</div>
+    </div>
+  </div>
+  <a href="#" class="btn-gold">Richiedi una valutazione gratuita</a>
+</div>
+
+<footer>
+  <div class="footer-logo">Immobiliare<span>Milano</span></div>
+  <p>&copy; 2026 ImmobiliareMilano Srl &mdash; P.IVA 12345678901</p>
 </footer>
 
-<!-- ── CHAT WIDGET REALE GETAUTOMATIK ──────────────────── -->
-<div id="ga-bubble" class="pulse-anim">
-  <svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>
-  <div id="ga-badge">1</div>
-</div>
-
-<div id="ga-win">
-  <div id="ga-head">
-    <div id="ga-head-avatar">🔧</div>
-    <div id="ga-head-text">
-      <div id="ga-head-name">Assistente Idraulico Rossi</div>
-      <div id="ga-head-sub"><span id="ga-online"></span> Online ora · risposta in pochi secondi</div>
+<!-- CHATBOT WIDGET -->
+<div id="ga-widget">
+  <div id="ga-window">
+    <div class="ga-header">
+      <div class="ga-avatar">&#127968;</div>
+      <div class="ga-header-text">
+        <div class="name">Assistente ImmobiliareMilano</div>
+        <div class="status">Online &middot; risponde subito</div>
+      </div>
+      <button class="ga-header-close" onclick="closeChat()">&#10005;</button>
     </div>
-    <button id="ga-close" onclick="toggleChat()">✕</button>
+    <div class="ga-msgs" id="ga-msgs">
+      <div class="ga-msg ga-msg-bot">Ciao! Posso aiutarti a trovare l'appartamento giusto a Milano. Cosa stai cercando &mdash; acquisto o affitto?</div>
+    </div>
+    <div class="ga-input-row">
+      <input class="ga-input" id="ga-in" placeholder="Scrivi qui..." onkeydown="if(event.key==='Enter')gaSend()">
+      <button class="ga-send" id="ga-btn" onclick="gaSend()">&rarr;</button>
+    </div>
+    <div class="ga-footer">Powered by <a href="/onboarding" target="_blank">GetAutomatik</a> &middot; AI per agenzie immobiliari</div>
   </div>
-  <div id="ga-msgs"></div>
-  <div id="ga-input-row">
-    <input id="ga-input" placeholder="Descrivi il problema..." onkeydown="if(event.key==='Enter')sendMsg()">
-    <button id="ga-send" onclick="sendMsg()">Invia</button>
-  </div>
-  <div id="ga-powered">Powered by <a href="https://getautomatik.com" target="_blank">GetAutomatik</a></div>
+  <button id="ga-bubble" onclick="toggleChat()">
+    <div class="ga-pulse"></div>
+    &#128172;
+  </button>
 </div>
 
 <script>
-const API = '/api/chat';
-const CID = 'demo-idraulico';
-let history = [];
-let open = false;
-let initialized = false;
+const chatHist = [
+  {role:'assistant',content:"Ciao! Posso aiutarti a trovare l'appartamento giusto a Milano. Cosa stai cercando — acquisto o affitto?"}
+];
+let isOpen = false;
 
-// Config simulata per la demo
-const CLIENT_CFG = {settore:'idraulico', nome_azienda:'Idraulico Rossi'};
-
-function toggleChat() {
-  open = !open;
-  const win = document.getElementById('ga-win');
-  win.style.display = open ? 'flex' : 'none';
-  document.getElementById('ga-bubble').classList.remove('pulse-anim');
-  document.getElementById('ga-badge').style.display = 'none';
-  if (open && !initialized) {
-    initialized = true;
-    callChat([]);
-  }
+function toggleChat(){isOpen?closeChat():openChat()}
+function openChat(){
+  isOpen=true;
+  document.getElementById('ga-window').classList.add('open');
+  document.getElementById('ga-in').focus();
+}
+function closeChat(){
+  isOpen=false;
+  document.getElementById('ga-window').classList.remove('open');
 }
 
-document.getElementById('ga-bubble').onclick = toggleChat;
+setTimeout(openChat, 4000);
 
-function addMsg(text, role) {
-  const msgs = document.getElementById('ga-msgs');
-  const d = document.createElement('div');
-  d.className = role === 'user' ? 'ga-msg-user' : 'ga-msg-ai';
-  d.textContent = text;
-  msgs.appendChild(d);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function showTyping() {
-  const msgs = document.getElementById('ga-msgs');
-  const t = document.createElement('div');
-  t.id = 'ga-typing';
-  t.className = 'ga-typing';
-  t.innerHTML = '<span></span><span></span><span></span>';
-  msgs.appendChild(t);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function removeTyping() {
-  document.getElementById('ga-typing')?.remove();
-}
-
-async function callChat(msgs_to_send) {
-  document.getElementById('ga-send').disabled = true;
-  showTyping();
-  try {
-    const resp = await fetch(API, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({cid: CID, history: msgs_to_send})
+async function gaSend(){
+  const inp=document.getElementById('ga-in');
+  const btn=document.getElementById('ga-btn');
+  const msgs=document.getElementById('ga-msgs');
+  const txt=inp.value.trim();
+  if(!txt)return;
+  chatHist.push({role:'user',content:txt});
+  msgs.innerHTML+=`<div class="ga-msg ga-msg-user">${txt}</div>`;
+  inp.value='';btn.disabled=true;
+  msgs.scrollTop=msgs.scrollHeight;
+  const tid='t'+Date.now();
+  msgs.innerHTML+=`<div id="${tid}" class="ga-typing"><span></span><span></span><span></span></div>`;
+  msgs.scrollTop=msgs.scrollHeight;
+  try{
+    const r=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({cid:'demo-immobiliare',history:chatHist})
     });
-    const data = await resp.json();
-    removeTyping();
-    const reply = data.reply || 'Come posso aiutarti?';
-    addMsg(reply, 'ai');
-    history.push({role: 'assistant', content: reply});
-
-    if (data.qualified) {
-      setTimeout(() => {
-        const msgs = document.getElementById('ga-msgs');
-        const notice = document.createElement('div');
-        notice.style.cssText = 'background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-family:sans-serif;font-size:12px;color:#166534;margin-top:4px;text-align:center;font-weight:600';
-        notice.textContent = '✓ Richiesta inviata! Ti contatteremo al più presto.';
-        msgs.appendChild(notice);
-        msgs.scrollTop = msgs.scrollHeight;
-      }, 800);
+    const d=await r.json();
+    const rep=d.reply||'Come posso aiutarti?';
+    chatHist.push({role:'assistant',content:rep});
+    document.getElementById(tid)?.remove();
+    msgs.innerHTML+=`<div class="ga-msg ga-msg-bot">${rep}</div>`;
+    if(d.qualified){
+      msgs.innerHTML+=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:11px 13px;font-size:12px;color:#16a34a;font-weight:600;margin-top:2px">&#10003; Perfetto! Un agente ti contatterà a breve per organizzare la visita.</div>`;
     }
-  } catch(e) {
-    removeTyping();
-    addMsg('Errore di connessione. Riprova.', 'ai');
+  }catch(e){
+    document.getElementById(tid)?.remove();
+    msgs.innerHTML+=`<div class="ga-msg ga-msg-bot">Errore di connessione. Riprova.</div>`;
   }
-  document.getElementById('ga-send').disabled = false;
+  btn.disabled=false;
+  msgs.scrollTop=msgs.scrollHeight;
 }
-
-function sendMsg() {
-  const input = document.getElementById('ga-input');
-  const text = input.value.trim();
-  if (!text) return;
-  addMsg(text, 'user');
-  input.value = '';
-  history.push({role: 'user', content: text});
-  callChat(history);
-}
-
-document.getElementById('ga-input').onkeydown = e => { if(e.key==='Enter') sendMsg(); };
-
-// Apri automaticamente dopo 4 secondi per creare engagement
-setTimeout(() => {
-  if (!open) {
-    document.getElementById('ga-bubble').classList.add('pulse-anim');
-  }
-}, 4000);
 </script>
-
 </body>
 </html>

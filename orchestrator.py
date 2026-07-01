@@ -26,7 +26,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT = os.getenv("TELEGRAM_CHAT_ID")
 FLOWOPS_DOMAIN = os.getenv("FLOWOPS_DOMAIN", "in.getautomatik.com")
 
-DEFAULT_NICHES = ["fotovoltaico", "climatizzazione", "idraulici", "ristrutturazioni", "infissi"]
+DEFAULT_NICHES = ["agenzia immobiliare", "agenzia immobiliare affitti", "studio immobiliare", "mediatore immobiliare"]
 
 def generate_forwarding_address():
     suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
@@ -1345,7 +1345,8 @@ def api_chat():
             }).execute()
         except Exception as e:
             print(f"chat_sessions save error: {e}")
-        notify_chat_lead(client_config, result.get("lead_name"), result.get("lead_phone"), result.get("lead_type"))
+        notify_chat_lead(client_config, result.get("lead_name"), result.get("lead_phone"),
+                         result.get("lead_type"), result.get("lead_budget"), result.get("lead_zone"))
 
     resp = jsonify({"reply": reply, "qualified": result.get("qualified", False)})
     resp.headers["Access-Control-Allow-Origin"] = "*"

@@ -834,11 +834,13 @@ class WebsiteAuditAgent:
                 import anthropic
                 client = anthropic.Anthropic(api_key=self.api_key)
                 prompt = (
-                    "Analizza questo sito di un'azienda artigianale italiana. "
-                    "Usa solo il contenuto fornito. Trova problemi che fanno perdere richieste clienti "
-                    "e opportunita per recuperare richieste non risposte. "
-                    "Rispondi SOLO JSON con chiavi: company_name, problems (array), opportunities (array), "
-                    "estimated_lost_leads (integer mensile), score (0-100).\n\n"
+                    "Analizza questo sito di un'agenzia immobiliare italiana. "
+                    "Usa solo il contenuto fornito. Trova problemi che fanno perdere lead immobiliari "
+                    "(persone che cercano casa e non ricevono risposta). "
+                    "Considera che ogni lead mancato = €3.000-8.000 di commissione persa. "
+                    "Rispondi SOLO JSON con chiavi: company_name, problems (array di problemi specifici), "
+                    "opportunities (array di opportunita per recuperare lead), "
+                    "estimated_lost_leads (integer: lead persi/mese), score (0-100 dove 100 = nessun lead perso).\n\n"
                     f"URL: {website_url}\nTitolo: {title}\nHTTP: {status_code}\n"
                     f"Segnali: booking={has_booking}, phone={has_phone}, whatsapp={has_whatsapp}, form={has_contact_form}\n"
                     f"Testo sito:\n{text[:3500]}"
@@ -862,19 +864,19 @@ class WebsiteAuditAgent:
         problems = []
         opportunities = []
         if not has_booking:
-            problems.append("Manca una prenotazione online evidente per i nuovi pazienti")
-            opportunities.append("Inserire una CTA di prenotazione e follow-up automatico per richieste fuori orario")
+            problems.append("Nessun sistema di risposta automatica ai lead — richieste fuori orario restano senza risposta")
+            opportunities.append("Risposta automatica in 2 minuti ai lead con qualifica su zona, budget e mutuo")
         if not has_whatsapp:
-            problems.append("WhatsApp non e visibile come canale rapido per richieste urgenti")
-            opportunities.append("Aggiungere risposta automatica WhatsApp/email per richieste di prima visita")
+            problems.append("WhatsApp non visibile — i lead preferiscono canali rapidi e non trovano risposta")
+            opportunities.append("Aggiungere risposta automatica multi-canale (email + WhatsApp) anche la sera")
         if not has_contact_form:
-            problems.append("Il form contatti non e immediatamente riconoscibile")
-            opportunities.append("Ridurre attrito con form breve e notifica immediata allo studio")
+            problems.append("Contatto difficile dal sito — i lead che non trovano form vanno dalla concorrenza")
+            opportunities.append("Form semplice con risposta AI immediata per ridurre abbandono")
         if not problems:
-            problems.append("Il sito ha canali di contatto, ma non mostra un recupero automatico delle richieste perse")
-            opportunities.append("Automatizzare richiamo e qualificazione delle richieste entro pochi minuti")
+            problems.append("Il sito ha canali di contatto ma non garantisce risposta rapida fuori orario")
+            opportunities.append("Automatizzare risposta e qualificazione dei lead entro 2 minuti, 24/7")
 
-        lost = max(2, round((100 - heuristic_score) / 10))
+        lost = max(3, round((100 - heuristic_score) / 8))
         return {
             "company_name": fallback_name,
             "problems": problems[:5],
@@ -893,7 +895,8 @@ class LeadScoring:
             score += 25
         if _is_real_email(prospect.get("contact_email")):
             score += 30
-        if (prospect.get("sector") or "").lower() in ("fotovoltaico", "climatizzazione", "idraulici", "ristrutturazioni", "infissi", "dentisti", "dentista", "studio dentistico"):
+        sector_lower = (prospect.get("sector") or "").lower()
+        if any(w in sector_lower for w in ["immobil", "agenzia", "mediatore", "studio immobiliare"]):
             score += 15
         if audit.get("estimated_lost_leads", 0) >= 4:
             score += 15
@@ -901,28 +904,28 @@ class LeadScoring:
             score += 10
         if prospect.get("contact_phone"):
             score += 5
-        reason = "email business + sito + audit artigiani" if score >= 65 else "lead debole o audit poco urgente"
+        reason = "email business + sito + agenzia immobiliare qualificata" if score >= 65 else "lead debole o audit poco urgente"
         return {"score": min(100, score), "qualified": score >= 65, "reason": reason}
 
 
 class OutreachGenerator:
-    """Creates audit-led outreach copy for dentists."""
+    """Creates audit-led outreach copy for real estate agencies."""
 
     def __init__(self):
-        self.api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+        self.api_key = os.getenv("ANTHROPIC_API_KEY")
 
     def generate(self, prospect, audit, score, email_number=1):
-        company = prospect.get("company_name") or audit.get("company_name") or "Azienda"
-        sector = prospect.get("sector", "artigiano")
+        company = prospect.get("company_name") or audit.get("company_name") or "Agenzia"
+        sector = prospect.get("sector", "agenzia immobiliare")
         prospect_id = prospect.get("id", "")
-        first_problem = (audit.get("problems") or ["alcune richieste clienti possono perdersi"])[0]
-        lost = audit.get("estimated_lost_leads", 3)
-        LANDING = os.getenv("FLOWOPS_LANDING", "https://getautomatik.com/landing")
+        first_problem = (audit.get("problems") or ["i lead arrivano fuori orario e restano senza risposta"])[0]
+        lost = audit.get("estimated_lost_leads", 4)
+        LANDING = os.getenv("FLOWOPS_LANDING", "https://getautomatik.com")
         landing_url = f"{LANDING}?ref={prospect_id}" if prospect_id else LANDING
 
         subjects = {
-            1: f"{company} — quante richieste perdi ogni settimana?",
-            2: f"Re: {company}",
+            1: f"{company} — quanti lead perdi dopo le 18:00?",
+            2: f"Re: lead immobiliari {company}",
             3: f"Ultima email — {company}",
         }
         subject = subjects.get(email_number, subjects[1])
@@ -933,27 +936,27 @@ class OutreachGenerator:
                 client = anthropic.Anthropic(api_key=self.api_key)
                 if email_number == 1:
                     prompt = (
-                        f"Scrivi email cold B2B in italiano (max 110 parole) per {company} (settore {sector}).\n"
-                        f"Proponi GetAutomatik: sistema AI che risponde automaticamente alle email dei loro clienti.\n"
-                        f"Problema rilevato dal sito: {first_problem}\n"
-                        f"Stima richieste perse/mese: {lost}\n"
-                        f"CTA: scopri come funziona -> {landing_url}\n"
-                        f"Tono: diretto, specifico, umano. Firma: Team GetAutomatik. NO template generico."
+                        f"Scrivi una cold email B2B in italiano (max 110 parole) per {company}, agenzia immobiliare.\n"
+                        f"Proponi GetAutomatik: AI che risponde ai lead immobiliari in 2 minuti, anche alle 22:00, li qualifica (zona, budget, mutuo) e invia all'agente una card con i dati completi.\n"
+                        f"Problema rilevato: {first_problem}\n"
+                        f"Stima lead persi/mese: {lost} — ogni lead mancato = €3.000-8.000 di commissione.\n"
+                        f"CTA: guarda la demo -> {landing_url}\n"
+                        f"Tono: diretto, concreto, no hype. Parla da collega del settore. Firma: Marco, Team GetAutomatik."
                     )
                 elif email_number == 2:
                     prompt = (
-                        f"Scrivi follow-up brevissimo (max 60 parole) per {company} ({sector}).\n"
-                        f"E' il secondo contatto — sii ancora piu' breve e diretto.\n"
-                        f"Menziona un caso studio specifico per {sector}: un artigiano che non perdeva piu' richieste.\n"
-                        f"CTA: risposta rapida o link -> {landing_url}\n"
-                        f"Firma: Team GetAutomatik"
+                        f"Scrivi un follow-up molto breve (max 55 parole) per {company}, agenzia immobiliare.\n"
+                        f"E' il secondo contatto — sii ancora piu' diretto.\n"
+                        f"Angolo: 'hai mai perso un lead perche' hai risposto il giorno dopo?' — fai una domanda secca.\n"
+                        f"CTA: link demo -> {landing_url}\n"
+                        f"Firma: Marco, GetAutomatik"
                     )
                 else:
                     prompt = (
-                        f"Scrivi email finale (max 55 parole) per {company} ({sector}).\n"
-                        f"E' l'ultima email — sii diretto e usa la scarsita'.\n"
-                        f"CTA: trial gratis 7 giorni, link -> {landing_url}\n"
-                        f"Firma: Team GetAutomatik"
+                        f"Scrivi l'ultima email (max 50 parole) per {company}, agenzia immobiliare.\n"
+                        f"E' l'ultimo contatto — sii diretto e usa la scarsita' (trial 7 giorni, poi sparisco).\n"
+                        f"CTA: trial gratis -> {landing_url}\n"
+                        f"Firma: Marco, GetAutomatik"
                     )
                 response = client.messages.create(
                     model=AUDIT_MODEL,
@@ -969,14 +972,16 @@ class OutreachGenerator:
 
         if not body:
             body = (
-                f"Buongiorno,\n\nHo analizzato il sito di {company}: {first_problem}.\n\n"
-                f"GetAutomatik risponde automaticamente alle email dei vostri clienti entro 2 minuti, "
-                f"anche fuori orario.\n\nProva gratis 7 giorni: {landing_url}\n\nTeam GetAutomatik"
+                f"Buongiorno,\n\nHo visto il sito di {company}: {first_problem}.\n\n"
+                f"GetAutomatik risponde ai lead immobiliari in 2 minuti — anche la domenica sera — "
+                f"li qualifica su zona, budget e mutuo, e ti manda una card completa.\n"
+                f"Un lead perso = €3.000-8.000 di commissione. Il sistema si paga con il primo recupero.\n\n"
+                f"Guarda la demo: {landing_url}\n\nMarco, Team GetAutomatik"
             )
         return {
             "subject": subject,
             "body": body,
-            "cta": "Prova GetAutomatik gratis",
+            "cta": "Guarda la demo",
             "email_number": email_number,
         }
 
@@ -1612,16 +1617,35 @@ def chat_qualify_lead(client_config, messages):
     if not api_key:
         return fallback
 
-    system = (
-        f"Sei l'assistente AI di {nome_azienda}, settore {settore}.\n"
-        f"Stai chattando con un visitatore del sito web.\n"
-        f"Obiettivo: capire il tipo di intervento, raccogliere nome e numero di telefono, poi concludere.\n"
-        f"REGOLE: rispondi in italiano, max 2 frasi, stile conversazionale.\n"
-        f"Prima capisci cosa serve, poi chiedi nome e telefono.\n"
-        f"Rispondi SOLO con JSON valido:\n"
-        f'{"{"}"reply":"...","qualified":false,"lead_name":null,"lead_phone":null,"lead_type":null{"}"}\n'
-        f"Quando hai nome E telefono: qualified=true e compila tutti i campi."
-    )
+    is_real_estate = any(w in settore.lower() for w in ["immobil", "agenzia", "mediatore", "casa", "affitto", "vendita"])
+
+    if is_real_estate:
+        system = (
+            f"Sei l'assistente AI di {nome_azienda}, agenzia immobiliare.\n"
+            f"Stai chattando con un potenziale cliente sul sito.\n"
+            f"OBIETTIVO: qualificare il lead raccogliendo queste info IN ORDINE:\n"
+            f"1. Cosa cerca (acquisto o affitto? Tipo immobile: app/villa/commerciale?)\n"
+            f"2. Zona preferita\n"
+            f"3. Budget indicativo\n"
+            f"4. Prima casa o investimento?\n"
+            f"5. Nome e numero di telefono\n"
+            f"REGOLE: una domanda alla volta, max 2 frasi, italiano colloquiale e professionale.\n"
+            f"Non chiedere tutto insieme. Sii caldo e competente come un agente esperto.\n"
+            f"Rispondi SOLO con JSON valido:\n"
+            f'{{"reply":"...","qualified":false,"lead_name":null,"lead_phone":null,"lead_type":null,"lead_budget":null,"lead_zone":null}}\n'
+            f"qualified=true solo quando hai nome + telefono + tipo ricerca. Compila tutti i campi disponibili."
+        )
+    else:
+        system = (
+            f"Sei l'assistente AI di {nome_azienda}, settore {settore}.\n"
+            f"Stai chattando con un visitatore del sito web.\n"
+            f"Obiettivo: capire il tipo di intervento, raccogliere nome e numero di telefono, poi concludere.\n"
+            f"REGOLE: rispondi in italiano, max 2 frasi, stile conversazionale.\n"
+            f"Prima capisci cosa serve, poi chiedi nome e telefono.\n"
+            f"Rispondi SOLO con JSON valido:\n"
+            f'{{"reply":"...","qualified":false,"lead_name":null,"lead_phone":null,"lead_type":null}}\n'
+            f"Quando hai nome E telefono: qualified=true e compila tutti i campi."
+        )
     try:
         client_ai = anthropic.Anthropic(api_key=api_key)
         resp = client_ai.messages.create(
@@ -1640,26 +1664,53 @@ def chat_qualify_lead(client_config, messages):
     return fallback
 
 
-def notify_chat_lead(client_config, lead_name, lead_phone, lead_type):
+def notify_chat_lead(client_config, lead_name, lead_phone, lead_type, lead_budget=None, lead_zone=None):
     """Email owner when a chat lead is qualified."""
     owner_email = client_config.get("email_titolare")
     nome_azienda = client_config.get("nome_azienda", "")
+    settore = client_config.get("settore", "")
     if not owner_email:
         return
-    body = (
-        f"Hai un nuovo lead dal chatbot del tuo sito!\n\n"
-        f"Nome: {lead_name or 'Non fornito'}\n"
-        f"Telefono: {lead_phone or 'Non fornito'}\n"
-        f"Tipo lavoro: {lead_type or 'Non specificato'}\n\n"
-        f"Ricontattalo il prima possibile."
-    )
+
+    is_real_estate = any(w in settore.lower() for w in ["immobil", "agenzia", "mediatore", "casa"])
+
+    if is_real_estate:
+        body = (
+            f"Nuovo lead qualificato dal chatbot del tuo sito!\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"Nome:     {lead_name or 'Non fornito'}\n"
+            f"Telefono: {lead_phone or 'Non fornito'}\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"Cerca:    {lead_type or 'Non specificato'}\n"
+            f"Zona:     {lead_zone or 'Non specificata'}\n"
+            f"Budget:   {lead_budget or 'Non specificato'}\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"Lead già qualificato — chiamalo adesso mentre è ancora caldo."
+        )
+        telegram_msg = (
+            f"🏠 Nuovo lead immobiliare!\n"
+            f"Agenzia: {nome_azienda}\n"
+            f"Nome: {lead_name} — {lead_phone}\n"
+            f"Cerca: {lead_type}\n"
+            f"Zona: {lead_zone} | Budget: {lead_budget}"
+        )
+    else:
+        body = (
+            f"Nuovo lead dal chatbot del tuo sito!\n\n"
+            f"Nome: {lead_name or 'Non fornito'}\n"
+            f"Telefono: {lead_phone or 'Non fornito'}\n"
+            f"Tipo lavoro: {lead_type or 'Non specificato'}\n\n"
+            f"Ricontattalo il prima possibile."
+        )
+        telegram_msg = (
+            f"Lead chatbot!\n"
+            f"Azienda: {nome_azienda}\n"
+            f"Lead: {lead_name} — {lead_phone}\n"
+            f"Lavoro: {lead_type}"
+        )
+
     _send_plain_email(owner_email, f"Nuovo lead dal sito: {lead_name or lead_phone}", body, sender_name="GetAutomatik")
-    send_telegram(
-        f"Lead chatbot!\n"
-        f"Azienda: {nome_azienda}\n"
-        f"Lead: {lead_name} — {lead_phone}\n"
-        f"Lavoro: {lead_type}"
-    )
+    send_telegram(telegram_msg)
 
 
 # ═══════════════════════════════════════════════════════════════════
