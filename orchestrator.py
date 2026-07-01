@@ -1046,24 +1046,17 @@ def onboarding_generate():
         return jsonify({"error": "Dati mancanti"}), 400
 
     forwarding_address = generate_forwarding_address()
-
-    SETTORI = {
-        "fotovoltaico": "pannelli solari e impianti fotovoltaici",
-        "climatizzazione": "climatizzazione e condizionatori",
-        "idraulici": "impianti idraulici e riparazioni",
-        "ristrutturazioni": "ristrutturazioni edili",
-        "infissi": "infissi, finestre e porte",
-    }
-    settore_desc = SETTORI.get(settore, settore)
+    citta = data.get("citta", "").strip()
+    tipo_attivita = data.get("tipo_attivita", "compravendita e affitti").strip()
+    zona_text = f" a {citta}" if citta else ""
 
     try:
         client_ai = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         prompt = (
-            f"Immagina di essere l'assistente AI di '{nome_azienda}', "
-            f"un'azienda di {settore_desc}.\n\n"
-            f"Scrivi un messaggio di benvenuto breve (2-3 frasi) che mostra come risponderesti "
-            f"a un cliente che chiede un preventivo. Sii professionale, cordiale e specifico per il settore {settore}. "
-            f"Usa il nome dell'azienda nel messaggio."
+            f"Sei l'assistente AI di '{nome_azienda}', agenzia immobiliare specializzata in {tipo_attivita}{zona_text}.\n\n"
+            f"Un lead ha scritto: 'Buonasera, ho visto il vostro annuncio. Cerco un trilocale per {tipo_attivita.split(' ')[0] if tipo_attivita else 'acquisto'}{zona_text}. Potete aiutarmi?'\n\n"
+            f"Scrivi la tua risposta (2-3 frasi). Sii caldo e naturale come un agente esperto. "
+            f"Fai una domanda per capire meglio le esigenze. Non fare l'elenco puntato. Non essere robotico."
         )
         msg = client_ai.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -1074,9 +1067,8 @@ def onboarding_generate():
     except Exception as e:
         print(f"Claude AHA error: {e}")
         aha_response = (
-            f"Grazie per aver contattato {nome_azienda}! "
-            f"Abbiamo ricevuto la sua richiesta per {settore_desc} "
-            f"e la contatteremo entro poche ore con un preventivo personalizzato."
+            f"Ciao! Certo, siamo qui. {nome_azienda} segue proprio questo tipo di ricerca"
+            f"{zona_text}. Stai cercando per abitazione principale o è un investimento?"
         )
 
     return jsonify({
@@ -1092,6 +1084,9 @@ def onboarding_save():
     settore = data.get("settore", "").strip()
     email_titolare = data.get("email_titolare", "").strip()
     forwarding_address = data.get("forwarding_address", "").strip()
+    slot_visita = data.get("slot_visita", "").strip()
+    citta = data.get("citta", "").strip()
+    tipo_attivita = data.get("tipo_attivita", "").strip()
 
     if not all([nome_azienda, settore, email_titolare, forwarding_address]):
         return jsonify({"error": "Dati mancanti"}), 400
@@ -1099,25 +1094,27 @@ def onboarding_save():
     try:
         chat_token = "".join(random.choices(string.ascii_lowercase + string.digits, k=16))
         existing = db.table("client_configs").select("id", "chat_token").eq("email_titolare", email_titolare).execute()
+        record = {
+            "forwarding_address": forwarding_address,
+            "settore": settore,
+            "nome_azienda": nome_azienda,
+            "active": True,
+        }
+        if slot_visita:
+            record["slot_visita"] = slot_visita
+        if citta:
+            record["citta"] = citta
+        if tipo_attivita:
+            record["tipo_attivita"] = tipo_attivita
         if existing.data:
             existing_token = existing.data[0].get("chat_token") or chat_token
-            db.table("client_configs").update({
-                "forwarding_address": forwarding_address,
-                "settore": settore,
-                "nome_azienda": nome_azienda,
-                "status": "active",
-                "chat_token": existing_token,
-            }).eq("email_titolare", email_titolare).execute()
+            record["chat_token"] = existing_token
+            db.table("client_configs").update(record).eq("email_titolare", email_titolare).execute()
             chat_token = existing_token
         else:
-            db.table("client_configs").insert({
-                "forwarding_address": forwarding_address,
-                "settore": settore,
-                "nome_azienda": nome_azienda,
-                "email_titolare": email_titolare,
-                "status": "active",
-                "chat_token": chat_token,
-            }).execute()
+            record["email_titolare"] = email_titolare
+            record["chat_token"] = chat_token
+            db.table("client_configs").insert(record).execute()
     except Exception as e:
         print(f"Errore salvataggio client_configs: {e}")
         return jsonify({"error": "Errore database"}), 500
@@ -1241,6 +1238,31 @@ def chatbot_demo():
     return render_template("chatbot_demo.html")
 
 
+@app.route("/agent")
+def agent_leads():
+    return render_template("agent_leads.html")
+
+
+@app.route("/api/agent/leads")
+def api_agent_leads():
+    """Returns recent qualified leads from chat_sessions."""
+    try:
+        rows = db.table("chat_sessions").select("*").order("created_at", desc=True).limit(50).execute()
+        return jsonify(rows.data or [])
+    except Exception as e:
+        return jsonify([])
+
+
+@app.route("/api/agent/appointments")
+def api_agent_appointments():
+    """Returns leads that have a lead_appointment set."""
+    try:
+        rows = db.table("chat_sessions").select("*").not_.is_("lead_appointment", "null").order("created_at", desc=True).limit(30).execute()
+        return jsonify(rows.data or [])
+    except Exception as e:
+        return jsonify([])
+
+
 @app.route("/widget.js")
 def widget_js():
     cid = request.args.get("cid", "")
@@ -1317,9 +1339,20 @@ def api_chat():
     cid = data.get("cid", "").strip()
     history = data.get("history", [])
 
+    # Demo client — hardcoded so the landing demo always works
+    DEMO_CONFIGS = {
+        "demo-immobiliare": {
+            "settore": "agenzia immobiliare",
+            "nome_azienda": "la nostra agenzia",
+            "email_titolare": None,
+            "slot_visita": "martedì alle 10:30 o giovedì alle 15:00",
+            "active": True,
+        }
+    }
+
     # Lookup client by chat_token
-    client_config = None
-    if cid:
+    client_config = DEMO_CONFIGS.get(cid)
+    if not client_config and cid:
         try:
             r = db.table("client_configs").select("*").eq("chat_token", cid).eq("active", True).execute()
             if r.data:
@@ -1340,6 +1373,9 @@ def api_chat():
                 "lead_name": result.get("lead_name"),
                 "lead_phone": result.get("lead_phone"),
                 "lead_type": result.get("lead_type"),
+                "lead_budget": result.get("lead_budget"),
+                "lead_zone": result.get("lead_zone"),
+                "lead_appointment": result.get("lead_appointment"),
                 "messages": history,
                 "qualified": True,
             }).execute()

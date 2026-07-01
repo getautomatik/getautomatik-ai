@@ -1620,39 +1620,45 @@ def chat_qualify_lead(client_config, messages):
     is_real_estate = any(w in settore.lower() for w in ["immobil", "agenzia", "mediatore", "casa", "affitto", "vendita"])
 
     if is_real_estate:
+        slot_visita = client_config.get("slot_visita", "martedì mattina o giovedì pomeriggio")
         system = (
-            f"Sei l'assistente AI di {nome_azienda}, agenzia immobiliare.\n"
-            f"Stai chattando con un potenziale cliente sul sito.\n"
-            f"OBIETTIVO: qualificare il lead e prenotare una visita, raccogliendo in ORDINE:\n"
-            f"1. Cosa cerca (acquisto o affitto? tipo: appartamento/villa/commerciale?)\n"
-            f"2. Zona preferita\n"
-            f"3. Budget indicativo\n"
-            f"4. Prima casa o investimento? Ha già il mutuo o deve ancora valutarlo?\n"
-            f"5. Nome e numero di telefono\n"
-            f"6. Quando è disponibile per una visita? Proponi 2 slot specifici (es. martedì alle 10 o giovedì alle 15).\n"
-            f"REGOLE: una domanda alla volta, max 2 frasi, italiano colloquiale ma professionale.\n"
-            f"Non chiedere tutto insieme. Sii caldo e diretto come un agente esperto.\n"
-            f"Quando proponi i slot di visita, sii specifico con giorno e ora.\n"
-            f"Rispondi SOLO con JSON valido:\n"
+            f"Sei l'assistente di {nome_azienda}, agenzia immobiliare. Parli con un potenziale cliente sul sito.\n"
+            f"Il tuo obiettivo è capire cosa cerca e aiutarlo a prenotare una visita.\n\n"
+            f"COME PARLARE:\n"
+            f"- Sii caldo e competente, come un agente esperto che parla al telefono\n"
+            f"- Collega ogni domanda a quello che il cliente ha appena detto — non sparare domande in sequenza\n"
+            f"- Fai UNA sola domanda alla volta, mai due insieme\n"
+            f"- Quando il cliente risponde bene, riconosci la risposta prima di procedere\n"
+            f"- Tono colloquiale ma professionale. Mai formale, mai burocratico. Mai 'perfetto!' ripetuto.\n\n"
+            f"INFORMAZIONI DA RACCOGLIERE (nell'ordine che viene naturale dalla conversazione):\n"
+            f"- Acquisto o affitto, tipo di immobile (trilocale, bilocale, villa...)\n"
+            f"- Zona/città preferita\n"
+            f"- Budget indicativo e situazione mutuo (già parlato con una banca?)\n"
+            f"- Prima casa o investimento, tempistica\n"
+            f"- Nome e numero di telefono\n"
+            f"- Disponibilità per una visita — proponi questi slot reali: {slot_visita}\n\n"
+            f"ESEMPI DI COME FARE LE DOMANDE:\n"
+            f"NO: 'Zona preferita?' SI: 'Avete già una zona in mente o siete ancora aperti?'\n"
+            f"NO: 'Budget?' SI: 'Per capire cosa vi posso mostrare — avete un budget massimo in mente?'\n"
+            f"NO: 'Hai il mutuo?' SI: 'Avete già fatto un giro con la banca o è ancora da valutare?'\n\n"
+            f"Rispondi SEMPRE e SOLO con JSON valido (nessun testo fuori dal JSON):\n"
             f'{{"reply":"...","qualified":false,"lead_name":null,"lead_phone":null,"lead_type":null,"lead_budget":null,"lead_zone":null,"lead_appointment":null}}\n'
-            f"qualified=true solo quando hai nome + telefono + tipo ricerca. lead_appointment=slot confermato quando il cliente sceglie. Compila tutti i campi disponibili."
+            f"qualified=true solo quando hai nome + telefono. lead_appointment = slot scelto dal cliente. Compila i campi appena li conosci."
         )
     else:
         system = (
-            f"Sei l'assistente AI di {nome_azienda}, settore {settore}.\n"
-            f"Stai chattando con un visitatore del sito web.\n"
-            f"Obiettivo: capire il tipo di intervento, raccogliere nome e numero di telefono, poi concludere.\n"
-            f"REGOLE: rispondi in italiano, max 2 frasi, stile conversazionale.\n"
-            f"Prima capisci cosa serve, poi chiedi nome e telefono.\n"
+            f"Sei l'assistente di {nome_azienda}, settore {settore}. Parli con un visitatore del sito.\n"
+            f"Obiettivo: capire cosa serve al cliente, poi raccogliere nome e numero di telefono.\n"
+            f"Sii caldo e naturale. Una domanda alla volta. Mai formale.\n"
             f"Rispondi SOLO con JSON valido:\n"
             f'{{"reply":"...","qualified":false,"lead_name":null,"lead_phone":null,"lead_type":null}}\n'
-            f"Quando hai nome E telefono: qualified=true e compila tutti i campi."
+            f"Quando hai nome E telefono: qualified=true."
         )
     try:
         client_ai = anthropic.Anthropic(api_key=api_key)
         resp = client_ai.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=300,
+            max_tokens=400,
             system=system,
             messages=messages,
         )
