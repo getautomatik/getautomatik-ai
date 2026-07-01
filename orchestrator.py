@@ -212,6 +212,73 @@ def pivot_loop():
                 print(f"Metrics report error: {e}")
         time.sleep(21600)  # 6h
 
+
+def appointment_reminder_loop():
+    """Runs every hour: sends reminder emails for visits scheduled tomorrow."""
+    time.sleep(3600)
+    while True:
+        try:
+            tomorrow = (datetime.now().date() + timedelta(days=1)).isoformat()
+            rows = db.table("chat_sessions").select("*").not_.is_("lead_appointment", "null").eq("reminder_sent", False).execute()
+            sent = 0
+            for row in (rows.data or []):
+                apt = (row.get("lead_appointment") or "").lower()
+                # Check if appointment contains tomorrow's weekday name or date
+                weekdays_it = ["lunedì","martedì","mercoledì","giovedì","venerdì","sabato","domenica"]
+                tomorrow_dt = datetime.now().date() + timedelta(days=1)
+                tomorrow_wd = weekdays_it[tomorrow_dt.weekday()]
+                if tomorrow_wd not in apt and tomorrow.replace("-", "") not in apt.replace("/", "").replace("-", ""):
+                    continue
+                # Get client config to find agent email
+                cfg_id = row.get("client_config_id")
+                agent_email = None
+                agent_name = "la tua agenzia"
+                if cfg_id:
+                    try:
+                        cfg = db.table("client_configs").select("email_titolare,nome_azienda").eq("id", cfg_id).execute()
+                        if cfg.data:
+                            agent_email = cfg.data[0].get("email_titolare")
+                            agent_name = cfg.data[0].get("nome_azienda") or agent_name
+                    except Exception:
+                        pass
+                if not agent_email:
+                    continue
+                lead_name = row.get("lead_name") or "il lead"
+                lead_phone = row.get("lead_phone") or "—"
+                lead_type = row.get("lead_type") or "—"
+                lead_budget = row.get("lead_budget") or "—"
+                lead_zone = row.get("lead_zone") or "—"
+                apt_slot = row.get("lead_appointment") or "—"
+                subject = f"Promemoria visita domani — {lead_name}"
+                body = f"""<div style="font-family:Inter,sans-serif;background:#050510;color:#fff;padding:40px 28px;max-width:520px;margin:0 auto;border-radius:16px;">
+<div style="font-size:13px;font-weight:700;color:#00c28c;margin-bottom:20px;">GetAutomatik</div>
+<h2 style="font-size:22px;font-weight:800;margin-bottom:8px;">Visita domani: {lead_name}</h2>
+<p style="color:rgba(255,255,255,0.55);margin-bottom:24px;">Riepilogo del lead e dell'appuntamento prenotato dall'AI.</p>
+<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;margin-bottom:20px;">
+<div style="margin-bottom:10px;"><span style="color:rgba(255,255,255,0.4);font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Contatto</span><br><strong>{lead_name} &middot; {lead_phone}</strong></div>
+<div style="margin-bottom:10px;"><span style="color:rgba(255,255,255,0.4);font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Interesse</span><br>{lead_type}</div>
+<div style="margin-bottom:10px;"><span style="color:rgba(255,255,255,0.4);font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Zona</span><br>{lead_zone}</div>
+<div style="margin-bottom:10px;"><span style="color:rgba(255,255,255,0.4);font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Budget</span><br>{lead_budget}</div>
+<div style="background:rgba(0,194,140,0.08);border:1px solid rgba(0,194,140,0.2);border-radius:8px;padding:12px;margin-top:14px;">
+<span style="color:rgba(255,255,255,0.4);font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Appuntamento</span><br>
+<strong style="color:#00c28c;font-size:16px;">{apt_slot}</strong></div>
+</div>
+<p style="font-size:12px;color:rgba(255,255,255,0.25);">Promemoria automatico di GetAutomatik &mdash; info@getautomatik.com</p>
+</div>"""
+                try:
+                    ok = send_email(agent_email, subject, body)
+                    if ok:
+                        db.table("chat_sessions").update({"reminder_sent": True}).eq("id", row["id"]).execute()
+                        sent += 1
+                except Exception as e:
+                    print(f"Reminder send error: {e}")
+            if sent:
+                send_telegram(f"Promemoria visite: {sent} email inviate per domani")
+        except Exception as e:
+            print(f"Appointment reminder loop error: {e}")
+        time.sleep(3600)  # every hour
+
+
 @app.route("/")
 def landing():
     ref = request.args.get("ref", "")
@@ -1017,17 +1084,7 @@ def checkout():
 
 @app.route("/success")
 def success():
-    return """<html><body style='background:#050510;color:white;font-family:Inter,sans-serif;text-align:center;padding:80px 20px;'>
-    <div style='max-width:480px;margin:0 auto;'>
-        <div style='font-size:54px;margin-bottom:20px;'>🚀</div>
-        <h1 style='color:#00ff88;font-size:30px;letter-spacing:-1px;margin-bottom:14px;'>Trial attivato!</h1>
-        <p style='color:rgba(255,255,255,0.55);font-size:16px;line-height:1.7;margin-bottom:28px;'>
-            Perfetto! Riceverai a breve una email con il link per configurare il tuo agente.<br>
-            <strong style='color:white;'>Controlla la casella di posta (anche lo spam).</strong>
-        </p>
-        <p style='color:rgba(255,255,255,0.3);font-size:14px;'>Hai domande? Scrivi a info@getautomatik.com</p>
-    </div>
-    </body></html>"""
+    return redirect("/onboarding?from=checkout")
 
 @app.route("/onboarding")
 def onboarding():
@@ -1238,14 +1295,50 @@ def chatbot_demo():
     return render_template("chatbot_demo.html")
 
 
+AGENT_SECRET = os.getenv("AGENT_SECRET", "")
+
+def check_agent_auth():
+    """Returns True if request has valid agent token (cookie or query param)."""
+    if not AGENT_SECRET:
+        return True  # no secret configured → open (dev mode)
+    token = request.cookies.get("agent_token") or request.args.get("token", "")
+    return hmac_mod.compare_digest(token, AGENT_SECRET)
+
 @app.route("/agent")
 def agent_leads():
+    if not check_agent_auth():
+        return redirect(f"/agent/login")
     return render_template("agent_leads.html")
 
+@app.route("/agent/login", methods=["GET", "POST"])
+def agent_login():
+    error = ""
+    if request.method == "POST":
+        pwd = request.form.get("password", "")
+        if AGENT_SECRET and hmac_mod.compare_digest(pwd, AGENT_SECRET):
+            resp = redirect("/agent")
+            resp.set_cookie("agent_token", AGENT_SECRET, max_age=86400 * 30, httponly=True, samesite="Lax")
+            return resp
+        error = "Password non corretta."
+    return f"""<!DOCTYPE html><html><head><title>Accesso area agente</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+<style>*{{box-sizing:border-box;margin:0;padding:0}}body{{font-family:Inter,sans-serif;background:#06091a;color:#f0f4ff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
+.card{{background:#0e1330;border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:40px 36px;max-width:380px;width:100%;text-align:center}}
+h2{{font-size:22px;font-weight:900;margin-bottom:8px}}p{{font-size:14px;color:rgba(240,244,255,0.5);margin-bottom:28px}}
+input{{width:100%;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#f0f4ff;font-size:15px;font-family:Inter;margin-bottom:14px}}
+input:focus{{outline:none;border-color:rgba(0,194,140,0.4)}}
+button{{width:100%;padding:15px;background:#00c28c;color:#06091a;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:Inter}}
+.err{{color:#f87171;font-size:13px;margin-bottom:14px}}</style></head>
+<body><div class="card"><h2>Area agente</h2><p>Inserisci la password per accedere ai lead e al calendario visite.</p>
+{"<div class='err'>" + error + "</div>" if error else ""}
+<form method="POST"><input type="password" name="password" placeholder="Password" autofocus><button type="submit">Accedi →</button></form></div></body></html>"""
 
 @app.route("/api/agent/leads")
 def api_agent_leads():
     """Returns recent qualified leads from chat_sessions."""
+    if not check_agent_auth():
+        return jsonify({"error": "unauthorized"}), 401
     try:
         rows = db.table("chat_sessions").select("*").order("created_at", desc=True).limit(50).execute()
         return jsonify(rows.data or [])
@@ -1256,6 +1349,8 @@ def api_agent_leads():
 @app.route("/api/agent/appointments")
 def api_agent_appointments():
     """Returns leads that have a lead_appointment set."""
+    if not check_agent_auth():
+        return jsonify({"error": "unauthorized"}), 401
     try:
         rows = db.table("chat_sessions").select("*").not_.is_("lead_appointment", "null").order("created_at", desc=True).limit(30).execute()
         return jsonify(rows.data or [])
@@ -1465,8 +1560,9 @@ def _start_background_threads():
     threading.Thread(target=discovery_loop, daemon=True).start()
     threading.Thread(target=outreach_loop, daemon=True).start()
     threading.Thread(target=pivot_loop, daemon=True).start()
+    threading.Thread(target=appointment_reminder_loop, daemon=True).start()
     # imap_loop disabilitato: IMAP non disponibile su piano Zoho attuale
-    send_telegram("GetAutomatik AI avviata: discovery 24h, outreach 12h, pivot 6h")
+    send_telegram("GetAutomatik AI avviata: discovery 24h, outreach 12h, pivot 6h, reminder visite 1h")
 
 threading.Thread(target=_start_background_threads, daemon=True).start()
 

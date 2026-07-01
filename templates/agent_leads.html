@@ -228,7 +228,8 @@ let calWeekOffset = 0;
 // ---- Data Fetch ----
 async function loadLeads() {
     try {
-        const r = await fetch('/api/agent/leads');
+        const r = await fetch('/api/agent/leads', {credentials: 'same-origin'});
+        if (r.status === 401) { window.location.href = '/agent/login'; return; }
         allLeads = await r.json();
         renderLeads();
         document.getElementById('stat-total').textContent = allLeads.length;
@@ -243,7 +244,7 @@ async function loadLeads() {
 
 async function loadApts() {
     try {
-        const r = await fetch('/api/agent/appointments');
+        const r = await fetch('/api/agent/appointments', {credentials: 'same-origin'});
         allApts = await r.json();
         document.getElementById('stat-apts').textContent = allApts.length;
         document.getElementById('badge-apts').textContent = allApts.length;
